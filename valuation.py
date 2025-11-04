@@ -32,100 +32,147 @@ SECTOR_EV_EBITDA_TR = 6.0
 SECTOR_EV_EBITDA_US = 10.0
 DDM_GROWTH_DEFAULT = 0.025
 
+BOND_YIELD_2_TR = 0.398
+BOND_YIELD_2_US = 0.0359
+
 MAX_GROWTH_CAP = 0.50     # 50% ↑
 MIN_GROWTH_CAP = -0.50    # -50%
 
 SECTOR_OVERRIDES = {
-    "AKBNK.IS": {'pe': 5.95},
-    "ISCTR.IS": {'pe': 5.95},
-    "YKBNK.IS": {'pe': 5.95},
-    "VAKBN.IS": {'pe': 5.95},
-    "HALKB.IS": {'pe': 5.95},
-    "TSKB.IS": {'pe': 5.95},
-    "GARAN.IS": {'pe': 5.95},
-    "AKSEN.IS": {'pe': 29.91, 'ev_ebitda': 3.73},
-    "ENJSA.IS": {'pe': 29.91, 'ev_ebitda': 3.73},
-    "PETKM.IS": {'pe': 29.91, 'ev_ebitda': 3.73},
-    "TUPRS.IS": {'pe': 29.91, 'ev_ebitda': 3.73},
-    "ASTOR.IS": {'pe': 29.91, 'ev_ebitda': 3.73},
-    "ARCLK.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "ASELS.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "BRSAN.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "CIMSA.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "EGEEN.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "KOZAA.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "KOZAL.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "ENKAI.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "TKFEN.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "AKSA.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "OTKAR.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "GUBRF.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "HEKTS.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "SASA.IS": {'pe': 56.62, 'ev_ebitda': 71.54},
-    "TOASO.IS": {'pe': 45.29, 'ev_ebitda': -12.47},
-    "FROTO.IS": {'pe': 45.29, 'ev_ebitda': -12.47},
-    "DOAS.IS": {'pe': 45.29, 'ev_ebitda': -12.47},
-    "BIMAS.IS": {'pe': 20.88, 'ev_ebitda': 14.08},
-    "MGROS.IS": {'pe': 20.88, 'ev_ebitda': 14.08},
-    "PGSUS.IS": {'pe': 11.92, 'ev_ebitda': 51.69},
-    "THYAO.IS": {'pe': 11.92, 'ev_ebitda': 51.69},
-    "TAVHL.IS": {'pe': 11.92, 'ev_ebitda': 51.69},
-    "ANSGR.IS": {'pe': 3.89, 'ev_ebitda': -2.3},
-    "CCOLA.IS": {'pe': 12.25, 'ev_ebitda': 8.74},
-    "AEFES.IS": {'pe': 12.25, 'ev_ebitda': 8.74},
-    "KCHOL.IS": {'pe': 356.88, 'ev_ebitda': -14.19},
-    "SAHOL.IS": {'pe': 356.88, 'ev_ebitda': -14.19},
-    "AGHOL.IS": {'pe': 356.88, 'ev_ebitda': -14.19},
-    "ALARK.IS": {'pe': 356.88, 'ev_ebitda': -14.19},
-    "DOHOL.IS": {'pe': 356.88, 'ev_ebitda': -14.19},
-    "BINHO.IS": {'pe': 356.88, 'ev_ebitda': -14.19},
-    "ECILC.IS": {'pe': 356.88, 'ev_ebitda': -14.19},
-    "TCELL.IS": {'pe': 15.05, 'ev_ebitda': 4.59},
-    "TTKOM.IS": {'pe': 15.05, 'ev_ebitda': 4.59},
-    "AAPL": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "GOOG": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "GOOGL": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "MSFT": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "META": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "NET": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "PLTR": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "ORCL": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "ADBE": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "CRM": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "AMZN": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "CSCO": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "DELL": {'pe': 86.01, 'ev_ebitda': -60.6},
-    "QCOM": {'pe': 60.06, 'ev_ebitda': 32.17},
-    "AMD": {'pe': 60.06, 'ev_ebitda': 32.17},
-    "NVDA": {'pe': 60.06, 'ev_ebitda': 32.17},
-    "INTL": {'pe': 60.06, 'ev_ebitda': 32.17},
-    "BABA": {'pe': 19.61, 'ev_ebitda': 16.24},
-    "AVGO": {'pe': 60.06, 'ev_ebitda': 32.17},
-    "DIS": {'pe': 32.18, 'ev_ebitda': 24.84},
-    "NFLX": {'pe': 32.18, 'ev_ebitda': 24.84},
-    "LLY": {'pe': 21.17, 'ev_ebitda': 13.67},
-    "JNJ": {'pe': 21.17, 'ev_ebitda': 13.67},
-    "MRK": {'pe': 21.17, 'ev_ebitda': 13.67},
-    "UNH": {'pe': 21.17, 'ev_ebitda': 13.67},
-    "PFE": {'pe': 21.17, 'ev_ebitda': 13.67},
-    "NVO": {'pe': 21.17, 'ev_ebitda': 13.67},
-    "TMO": {'pe': 21.17, 'ev_ebitda': 13.67},
-    "JPM": {'pe': 24.63, 'ev_ebitda': 24.52},
-    "WFC": {'pe': 24.63, 'ev_ebitda': 24.52},
-    "MA": {'pe': 24.63, 'ev_ebitda': 24.52},
-    "V": {'pe': 24.63, 'ev_ebitda': 24.52},
-    "XOM": {'pe': 16.62, 'ev_ebitda': 8.42},
-    "MCD": {'pe': 31.68, 'ev_ebitda': 22.77},
-    "WMT": {'pe': 31.68, 'ev_ebitda': 22.77},
-    "COST": {'pe': 31.68, 'ev_ebitda': 22.77},
-    "HD": {'pe': 31.68, 'ev_ebitda': 22.77},
-    "KO": {'pe': 31.68, 'ev_ebitda': 22.77},
-    "PEP": {'pe': 31.68, 'ev_ebitda': 22.77},
-    "BA": {'pe': 15.8, 'ev_ebitda': -10.68},
-    "L": {'pe': 15.8, 'ev_ebitda': -10.68},
-    "TSLA": {'pe': 312.71, 'ev_ebitda': 138.5},
+    "AKBNK.IS": {'pe': 5.5},
+    "ISCTR.IS": {'pe': 5.5},
+    "YKBNK.IS": {'pe': 5.5},
+    "VAKBN.IS": {'pe': 5.5},
+    "HALKB.IS": {'pe': 5.5},
+    "TSKB.IS": {'pe': 5.5},
+    "GARAN.IS": {'pe': 5.5},
+    "ALBRK.IS": {'pe': 5.5},
+    "AKSEN.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
+    "ENJSA.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
+    "ASTOR.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
+    "ZOREN.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
+    "GWIND.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
+    "CWENE.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
+    "SMRTG.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
+    "TATEN.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
+    "PETKM.IS": {'pe': 19.03, 'ev_ebitda': 6.67},
+    "TUPRS.IS": {'pe': 19.03, 'ev_ebitda': 6.67},
+    "IPEKE.IS": {'pe': 19.03, 'ev_ebitda': 6.67},
+    "BRSAN.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "EGEEN.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "KOZAA.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "KOZAL.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "ENKAI.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "AKSA.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "GUBRF.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "HEKTS.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "SASA.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "CEMTS.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "KCAER.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "KRDMD.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "ISDMR.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "EREGL.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
+    "ARCLK.IS": {'ev_ebitda': 15.87},
+    "VESTL.IS": {'ev_ebitda': 15.87},
+    "VESBE.IS": {'ev_ebitda': 15.87},
+    "ASELS.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
+    "ALTNY.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
+    "FORTE.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
+    "ONRYT.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
+    "KAREL.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
+    "CIMSA.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
+    "GOLTS.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
+    "BOBET.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
+    "LMKDC.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
+    "OYAKC.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
+    "KONYA.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
+    "BUCIM.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
+    "AFYON.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
+    "NUHCM.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
+    "TOASO.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
+    "FROTO.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
+    "DOAS.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
+    "OTKAR.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
+    "TTRAK.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
+    "BIMAS.IS": {'pe': 20.74, 'ev_ebitda': 7.1},
+    "MGROS.IS": {'pe': 20.74, 'ev_ebitda': 7.1},
+    "TKNSA.IS": {'pe': 20.74, 'ev_ebitda': 7.1},
+    "SOKM.IS": {'pe': 20.74, 'ev_ebitda': 7.1},
+    "PGSUS.IS": {'pe': 11.9, 'ev_ebitda': 41.54},
+    "THYAO.IS": {'pe': 11.9, 'ev_ebitda': 41.54},
+    "TAVHL.IS": {'pe': 11.9, 'ev_ebitda': 41.54},
+    "CLEBI.IS": {'pe': 11.9, 'ev_ebitda': 41.54},
+    "ANSGR.IS": {'pe': 18.12, 'ev_ebitda': 1.72},
+    "AGESA.IS": {'pe': 18.12, 'ev_ebitda': 1.72},
+    "TURSG.IS": {'pe': 18.12, 'ev_ebitda': 1.72},
+    "ANHYT.IS": {'pe': 18.12, 'ev_ebitda': 1.72},
+    "ULUUN.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
+    "ULKER.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
+    "KRVGD.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
+    "YYLGD.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
+    "GOKNR.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
+    "OBAMS.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
+    "CCOLA.IS": {'pe': 12.46, 'ev_ebitda': 8.31},
+    "AEFES.IS": {'pe': 12.46, 'ev_ebitda': 8.31},
+    "TBORG.IS": {'pe': 12.46, 'ev_ebitda': 8.31},
+    "ELITE.IS": {'pe': 12.46, 'ev_ebitda': 8.31},
+    "ECILC.IS": {'pe': 20.92, 'ev_ebitda': -13.81},
+    "LKMNH.IS": {'pe': 20.92, 'ev_ebitda': -13.81},
+    "MPARK.IS": {'pe': 20.92, 'ev_ebitda': -13.81},
+    "SELEC.IS": {'pe': 20.92, 'ev_ebitda': -13.81},
+    "KCHOL.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
+    "SAHOL.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
+    "AGHOL.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
+    "ALARK.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
+    "DOHOL.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
+    "BINHO.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
+    "TKFEN.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
+    "BERA.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
+    "TCELL.IS": {'pe': 14.92, 'ev_ebitda': 4.51},
+    "TTKOM.IS": {'pe': 14.92, 'ev_ebitda': 4.51},
+    "AAPL": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "GOOG": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "GOOGL": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "MSFT": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "META": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "NET": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "PLTR": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "ORCL": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "ADBE": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "CRM": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "AMZN": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "CSCO": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "DELL": {'pe': 89.89, 'ev_ebitda': -55.65},
+    "QCOM": {'pe': 60.23, 'ev_ebitda': 32.52},
+    "AMD": {'pe': 60.23, 'ev_ebitda': 32.52},
+    "NVDA": {'pe': 60.23, 'ev_ebitda': 32.52},
+    "INTL": {'pe': 60.23, 'ev_ebitda': 32.52},
+    "BABA": {'pe': 19.34, 'ev_ebitda': 15.97},
+    "AVGO": {'pe': 60.23, 'ev_ebitda': 32.52},
+    "DIS": {'pe': 31.72, 'ev_ebitda': 24.51},
+    "NFLX": {'pe': 31.72, 'ev_ebitda': 24.51},
+    "LLY": {'pe': 21.23, 'ev_ebitda': 13.7},
+    "JNJ": {'pe': 21.23, 'ev_ebitda': 13.7},
+    "MRK": {'pe': 21.23, 'ev_ebitda': 13.7},
+    "UNH": {'pe': 21.23, 'ev_ebitda': 13.7},
+    "PFE": {'pe': 21.23, 'ev_ebitda': 13.7},
+    "NVO": {'pe': 21.23, 'ev_ebitda': 13.7},
+    "TMO": {'pe': 21.23, 'ev_ebitda': 13.7},
+    "JPM": {'pe': 24.39, 'ev_ebitda': 24.21},
+    "WFC": {'pe': 24.39, 'ev_ebitda': 24.21},
+    "MA": {'pe': 24.39, 'ev_ebitda': 24.21},
+    "V": {'pe': 24.39, 'ev_ebitda': 24.21},
+    "XOM": {'pe': 16.53, 'ev_ebitda': 8.38},
+    "MCD": {'pe': 31.71, 'ev_ebitda': 22.77},
+    "WMT": {'pe': 31.71, 'ev_ebitda': 22.77},
+    "COST": {'pe': 31.71, 'ev_ebitda': 22.77},
+    "HD": {'pe': 31.71, 'ev_ebitda': 22.77},
+    "KO": {'pe': 31.71, 'ev_ebitda': 22.77},
+    "PEP": {'pe': 31.71, 'ev_ebitda': 22.77},
+    "BA": {'pe': 15.78, 'ev_ebitda': -10.9},
+    "L": {'pe': 15.78, 'ev_ebitda': -10.9},
+    "TSLA": {'pe': 323.01, 'ev_ebitda': 142.14},
 }
-
 
 # ------------------------------
 # Helpers
@@ -197,6 +244,7 @@ def get_country_params(ticker: str):
             TAX_RATE=TAX_RATE_TR,
             PE=SECTOR_OVERRIDES.get(ticker, {}).get("pe", SECTOR_PE_TR),
             EV_EBITDA=SECTOR_OVERRIDES.get(ticker, {}).get("ev_ebitda", SECTOR_EV_EBITDA_TR),
+            BOND_YIELD_2 = BOND_YIELD_2_TR
         )
     else:
         return dict(
@@ -206,6 +254,7 @@ def get_country_params(ticker: str):
             TAX_RATE=TAX_RATE_US,
             PE=SECTOR_OVERRIDES.get(ticker, {}).get("pe", SECTOR_PE_US),
             EV_EBITDA=SECTOR_OVERRIDES.get(ticker, {}).get("ev_ebitda", SECTOR_EV_EBITDA_US),
+            BOND_YIELD_2 = BOND_YIELD_2_US
         )
 
 
@@ -277,6 +326,14 @@ def calculate_fcf(op, tax, depr, capex, rec, inv, liab,
     nopat = op*(1-eff)
     dWC   = ((rec or 0)+(inv or 0)-(liab or 0)) - ((prec or 0)+(pinv or 0)-(pliab or 0))
     return nopat + (depr or 0) - (capex or 0) - dWC
+
+# ------------------------------
+# Graham
+# ------------------------------
+def graham_valuation(eps, sector_pe, bond_yield):
+    if not eps or not sector_pe or not bond_yield:
+        return None
+    return (eps * sector_pe) / (bond_yield * 100)
 
 
 # ------------------------------
@@ -359,8 +416,23 @@ def value_ticker(ticker):
     fv_ddm   = None
     if dividend>0 and wacc>DDM_GROWTH_DEFAULT:
         fv_ddm = dividend*(1+DDM_GROWTH_DEFAULT)/(wacc-DDM_GROWTH_DEFAULT)
+        
+    
+    # Ödenmiş Sermaye Yaklaşımı
+    nominal_value = 1 if ticker.upper().endswith(".IS") else 1  # ABD için de 1$
+    paid_up_capital = shares * nominal_value if shares else None
 
-    vals = [v for v in [fv_dcf, fv_fk, fv_ev, fv_ddm] if v is not None and v > 0]
+    operating_income = _annual_value_for_year(income_stmt, ["Operating Income", "Total Operating Income"], 2024)
+    fv_efk = safe_div((operating_income * 10) if operating_income else None, paid_up_capital)
+
+    net_income = _annual_value_for_year(income_stmt, ["Net Income", "Net Income Applicable to Common Shares"], 2023)
+    fv_ndk = safe_div((net_income * 10) if net_income else None, paid_up_capital)
+    
+    #Graham
+    fv_graham = graham_valuation(eps, pe_sector, params["BOND_YIELD_2"])
+    
+    # Ortalama Adil Fiyat
+    vals = [v for v in [fv_dcf, fv_fk, fv_ev, fv_ddm, fv_efk, fv_ndk, fv_graham] if v is not None and v > 0]
     fv_avg = sum(vals)/len(vals) if vals else None
 
     out = {
@@ -372,6 +444,9 @@ def value_ticker(ticker):
         "F/K Değerlemesi": format_number_tr(fv_fk),
         "EV/EBITDA Değerlemesi": format_number_tr(fv_ev),
         "DDM Değerlemesi": format_number_tr(fv_ddm),
+        "EFK Değerlemesi": format_number_tr(fv_efk),
+        "NDK Değerlemesi": format_number_tr(fv_ndk),
+        "Graham Değerlemesi": format_number_tr(fv_graham),
         "Ortalama Adil Fiyat": format_number_tr(fv_avg),
     }
 

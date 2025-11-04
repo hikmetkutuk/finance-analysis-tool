@@ -3,31 +3,49 @@ import pandas as pd
 # Türkiye ve ABD sektör-hisse eşlemesi
 sector_tickers_tr = {
     "Banka": [
-        "AKBNK.IS", "ISCTR.IS", "YKBNK.IS", "VAKBN.IS", "HALKB.IS", "TSKB.IS", "GARAN.IS"
+        "AKBNK.IS", "ISCTR.IS", "YKBNK.IS", "VAKBN.IS", "HALKB.IS", "TSKB.IS", "GARAN.IS", "ALBRK.IS"
     ],
     "Enerji": [
-        "AKSEN.IS", "ENJSA.IS", "PETKM.IS", "TUPRS.IS", "ASTOR.IS"
+        "AKSEN.IS", "ENJSA.IS", "ASTOR.IS", "ZOREN.IS", "GWIND.IS", "CWENE.IS", "SMRTG.IS", "TATEN.IS"
+    ],
+    "Petrol": [
+        "PETKM.IS", "TUPRS.IS", "IPEKE.IS"
     ],
     "Sanayi & Üretim": [
-        "ARCLK.IS", "ASELS.IS", "BRSAN.IS", "CIMSA.IS", "EGEEN.IS", "KOZAA.IS", "KOZAL.IS", "ENKAI.IS", "TKFEN.IS", "AKSA.IS", "OTKAR.IS", "GUBRF.IS", "HEKTS.IS", "SASA.IS"
+        "BRSAN.IS", "EGEEN.IS", "KOZAA.IS", "KOZAL.IS", "ENKAI.IS", "AKSA.IS", "GUBRF.IS", "HEKTS.IS", "SASA.IS", "CEMTS.IS", "KCAER.IS", "KRDMD.IS", "ISDMR.IS", "EREGL.IS"
+    ],
+    "Dayanıklı Tüketim": [
+        "ARCLK.IS", "VESTL.IS", "VESBE.IS"
+    ],
+    "Savunma": [
+        "ASELS.IS", "ALTNY.IS", "FORTE.IS", "ONRYT.IS", "KAREL.IS"
+    ],
+    "Çimento": [
+        "CIMSA.IS", "GOLTS.IS", "BOBET.IS", "LMKDC.IS", "OYAKC.IS", "KONYA.IS", "BUCIM.IS", "AFYON.IS", "NUHCM.IS"
     ],
     "Otomotiv": [
-        "TOASO.IS", "FROTO.IS", "DOAS.IS"
+        "TOASO.IS", "FROTO.IS", "DOAS.IS", "OTKAR.IS", "TTRAK.IS"
     ],
-    "Perakende & Tüketim": [
-        "BIMAS.IS", "MGROS.IS"
+    "Perakende": [
+        "BIMAS.IS", "MGROS.IS", "TKNSA.IS", "SOKM.IS"
     ],
     "Havacılık": [
-        "PGSUS.IS", "THYAO.IS", "TAVHL.IS"
+        "PGSUS.IS", "THYAO.IS", "TAVHL.IS", "CLEBI.IS"
     ],
     "Sigorta": [
-        "ANSGR.IS"
+        "ANSGR.IS", "AGESA.IS", "TURSG.IS", "ANHYT.IS"
     ],
-    "Gıda & İçecek": [
-        "CCOLA.IS", "AEFES.IS"
+    "Gıda": [
+        "ULUUN.IS", "ULKER.IS", "KRVGD.IS", "YYLGD.IS", "GOKNR.IS", "OBAMS.IS"
+    ],
+    "İçecek": [
+        "CCOLA.IS", "AEFES.IS", "TBORG.IS", "ELITE.IS"
+    ],
+    "İlaç & Sağlık": [
+        "ECILC.IS", "LKMNH.IS", "MPARK.IS", "SELEC.IS"
     ],
     "Holding & Karma": [
-        "KCHOL.IS", "SAHOL.IS", "AGHOL.IS", "ALARK.IS", "DOHOL.IS", "BINHO.IS", "ECILC.IS",
+        "KCHOL.IS", "SAHOL.IS", "AGHOL.IS", "ALARK.IS", "DOHOL.IS", "BINHO.IS", "TKFEN.IS", "BERA.IS"
     ],
     "Telekomünikasyon": [
         "TCELL.IS", "TTKOM.IS"
