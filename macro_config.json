@@ -1,0 +1,33 @@
+{
+  "as_of": "2026-04-07",
+  "tr": {
+    "bond_yield_2": 0.36,
+    "cost_of_debt": 0.4,
+    "ddm_growth": 0.025,
+    "defaults": {
+      "ev_ebitda": 7.0,
+      "pb": 1.2,
+      "pe": 10.0
+    },
+    "market_premium": 0.08,
+    "risk_free_rate": 0.36,
+    "source": "manual_fallback",
+    "tax_rate": 0.25,
+    "terminal_growth": 0.03
+  },
+  "us": {
+    "bond_yield_2": 0.041,
+    "cost_of_debt": 0.055,
+    "ddm_growth": 0.025,
+    "defaults": {
+      "ev_ebitda": 11.0,
+      "pb": 3.0,
+      "pe": 22.0
+    },
+    "market_premium": 0.05,
+    "risk_free_rate": 0.042,
+    "source": "yfinance",
+    "tax_rate": 0.21,
+    "terminal_growth": 0.03
+  }
+}

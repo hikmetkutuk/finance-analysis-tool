@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 from dataclasses import dataclass
 from importlib import import_module
@@ -19,6 +20,7 @@ except ModuleNotFoundError:
 FETCH_ERRORS = (NetworkRequestError, RuntimeError, ValueError, TypeError, KeyError, AttributeError, OSError)
 INFO_CACHE: dict[str, dict] = {}
 SECTOR_FINANCIAL_SERVICES = "Finansal Hizmetler"
+SECTOR_ASSIGNMENTS_FILE = Path("sector_assignments.json")
 
 
 @dataclass(frozen=True)
@@ -67,7 +69,7 @@ BASE_SECTOR_TICKERS_TR = {
         "TOASO.IS", "FROTO.IS", "DOAS.IS", "OTKAR.IS", "TTRAK.IS"
     ],
     "Perakende": [
-        "BIMAS.IS", "MGROS.IS", "SOKM.IS"
+        "BIMAS.IS", "MGROS.IS", "SOKM.IS", "TKNSA.IS"
     ],
     "Havacılık": [
         "PGSUS.IS", "THYAO.IS", "TAVHL.IS", "CLEBI.IS"
@@ -97,10 +99,10 @@ BASE_SECTOR_TICKERS_TR = {
 
 BASE_SECTOR_TICKERS_US = {
     "Teknoloji": [
-        "AAPL", "GOOG", "GOOGL", "MSFT", "META", "PLTR", "ORCL", "ADBE", "CRM", "AMZN", "CSCO", "DELL", "APP"
+        "AAPL", "GOOG", "GOOGL", "MSFT", "META", "PLTR", "ORCL", "ADBE", "CRM", "AMZN", "CSCO", "DELL", "APP", "NET"
     ],
     "Yarı İletken": [
-        "QCOM", "AMD", "NVDA", "INTC", "AVGO", "SNDK"
+        "QCOM", "AMD", "NVDA", "INTC", "INTL", "AVGO", "SNDK"
     ],
     "E-Ticaret": [
         "BABA"
@@ -109,7 +111,7 @@ BASE_SECTOR_TICKERS_US = {
         "DIS", "NFLX"
     ],
     "Sağlık & İlaç": [
-        "LLY", "JNJ", "MRK", "UNH", "PFE", "TMO"
+        "LLY", "JNJ", "MRK", "UNH", "PFE", "TMO", "NVO"
     ],
     "Finans": [
         "JPM", "WFC", "MA", "V", "BRK.B"
@@ -210,6 +212,32 @@ def robust_median(values: Iterable[float]) -> Optional[float]:
     return round(float(series.median()), 2)
 
 
+def load_sector_assignments(path: Path = SECTOR_ASSIGNMENTS_FILE) -> dict[str, dict[str, str]]:
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    normalized: dict[str, dict[str, str]] = {}
+    for market, mapping in raw.items():
+        if not isinstance(market, str) or not isinstance(mapping, dict):
+            continue
+        market_map: dict[str, str] = {}
+        for ticker, sector_name in mapping.items():
+            if isinstance(ticker, str) and isinstance(sector_name, str) and ticker and sector_name:
+                market_map[ticker.upper()] = sector_name
+        if market_map:
+            normalized[market] = market_map
+    return normalized
+
+
+def save_sector_assignments(assignments: dict[str, dict[str, str]], path: Path = SECTOR_ASSIGNMENTS_FILE) -> None:
+    path.write_text(json.dumps(assignments, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+
+
 def load_universe(path: str, market: str) -> set[str]:
     file_path = Path(path)
     if not file_path.exists():
@@ -288,11 +316,52 @@ def append_remaining_bucket(profile: MarketProfile, universe: set[str], prepared
         prepared[profile.other_label] = remaining
 
 
+def apply_cached_assignments(
+    profile: MarketProfile,
+    universe: set[str],
+    prepared: dict[str, list[str]],
+    used: set[str],
+    assignments: dict[str, dict[str, str]],
+) -> None:
+    market_assignments = assignments.get(profile.market, {})
+    if not market_assignments:
+        return
+    valid_sectors = set(profile.base_sector_map) | {profile.other_label}
+    for ticker in sorted(universe - used):
+        sector_name = market_assignments.get(ticker)
+        if not sector_name or sector_name not in valid_sectors or sector_name == profile.other_label:
+            continue
+        prepared.setdefault(sector_name, []).append(ticker)
+        used.add(ticker)
+
+
+def update_assignments_from_prepared(
+    profile: MarketProfile,
+    prepared: dict[str, list[str]],
+    assignments: dict[str, dict[str, str]],
+) -> bool:
+    market_assignments = assignments.setdefault(profile.market, {})
+    changed = False
+    for sector_name, tickers in prepared.items():
+        if sector_name == profile.other_label:
+            continue
+        for ticker in tickers:
+            previous = market_assignments.get(ticker)
+            if previous != sector_name:
+                market_assignments[ticker] = sector_name
+                changed = True
+    return changed
+
+
 def prepare_sector_map(profile: MarketProfile, auto_classify: bool = False) -> dict[str, list[str]]:
+    assignments = load_sector_assignments()
     universe = resolve_universe(profile)
     prepared, used = seed_prepared_map(profile, universe)
+    apply_cached_assignments(profile, universe, prepared, used, assignments)
     if auto_classify:
         auto_classify_missing_tickers(profile, universe, prepared, used)
+        if update_assignments_from_prepared(profile, prepared, assignments):
+            save_sector_assignments(assignments)
     append_remaining_bucket(profile, universe, prepared, used)
     return prepared
 
