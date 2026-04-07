@@ -1,347 +1,314 @@
 # -*- coding: utf-8 -*-
 
-import yfinance as yf
-import pandas as pd
-from typing import Iterable, Optional, Dict, Any
 import time
 
+import pandas as pd
+import yfinance as yf
 
-# ------------------------------
-# SABITLER
-# ------------------------------
+from sector_override_builder import load_sector_overrides
+
 
 # Türkiye (BIST)
-RISK_FREE_RATE_TR = 0.25
-MARKET_PREMIUM_TR = 0.07
-COST_OF_DEBT_TR = 0.3
+RISK_FREE_RATE_TR = 0.36
+MARKET_PREMIUM_TR = 0.08
+COST_OF_DEBT_TR = 0.40
 TAX_RATE_TR = 0.25
 
 # ABD
-RISK_FREE_RATE_US = 0.045
-MARKET_PREMIUM_US = 0.055
-COST_OF_DEBT_US = 0.06
+RISK_FREE_RATE_US = 0.042
+MARKET_PREMIUM_US = 0.050
+COST_OF_DEBT_US = 0.055
 TAX_RATE_US = 0.21
 
-TERMINAL_GROWTH = 0.025
+TERMINAL_GROWTH = 0.030
 YEARS_PROJECTION = 5
 
-SECTOR_PE_TR = 8.0
-SECTOR_PE_US = 25.0
+SECTOR_PE_TR = 10.0
+SECTOR_PE_US = 22.0
 
-SECTOR_EV_EBITDA_TR = 6.0
-SECTOR_EV_EBITDA_US = 10.0
+SECTOR_EV_EBITDA_TR = 7.0
+SECTOR_EV_EBITDA_US = 11.0
 DDM_GROWTH_DEFAULT = 0.025
 
-BOND_YIELD_2_TR = 0.398
-BOND_YIELD_2_US = 0.0359
+BOND_YIELD_2_TR = 0.36
+BOND_YIELD_2_US = 0.041
 
-MAX_GROWTH_CAP = 0.50     # 50% ↑
-MIN_GROWTH_CAP = -0.50    # -50%
+MAX_GROWTH_CAP = 0.50
+MIN_GROWTH_CAP = -0.50
 
-SECTOR_OVERRIDES = {
-    "AKBNK.IS": {'pe': 5.5},
-    "ISCTR.IS": {'pe': 5.5},
-    "YKBNK.IS": {'pe': 5.5},
-    "VAKBN.IS": {'pe': 5.5},
-    "HALKB.IS": {'pe': 5.5},
-    "TSKB.IS": {'pe': 5.5},
-    "GARAN.IS": {'pe': 5.5},
-    "ALBRK.IS": {'pe': 5.5},
-    "AKSEN.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
-    "ENJSA.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
-    "ASTOR.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
-    "ZOREN.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
-    "GWIND.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
-    "CWENE.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
-    "SMRTG.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
-    "TATEN.IS": {'pe': 41.02, 'ev_ebitda': 12.87},
-    "PETKM.IS": {'pe': 19.03, 'ev_ebitda': 6.67},
-    "TUPRS.IS": {'pe': 19.03, 'ev_ebitda': 6.67},
-    "IPEKE.IS": {'pe': 19.03, 'ev_ebitda': 6.67},
-    "BRSAN.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "EGEEN.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "KOZAA.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "KOZAL.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "ENKAI.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "AKSA.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "GUBRF.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "HEKTS.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "SASA.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "CEMTS.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "KCAER.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "KRDMD.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "ISDMR.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "EREGL.IS": {'pe': 49.82, 'ev_ebitda': 67.3},
-    "ARCLK.IS": {'ev_ebitda': 15.87},
-    "VESTL.IS": {'ev_ebitda': 15.87},
-    "VESBE.IS": {'ev_ebitda': 15.87},
-    "ASELS.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
-    "ALTNY.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
-    "FORTE.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
-    "ONRYT.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
-    "KAREL.IS": {'pe': 47.74, 'ev_ebitda': 16.42},
-    "CIMSA.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
-    "GOLTS.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
-    "BOBET.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
-    "LMKDC.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
-    "OYAKC.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
-    "KONYA.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
-    "BUCIM.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
-    "AFYON.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
-    "NUHCM.IS": {'pe': 41.47, 'ev_ebitda': 27.21},
-    "TOASO.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
-    "FROTO.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
-    "DOAS.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
-    "OTKAR.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
-    "TTRAK.IS": {'pe': 33.17, 'ev_ebitda': 0.76},
-    "BIMAS.IS": {'pe': 20.74, 'ev_ebitda': 7.1},
-    "MGROS.IS": {'pe': 20.74, 'ev_ebitda': 7.1},
-    "TKNSA.IS": {'pe': 20.74, 'ev_ebitda': 7.1},
-    "SOKM.IS": {'pe': 20.74, 'ev_ebitda': 7.1},
-    "PGSUS.IS": {'pe': 11.9, 'ev_ebitda': 41.54},
-    "THYAO.IS": {'pe': 11.9, 'ev_ebitda': 41.54},
-    "TAVHL.IS": {'pe': 11.9, 'ev_ebitda': 41.54},
-    "CLEBI.IS": {'pe': 11.9, 'ev_ebitda': 41.54},
-    "ANSGR.IS": {'pe': 18.12, 'ev_ebitda': 1.72},
-    "AGESA.IS": {'pe': 18.12, 'ev_ebitda': 1.72},
-    "TURSG.IS": {'pe': 18.12, 'ev_ebitda': 1.72},
-    "ANHYT.IS": {'pe': 18.12, 'ev_ebitda': 1.72},
-    "ULUUN.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
-    "ULKER.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
-    "KRVGD.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
-    "YYLGD.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
-    "GOKNR.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
-    "OBAMS.IS": {'pe': 10.7, 'ev_ebitda': 8.33},
-    "CCOLA.IS": {'pe': 12.46, 'ev_ebitda': 8.31},
-    "AEFES.IS": {'pe': 12.46, 'ev_ebitda': 8.31},
-    "TBORG.IS": {'pe': 12.46, 'ev_ebitda': 8.31},
-    "ELITE.IS": {'pe': 12.46, 'ev_ebitda': 8.31},
-    "ECILC.IS": {'pe': 20.92, 'ev_ebitda': -13.81},
-    "LKMNH.IS": {'pe': 20.92, 'ev_ebitda': -13.81},
-    "MPARK.IS": {'pe': 20.92, 'ev_ebitda': -13.81},
-    "SELEC.IS": {'pe': 20.92, 'ev_ebitda': -13.81},
-    "KCHOL.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
-    "SAHOL.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
-    "AGHOL.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
-    "ALARK.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
-    "DOHOL.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
-    "BINHO.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
-    "TKFEN.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
-    "BERA.IS": {'pe': 364.17, 'ev_ebitda': 3.85},
-    "TCELL.IS": {'pe': 14.92, 'ev_ebitda': 4.51},
-    "TTKOM.IS": {'pe': 14.92, 'ev_ebitda': 4.51},
-    "AAPL": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "GOOG": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "GOOGL": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "MSFT": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "META": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "NET": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "PLTR": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "ORCL": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "ADBE": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "CRM": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "AMZN": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "CSCO": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "DELL": {'pe': 89.89, 'ev_ebitda': -55.65},
-    "QCOM": {'pe': 60.23, 'ev_ebitda': 32.52},
-    "AMD": {'pe': 60.23, 'ev_ebitda': 32.52},
-    "NVDA": {'pe': 60.23, 'ev_ebitda': 32.52},
-    "INTL": {'pe': 60.23, 'ev_ebitda': 32.52},
-    "BABA": {'pe': 19.34, 'ev_ebitda': 15.97},
-    "AVGO": {'pe': 60.23, 'ev_ebitda': 32.52},
-    "DIS": {'pe': 31.72, 'ev_ebitda': 24.51},
-    "NFLX": {'pe': 31.72, 'ev_ebitda': 24.51},
-    "LLY": {'pe': 21.23, 'ev_ebitda': 13.7},
-    "JNJ": {'pe': 21.23, 'ev_ebitda': 13.7},
-    "MRK": {'pe': 21.23, 'ev_ebitda': 13.7},
-    "UNH": {'pe': 21.23, 'ev_ebitda': 13.7},
-    "PFE": {'pe': 21.23, 'ev_ebitda': 13.7},
-    "NVO": {'pe': 21.23, 'ev_ebitda': 13.7},
-    "TMO": {'pe': 21.23, 'ev_ebitda': 13.7},
-    "JPM": {'pe': 24.39, 'ev_ebitda': 24.21},
-    "WFC": {'pe': 24.39, 'ev_ebitda': 24.21},
-    "MA": {'pe': 24.39, 'ev_ebitda': 24.21},
-    "V": {'pe': 24.39, 'ev_ebitda': 24.21},
-    "XOM": {'pe': 16.53, 'ev_ebitda': 8.38},
-    "MCD": {'pe': 31.71, 'ev_ebitda': 22.77},
-    "WMT": {'pe': 31.71, 'ev_ebitda': 22.77},
-    "COST": {'pe': 31.71, 'ev_ebitda': 22.77},
-    "HD": {'pe': 31.71, 'ev_ebitda': 22.77},
-    "KO": {'pe': 31.71, 'ev_ebitda': 22.77},
-    "PEP": {'pe': 31.71, 'ev_ebitda': 22.77},
-    "BA": {'pe': 15.78, 'ev_ebitda': -10.9},
-    "L": {'pe': 15.78, 'ev_ebitda': -10.9},
-    "TSLA": {'pe': 323.01, 'ev_ebitda': 142.14},
-}
+SECTOR_OVERRIDES = load_sector_overrides()
 
-# ------------------------------
-# Helpers
-# ------------------------------
+NUMBER_FORMAT = "{:,.2f}"
+AVERAGE_FAIR_PRICE_LABEL = "Ortalama Adil Fiyat"
 
-def safe_div(a, b):
+OPERATING_INCOME = "Operating Income"
+TOTAL_OPERATING_INCOME = "Total Operating Income"
+OPERATING_INCOME_FIELDS = [OPERATING_INCOME, TOTAL_OPERATING_INCOME]
+TAX_FIELDS = ["Tax Provision", "Income Tax Expense"]
+DEPRECIATION_FIELDS = ["Depreciation And Amortization", "Depreciation"]
+CAPEX_FIELDS = ["Capital Expenditures"]
+RECEIVABLE_FIELDS = ["Accounts Receivable", "Total Receivables"]
+INVENTORY_FIELDS = ["Inventory", "Inventories"]
+LIABILITY_FIELDS = ["Total Liabilities", "Total Liabilities Net Minority Interest"]
+NET_INCOME_FIELDS = ["Net Income", "Net Income Applicable to Common Shares"]
+
+TICKER_PROCESSING_ERRORS = (
+    ValueError,
+    TypeError,
+    KeyError,
+    AttributeError,
+    OSError,
+    RuntimeError,
+    ZeroDivisionError,
+)
+
+
+def safe_div(numerator, denominator):
     try:
-        if a is None or b in (None, 0): return None
-        return float(a) / float(b)
-    except:
+        if numerator is None or denominator in (None, 0):
+            return None
+        return float(numerator) / float(denominator)
+    except (TypeError, ValueError, ZeroDivisionError):
         return None
 
 
-def format_number_tr(v):
-    if v is None: return ""
+def format_number_tr(value):
+    if value is None:
+        return ""
     try:
-        return "{:,.2f}".format(float(v)).replace(",", "X").replace(".", ",").replace("X", ".")
-    except:
+        return NUMBER_FORMAT.format(float(value)).replace(",", "X").replace(".", ",").replace("X", ".")
+    except (TypeError, ValueError):
         return ""
 
 
-def format_percent_tr(v):
-    if v is None: return ""
+def format_percent_tr(value):
+    if value is None:
+        return ""
     try:
-        return f"{v*100:,.2f}%".replace(",", "X").replace(".", ",").replace("X", ".")
-    except:
+        return f"{value * 100:,.2f}%".replace(",", "X").replace(".", ",").replace("X", ".")
+    except (TypeError, ValueError):
         return ""
 
 
-def get_currency_symbol(t):
-    return "₺" if t.upper().endswith(".IS") else "$"
+def get_currency_symbol(ticker_code):
+    return "₺" if ticker_code.upper().endswith(".IS") else "$"
 
 
-def clean_ticker(ticker: str) -> str:
-    return ticker.replace(".IS", "") if ticker.upper().endswith(".IS") else ticker
+def clean_ticker(ticker_code):
+    return ticker_code.replace(".IS", "") if ticker_code.upper().endswith(".IS") else ticker_code
 
-# ------------------------------
-# Growth Stabilizer ✅
-# ------------------------------
 
 def compute_avg_growth(series):
-    """FCF büyüme ortalamasını hesaplarken aşırı uçları kırpıyoruz."""
-    arr = [x for x in series if x is not None]
-    if len(arr) < 2:
+    values = [item for item in series if item is not None]
+    if len(values) < 2:
         return 0.05
 
     growths = []
-    for i in range(1, len(arr)):
-        if arr[i - 1] and arr[i - 1] != 0:
-            g = arr[i] / arr[i - 1] - 1
-
-            # Growth CAP ✅
-            g = max(min(g, MAX_GROWTH_CAP), MIN_GROWTH_CAP)
-            growths.append(g)
+    for index in range(1, len(values)):
+        previous = values[index - 1]
+        current = values[index]
+        if previous in (None, 0):
+            continue
+        growth = current / previous - 1
+        growth = max(min(growth, MAX_GROWTH_CAP), MIN_GROWTH_CAP)
+        growths.append(growth)
 
     return sum(growths) / len(growths) if growths else 0.05
 
 
-# ------------------------------
-# WACC
-# ------------------------------
-
-def get_country_params(ticker: str):
+def get_country_params(ticker):
     if ticker.upper().endswith(".IS"):
-        return dict(
-            RISK_FREE_RATE=RISK_FREE_RATE_TR,
-            MARKET_PREMIUM=MARKET_PREMIUM_TR,
-            COST_OF_DEBT=COST_OF_DEBT_TR,
-            TAX_RATE=TAX_RATE_TR,
-            PE=SECTOR_OVERRIDES.get(ticker, {}).get("pe", SECTOR_PE_TR),
-            EV_EBITDA=SECTOR_OVERRIDES.get(ticker, {}).get("ev_ebitda", SECTOR_EV_EBITDA_TR),
-            BOND_YIELD_2 = BOND_YIELD_2_TR
-        )
-    else:
-        return dict(
-            RISK_FREE_RATE=RISK_FREE_RATE_US,
-            MARKET_PREMIUM=MARKET_PREMIUM_US,
-            COST_OF_DEBT=COST_OF_DEBT_US,
-            TAX_RATE=TAX_RATE_US,
-            PE=SECTOR_OVERRIDES.get(ticker, {}).get("pe", SECTOR_PE_US),
-            EV_EBITDA=SECTOR_OVERRIDES.get(ticker, {}).get("ev_ebitda", SECTOR_EV_EBITDA_US),
-            BOND_YIELD_2 = BOND_YIELD_2_US
-        )
+        return {
+            "risk_free_rate": RISK_FREE_RATE_TR,
+            "market_premium": MARKET_PREMIUM_TR,
+            "cost_of_debt": COST_OF_DEBT_TR,
+            "tax_rate": TAX_RATE_TR,
+            "pe": SECTOR_OVERRIDES.get(ticker, {}).get("pe", SECTOR_PE_TR),
+            "ev_ebitda": SECTOR_OVERRIDES.get(ticker, {}).get("ev_ebitda", SECTOR_EV_EBITDA_TR),
+            "bond_yield_2": BOND_YIELD_2_TR,
+        }
+    return {
+        "risk_free_rate": RISK_FREE_RATE_US,
+        "market_premium": MARKET_PREMIUM_US,
+        "cost_of_debt": COST_OF_DEBT_US,
+        "tax_rate": TAX_RATE_US,
+        "pe": SECTOR_OVERRIDES.get(ticker, {}).get("pe", SECTOR_PE_US),
+        "ev_ebitda": SECTOR_OVERRIDES.get(ticker, {}).get("ev_ebitda", SECTOR_EV_EBITDA_US),
+        "bond_yield_2": BOND_YIELD_2_US,
+    }
 
 
 def calculate_wacc(info, ticker):
-    p = get_country_params(ticker)
+    params = get_country_params(ticker)
     beta = info.get("beta", 1.0) or 1.0
     equity = info.get("marketCap", 0.0) or 0.0
-    debt   = info.get("totalDebt", 0.0) or 0.0
-    total  = equity + debt if (equity + debt) > 0 else 1
+    debt = info.get("totalDebt", 0.0) or 0.0
+    total_capital = equity + debt if (equity + debt) > 0 else 1
 
-    cost_of_equity = p["RISK_FREE_RATE"] + beta * p["MARKET_PREMIUM"]
-    cost_of_debt   = info.get("interestRate", p["COST_OF_DEBT"]) or p["COST_OF_DEBT"]
-    tax_rate       = p["TAX_RATE"]
-
-    return (equity/total)*cost_of_equity + (debt/total)*cost_of_debt*(1 - tax_rate)
-
-
-# ------------------------------
-# Annual DS helper
-# ------------------------------
-
-def _is_df(df):
-    return isinstance(df, pd.DataFrame) and not df.empty
+    cost_of_equity = params["risk_free_rate"] + beta * params["market_premium"]
+    cost_of_debt = info.get("interestRate", params["cost_of_debt"]) or params["cost_of_debt"]
+    tax_rate = params["tax_rate"]
+    return (equity / total_capital) * cost_of_equity + (debt / total_capital) * cost_of_debt * (1 - tax_rate)
 
 
-def _annual_value_for_year(df, row_names, target_year):
-    if not _is_df(df):
+def _is_dataframe(frame):
+    return isinstance(frame, pd.DataFrame) and not frame.empty
+
+
+def _annual_value_for_year(frame, row_names, target_year):
+    if not _is_dataframe(frame):
         return None
-    row = next((r for r in row_names if r in df.index), None)
-    if row is None: 
+    row_name = next((candidate for candidate in row_names if candidate in frame.index), None)
+    if row_name is None:
         return None
-    for col in df.columns:
-        if getattr(col, "year", None) == target_year:
-            v=df.loc[row, col]
-            return float(v) if pd.notna(v) else None
+    for column in frame.columns:
+        if getattr(column, "year", None) == target_year:
+            value = frame.loc[row_name, column]
+            return float(value) if pd.notna(value) else None
     return None
 
 
-# ------------------------------
-# EBITDA
-# ------------------------------
-
 def get_ebitda_safely(info, income_stmt, cash_flow, year_hint=2024):
+    ebitda = info.get("ebitda")
+    if isinstance(ebitda, (int, float)) and ebitda != 0:
+        return float(ebitda)
 
-    e = info.get("ebitda")
-    if isinstance(e, (int,float)) and e != 0:
-        return float(e)
-
-    op = _annual_value_for_year(income_stmt, ["Operating Income","Total Operating Income"], year_hint) or 0
-    da = _annual_value_for_year(cash_flow, ["Depreciation And Amortization","Depreciation"], year_hint) or 0
-    e2 = op + da
-
-    # scale safety
-    if e2 > 1e12:
-        e2 /= 1_000_000
-
-    return float(e2)
+    operating_income = _annual_value_for_year(income_stmt, OPERATING_INCOME_FIELDS, year_hint) or 0
+    depreciation = _annual_value_for_year(cash_flow, DEPRECIATION_FIELDS, year_hint) or 0
+    derived_ebitda = operating_income + depreciation
+    if derived_ebitda > 1e12:
+        derived_ebitda /= 1_000_000
+    return float(derived_ebitda)
 
 
-# ------------------------------
-# FCF
-# ------------------------------
-
-def calculate_fcf(op, tax, depr, capex, rec, inv, liab,
-                  prec, pinv, pliab, *, tax_rate_fallback):
-    if not op:
+def calculate_fcf(
+    operating_income,
+    tax,
+    depreciation,
+    capex,
+    receivable,
+    inventory,
+    liability,
+    prev_receivable,
+    prev_inventory,
+    prev_liability,
+    tax_rate_fallback,
+):
+    if not operating_income:
         return None
-    eff = abs(tax/op) if tax and op!=0 else tax_rate_fallback
-    nopat = op*(1-eff)
-    dWC   = ((rec or 0)+(inv or 0)-(liab or 0)) - ((prec or 0)+(pinv or 0)-(pliab or 0))
-    return nopat + (depr or 0) - (capex or 0) - dWC
+    effective_tax = abs(tax / operating_income) if tax and operating_income != 0 else tax_rate_fallback
+    nopat = operating_income * (1 - effective_tax)
+    delta_working_capital = (
+        (receivable or 0) + (inventory or 0) - (liability or 0)
+    ) - (
+        (prev_receivable or 0) + (prev_inventory or 0) - (prev_liability or 0)
+    )
+    return nopat + (depreciation or 0) - (capex or 0) - delta_working_capital
 
-# ------------------------------
-# Graham
-# ------------------------------
+
+def build_fcf_by_year(income_stmt, balance_sheet, cash_flow, tax_rate):
+    fcf_by_year = {}
+    for year in range(2021, 2026):
+        fcf_by_year[year] = calculate_fcf(
+            _annual_value_for_year(income_stmt, OPERATING_INCOME_FIELDS, year),
+            _annual_value_for_year(income_stmt, TAX_FIELDS, year),
+            _annual_value_for_year(cash_flow, DEPRECIATION_FIELDS, year),
+            _annual_value_for_year(cash_flow, CAPEX_FIELDS, year),
+            _annual_value_for_year(balance_sheet, RECEIVABLE_FIELDS, year),
+            _annual_value_for_year(balance_sheet, INVENTORY_FIELDS, year),
+            _annual_value_for_year(balance_sheet, LIABILITY_FIELDS, year),
+            _annual_value_for_year(balance_sheet, RECEIVABLE_FIELDS, year - 1),
+            _annual_value_for_year(balance_sheet, INVENTORY_FIELDS, year - 1),
+            _annual_value_for_year(balance_sheet, LIABILITY_FIELDS, year - 1),
+            tax_rate_fallback=tax_rate,
+        )
+    return fcf_by_year
+
+
+def clamp_growth(avg_growth, wacc):
+    if avg_growth < wacc:
+        return avg_growth
+    clamped_growth = wacc - 0.01
+    return max(min(clamped_growth, MAX_GROWTH_CAP), MIN_GROWTH_CAP)
+
+
+def calculate_dcf_fair_value(fcf_by_year, avg_growth, wacc, debt, cash, shares):
+    past_fcfs = [value for value in fcf_by_year.values() if value is not None]
+    if not past_fcfs:
+        return None
+    last_fcf = past_fcfs[-1]
+
+    projected_fcfs = [last_fcf * ((1 + avg_growth) ** year) for year in range(1, YEARS_PROJECTION + 1)]
+    discounted_fcfs = [fcf / ((1 + wacc) ** (year + 1)) for year, fcf in enumerate(projected_fcfs)]
+
+    present_terminal_value = 0
+    if projected_fcfs and wacc > TERMINAL_GROWTH:
+        present_terminal_value = (
+            projected_fcfs[-1] * (1 + TERMINAL_GROWTH) / (wacc - TERMINAL_GROWTH)
+        ) / ((1 + wacc) ** YEARS_PROJECTION)
+
+    enterprise_value = sum(discounted_fcfs) + present_terminal_value
+    return safe_div(enterprise_value - debt + cash, shares)
+
+
+def calculate_fk_fair_value(eps, sector_pe):
+    if eps is None or eps <= 0 or sector_pe is None or sector_pe <= 0:
+        return None
+    return eps * sector_pe
+
+
+def calculate_ev_ebitda_fair_value(ebitda, ev_multiple, debt, cash, shares):
+    if ebitda is None or ebitda <= 0 or ev_multiple is None or ev_multiple <= 0:
+        return None
+    enterprise_value = ebitda * ev_multiple
+    return safe_div(enterprise_value - debt + cash, shares)
+
+
+def calculate_ddm_fair_value(dividend, wacc):
+    if dividend <= 0 or wacc <= DDM_GROWTH_DEFAULT:
+        return None
+    return dividend * (1 + DDM_GROWTH_DEFAULT) / (wacc - DDM_GROWTH_DEFAULT)
+
+
+def calculate_paid_capital_valuations(income_stmt, shares):
+    paid_up_capital = shares if shares else None
+    operating_income = _annual_value_for_year(income_stmt, OPERATING_INCOME_FIELDS, 2024)
+    net_income = _annual_value_for_year(income_stmt, NET_INCOME_FIELDS, 2023)
+    fair_value_efk = safe_div((operating_income * 10) if operating_income else None, paid_up_capital)
+    fair_value_ndk = safe_div((net_income * 10) if net_income else None, paid_up_capital)
+    return fair_value_efk, fair_value_ndk
+
+
 def graham_valuation(eps, sector_pe, bond_yield):
     if not eps or not sector_pe or not bond_yield:
         return None
     return (eps * sector_pe) / (bond_yield * 100)
 
 
-# ------------------------------
-# MAIN
-# ------------------------------
+def build_output(ticker, wacc, avg_growth, valuations, fcf_by_year):
+    fair_values = [value for value in valuations.values() if value is not None and value > 0]
+    average_fair_value = sum(fair_values) / len(fair_values) if fair_values else None
+
+    output = {
+        "Kod": clean_ticker(ticker),
+        "Para Birimi": get_currency_symbol(ticker),
+        "WACC": format_percent_tr(wacc),
+        "Ortalama Büyüme": format_percent_tr(avg_growth),
+        "DCF Değerlemesi": format_number_tr(valuations["fv_dcf"]),
+        "F/K Değerlemesi": format_number_tr(valuations["fv_fk"]),
+        "EV/EBITDA Değerlemesi": format_number_tr(valuations["fv_ev"]),
+        "DDM Değerlemesi": format_number_tr(valuations["fv_ddm"]),
+        "EFK Değerlemesi": format_number_tr(valuations["fv_efk"]),
+        "NDK Değerlemesi": format_number_tr(valuations["fv_ndk"]),
+        "Graham Değerlemesi": format_number_tr(valuations["fv_graham"]),
+        AVERAGE_FAIR_PRICE_LABEL: format_number_tr(average_fair_value),
+    }
+    for year in sorted(fcf_by_year.keys()):
+        output[f"FCF {year}"] = format_number_tr(fcf_by_year[year])
+    return output
+
 
 def value_ticker(ticker):
-
     stock = yf.Ticker(ticker)
     info = stock.info or {}
     income_stmt = stock.financials
@@ -349,144 +316,70 @@ def value_ticker(ticker):
     cash_flow = stock.cashflow
 
     params = get_country_params(ticker)
-    wacc   = calculate_wacc(info, ticker)
+    wacc = calculate_wacc(info, ticker)
+    fcf_by_year = build_fcf_by_year(income_stmt, balance_sheet, cash_flow, params["tax_rate"])
+    avg_growth = clamp_growth(compute_avg_growth(list(fcf_by_year.values())), wacc)
 
-    fcf_by_year = {}
-    for year in range(2021, 2026):
-        fcf_by_year[year] = calculate_fcf(
-            _annual_value_for_year(income_stmt, ["Operating Income","Total Operating Income"], year),
-            _annual_value_for_year(income_stmt, ["Tax Provision","Income Tax Expense"], year),
-            _annual_value_for_year(cash_flow, ["Depreciation And Amortization","Depreciation"], year),
-            _annual_value_for_year(cash_flow, ["Capital Expenditures"], year),
-            _annual_value_for_year(balance_sheet, ["Accounts Receivable","Total Receivables"], year),
-            _annual_value_for_year(balance_sheet, ["Inventory","Inventories"], year),
-            _annual_value_for_year(balance_sheet, ["Total Liabilities","Total Liabilities Net Minority Interest"], year),
-            _annual_value_for_year(balance_sheet, ["Accounts Receivable","Total Receivables"], year-1),
-            _annual_value_for_year(balance_sheet, ["Inventory","Inventories"], year-1),
-            _annual_value_for_year(balance_sheet, ["Total Liabilities","Total Liabilities Net Minority Interest"], year-1),
-            tax_rate_fallback = params["TAX_RATE"]
-        )
-
-    avg_growth = compute_avg_growth(list(fcf_by_year.values()))
-
-    # growth must not exceed WACC
-    if avg_growth >= wacc:
-        avg_growth = wacc - 0.01
-        avg_growth = max(min(avg_growth,MAX_GROWTH_CAP),MIN_GROWTH_CAP)
-
-
-    # last valid fcf
-    past_fcfs = [v for v in fcf_by_year.values() if v is not None]
-    last_fcf  = past_fcfs[-1] if past_fcfs else None
-
-    projected_fcfs = [last_fcf*((1+avg_growth)**i) for i in range(1,YEARS_PROJECTION+1)] if last_fcf else []
-    pv_fcfs        = [fcf/((1+wacc)**(i+1)) for i,fcf in enumerate(projected_fcfs)] if projected_fcfs else []
-
-    terminal_value = None
-    pv_term        = None
-    if projected_fcfs and wacc > TERMINAL_GROWTH:
-        terminal_value = projected_fcfs[-1]*(1+TERMINAL_GROWTH)/(wacc-TERMINAL_GROWTH)
-        pv_term        = terminal_value/((1+wacc)**YEARS_PROJECTION)
-
-    enterprise_value = sum(pv_fcfs)+(pv_term or 0) if pv_fcfs else None
     shares = info.get("sharesOutstanding") or info.get("floatShares") or 1
-    debt   = info.get("totalDebt",0) or 0
-    cash   = info.get("totalCash",0) or 0
-
-    fv_dcf = safe_div((enterprise_value - debt + cash) if enterprise_value is not None else None, shares)
-
-    pe_sector = params["PE"]
+    debt = info.get("totalDebt", 0) or 0
+    cash = info.get("totalCash", 0) or 0
 
     eps = info.get("trailingEps")
-    fv_fk = None
-    if eps is not None and eps > 0 and pe_sector is not None and pe_sector > 0:
-        fv_fk = eps * pe_sector
-
-    ev_mult = params["EV_EBITDA"]
     ebitda = get_ebitda_safely(info, income_stmt, cash_flow)
+    dividend = info.get("dividendRate", 0) or 0
+    fair_value_efk, fair_value_ndk = calculate_paid_capital_valuations(income_stmt, shares)
 
-    fv_ev = None
-    if ebitda is not None and ebitda > 0 and ev_mult is not None and ev_mult > 0:
-        ent_ev = ebitda * ev_mult
-        fv_ev = safe_div(ent_ev - debt + cash, shares)
-    else:
-        fv_ev = None
-
-    dividend = info.get("dividendRate",0) or 0
-    fv_ddm   = None
-    if dividend>0 and wacc>DDM_GROWTH_DEFAULT:
-        fv_ddm = dividend*(1+DDM_GROWTH_DEFAULT)/(wacc-DDM_GROWTH_DEFAULT)
-        
-    
-    # Ödenmiş Sermaye Yaklaşımı
-    nominal_value = 1 if ticker.upper().endswith(".IS") else 1  # ABD için de 1$
-    paid_up_capital = shares * nominal_value if shares else None
-
-    operating_income = _annual_value_for_year(income_stmt, ["Operating Income", "Total Operating Income"], 2024)
-    fv_efk = safe_div((operating_income * 10) if operating_income else None, paid_up_capital)
-
-    net_income = _annual_value_for_year(income_stmt, ["Net Income", "Net Income Applicable to Common Shares"], 2023)
-    fv_ndk = safe_div((net_income * 10) if net_income else None, paid_up_capital)
-    
-    #Graham
-    fv_graham = graham_valuation(eps, pe_sector, params["BOND_YIELD_2"])
-    
-    # Ortalama Adil Fiyat
-    vals = [v for v in [fv_dcf, fv_fk, fv_ev, fv_ddm, fv_efk, fv_ndk, fv_graham] if v is not None and v > 0]
-    fv_avg = sum(vals)/len(vals) if vals else None
-
-    out = {
-        "Kod": clean_ticker(ticker),
-        "Para Birimi": get_currency_symbol(ticker),
-        "WACC": format_percent_tr(wacc),
-        "Ortalama Büyüme": format_percent_tr(avg_growth),
-        "DCF Değerlemesi": format_number_tr(fv_dcf),
-        "F/K Değerlemesi": format_number_tr(fv_fk),
-        "EV/EBITDA Değerlemesi": format_number_tr(fv_ev),
-        "DDM Değerlemesi": format_number_tr(fv_ddm),
-        "EFK Değerlemesi": format_number_tr(fv_efk),
-        "NDK Değerlemesi": format_number_tr(fv_ndk),
-        "Graham Değerlemesi": format_number_tr(fv_graham),
-        "Ortalama Adil Fiyat": format_number_tr(fv_avg),
+    valuations = {
+        "fv_dcf": calculate_dcf_fair_value(fcf_by_year, avg_growth, wacc, debt, cash, shares),
+        "fv_fk": calculate_fk_fair_value(eps, params["pe"]),
+        "fv_ev": calculate_ev_ebitda_fair_value(ebitda, params["ev_ebitda"], debt, cash, shares),
+        "fv_ddm": calculate_ddm_fair_value(dividend, wacc),
+        "fv_efk": fair_value_efk,
+        "fv_ndk": fair_value_ndk,
+        "fv_graham": graham_valuation(eps, params["pe"], params["bond_yield_2"]),
     }
-
-    for y in sorted(fcf_by_year.keys()):
-        out[f"FCF {y}"] = format_number_tr(fcf_by_year[y])
-
-    return out
+    return build_output(ticker, wacc, avg_growth, valuations, fcf_by_year)
 
 
-# ------------------------------
-# RUN
-# ------------------------------
-
-if __name__=="__main__":
-    tickers=[]
-    fname="coverage.txt"
-
+def load_tickers(path):
     try:
-        with open(fname,"r",encoding="utf-8") as f:
-            tickers=[x.strip() for x in f if x.strip()]
-            print("Kaynak:",fname)
-    except:
+        with open(path, "r", encoding="utf-8") as source:
+            tickers = [line.strip() for line in source if line.strip()]
+        print("Kaynak:", path)
+        return tickers
+    except FileNotFoundError:
         print("❌ coverage.txt yok")
+        return []
 
-    results=[]
-    for t in tickers:
-        print("→",t,"analiz")
+
+def run_valuation(tickers):
+    results = []
+    for ticker_code in tickers:
+        print("→", ticker_code, "analiz")
         try:
-            r=value_ticker(t)
-            if r: results.append(r)
-        except Exception as e:
-            print("  hata:",e)
+            result_row = value_ticker(ticker_code)
+            if result_row:
+                results.append(result_row)
+        except TICKER_PROCESSING_ERRORS as error:
+            print("  hata:", error)
         time.sleep(1)
+    return results
 
-    if results:
-        df=pd.DataFrame(results)
-        c=[c for c in df.columns if c!="Ortalama Adil Fiyat"]
-        c.append("Ortalama Adil Fiyat")
-        df=df[c]
-        df.to_excel("valuation.xlsx",index=False,engine="openpyxl")
-        print("✅ yazıldı → valuation.xlsx")
-    else:
+
+def save_results(results):
+    if not results:
         print("⚠️ sonuç yok")
+        return
+    result_frame = pd.DataFrame(results)
+    ordered_columns = [column for column in result_frame.columns if column != AVERAGE_FAIR_PRICE_LABEL]
+    ordered_columns.append(AVERAGE_FAIR_PRICE_LABEL)
+    result_frame = result_frame[ordered_columns]
+    result_frame.to_excel("valuation.xlsx", index=False, engine="openpyxl")
+    print("✅ yazıldı → valuation.xlsx")
+
+
+if __name__ == "__main__":
+    coverage_file = "coverage.txt"
+    ticker_list = load_tickers(coverage_file)
+    valuation_results = run_valuation(ticker_list)
+    save_results(valuation_results)
