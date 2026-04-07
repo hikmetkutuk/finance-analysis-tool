@@ -1,24 +1,64 @@
-import yfinance as yf
-import pandas as pd
+import argparse
+import logging
+from dataclasses import dataclass
+from importlib import import_module
+from pathlib import Path
+from typing import Any, Iterable, Optional
 
-sector_tickers_tr = {
+import pandas as pd
+import yfinance as yf
+
+logger = logging.getLogger("sector")
+
+try:
+    curl_request_exceptions = import_module("curl_cffi.requests.exceptions")
+    NetworkRequestError = getattr(curl_request_exceptions, "RequestException")
+except ModuleNotFoundError:
+    NetworkRequestError = OSError
+
+FETCH_ERRORS = (NetworkRequestError, RuntimeError, ValueError, TypeError, KeyError, AttributeError, OSError)
+INFO_CACHE: dict[str, dict] = {}
+SECTOR_FINANCIAL_SERVICES = "Finansal Hizmetler"
+
+
+@dataclass(frozen=True)
+class MarketProfile:
+    market: str
+    universe_path: str
+    ticker_suffix: str
+    other_label: str
+    base_sector_map: dict[str, list[str]]
+    financial_sectors: set[str]
+    classifier_rules: list[tuple[str, tuple[str, ...]]]
+
+
+BASE_SECTOR_TICKERS_TR = {
     "Banka": [
         "AKBNK.IS", "ISCTR.IS", "YKBNK.IS", "VAKBN.IS", "HALKB.IS", "TSKB.IS", "GARAN.IS", "ALBRK.IS"
     ],
+    SECTOR_FINANCIAL_SERVICES: [
+        "A1CAP.IS", "ISMEN.IS", "GEDIK.IS", "INFO.IS", "UNLU.IS", "QNBTR.IS", "QNBFK.IS", "BRKVY.IS", "VAKFA.IS"
+    ],
     "Enerji": [
-        "AKSEN.IS", "ENJSA.IS", "ASTOR.IS", "ZOREN.IS", "GWIND.IS", "CWENE.IS", "SMRTG.IS", "TATEN.IS"
+        "AKSEN.IS", "ENJSA.IS", "ASTOR.IS", "ZOREN.IS", "GWIND.IS", "CWENE.IS", "SMRTG.IS", "TATEN.IS", "ARFYE.IS", "BESTE.IS", "ECOGR.IS"
     ],
     "Petrol": [
-        "PETKM.IS", "TUPRS.IS", "IPEKE.IS"
+        "PETKM.IS", "TUPRS.IS", "TRENJ.IS", "TRCAS.IS"
     ],
     "Sanayi & Üretim": [
-        "BRSAN.IS", "EGEEN.IS", "KOZAA.IS", "KOZAL.IS", "ENKAI.IS", "AKSA.IS", "GUBRF.IS", "HEKTS.IS", "SASA.IS", "CEMTS.IS", "KCAER.IS", "KRDMD.IS", "ISDMR.IS", "EREGL.IS"
+        "BRSAN.IS", "EGEEN.IS", "TRMET.IS", "TRALT.IS", "ENKAI.IS", "AKSA.IS", "GUBRF.IS", "HEKTS.IS", "SASA.IS", "CEMTS.IS", "KCAER.IS", "KRDMD.IS", "ISDMR.IS", "EREGL.IS", "GENKM.IS", "EMPAE.IS", "UCAYM.IS", "FRMPL.IS"
     ],
     "Dayanıklı Tüketim": [
         "ARCLK.IS", "VESTL.IS", "VESBE.IS"
     ],
+    "Teknoloji": [
+        "ARDYZ.IS", "KFEIN.IS", "NETCD.IS", "DOFRB.IS", "GATEG.IS", "PATEK.IS", "KRONT.IS"
+    ],
     "Savunma": [
         "ASELS.IS", "ALTNY.IS", "FORTE.IS", "ONRYT.IS", "KAREL.IS"
+    ],
+    "Gayrimenkul": [
+        "EKGYO.IS", "TRGYO.IS", "KLGYO.IS", "PAGYO.IS", "PSGYO.IS", "LXGYO.IS", "SVGYO.IS", "ZGYO.IS", "ZERGY.IS"
     ],
     "Çimento": [
         "CIMSA.IS", "GOLTS.IS", "BOBET.IS", "LMKDC.IS", "OYAKC.IS", "KONYA.IS", "BUCIM.IS", "AFYON.IS", "NUHCM.IS"
@@ -31,6 +71,9 @@ sector_tickers_tr = {
     ],
     "Havacılık": [
         "PGSUS.IS", "THYAO.IS", "TAVHL.IS", "CLEBI.IS"
+    ],
+    "Turizm": [
+        "DOCO.IS", "ATATR.IS", "BLUME.IS"
     ],
     "Sigorta": [
         "ANSGR.IS", "AGESA.IS", "TURSG.IS", "ANHYT.IS"
@@ -45,19 +88,19 @@ sector_tickers_tr = {
         "ECILC.IS", "LKMNH.IS", "MPARK.IS", "SELEC.IS"
     ],
     "Holding & Karma": [
-        "KCHOL.IS", "SAHOL.IS", "AGHOL.IS", "ALARK.IS", "DOHOL.IS", "BINHO.IS", "TKFEN.IS"
+        "KCHOL.IS", "SAHOL.IS", "AGHOL.IS", "ALARK.IS", "DOHOL.IS", "BINHO.IS", "TKFEN.IS", "PAHOL.IS", "MARMR.IS", "DUNYH.IS"
     ],
     "Telekomünikasyon": [
-        "TCELL.IS", "TTKOM.IS"
+        "TCELL.IS", "TTKOM.IS", "BIGTK.IS"
     ],
 }
 
-sector_tickers_us = {
+BASE_SECTOR_TICKERS_US = {
     "Teknoloji": [
-        "AAPL", "GOOG", "GOOGL", "MSFT", "META", "NET", "PLTR", "ORCL", "ADBE", "CRM", "AMZN", "CSCO", "DELL"
+        "AAPL", "GOOG", "GOOGL", "MSFT", "META", "PLTR", "ORCL", "ADBE", "CRM", "AMZN", "CSCO", "DELL", "APP"
     ],
     "Yarı İletken": [
-        "QCOM", "AMD", "NVDA", "INTL", "BABA", "AVGO"
+        "QCOM", "AMD", "NVDA", "INTC", "AVGO", "SNDK"
     ],
     "E-Ticaret": [
         "BABA"
@@ -66,10 +109,10 @@ sector_tickers_us = {
         "DIS", "NFLX"
     ],
     "Sağlık & İlaç": [
-        "LLY", "JNJ", "MRK", "UNH", "PFE", "NVO", "TMO"
+        "LLY", "JNJ", "MRK", "UNH", "PFE", "TMO"
     ],
     "Finans": [
-        "JPM", "WFC", "MA", "V"
+        "JPM", "WFC", "MA", "V", "BRK.B"
     ],
     "Enerji": [
         "XOM"
@@ -85,34 +128,250 @@ sector_tickers_us = {
     ],
 }
 
-def calculate_sector_multiples(sector_tickers: dict, filename: str):
-    rows = []
-    for sector, tickers in sector_tickers.items():
-        pe, pb, ev_ebitda = [], [], []
-        for t in tickers:
-            try:
-                info = yf.Ticker(t).info
-                if info.get("trailingPE"): pe.append(info["trailingPE"])
-                if info.get("priceToBook"): pb.append(info["priceToBook"])
-                ev, ebitda = info.get("enterpriseValue"), info.get("ebitda")
-                if ev and ebitda:
-                    ev_ebitda.append(ev / ebitda)
-            except Exception as e:
-                print(f"{t} → {e}")
-        rows.append({
-            "sector": sector,
-            "pe": round(sum(pe)/len(pe), 2) if pe else None,
-            "pb": round(sum(pb)/len(pb), 2) if pb else None,
-            "ev_ebitda": round(sum(ev_ebitda)/len(ev_ebitda), 2) if ev_ebitda else None,
-            "ticker_count": len(tickers)
-        })
+TR_CLASSIFIER_RULES = [
+    ("Banka", ("bank", "banka", "katilim bank", "depositary bank", "regional bank", "banks-diversified")),
+    ("Sigorta", ("insurance", "sigorta", "insur", "reinsurance", "hayat emeklilik")),
+    (SECTOR_FINANCIAL_SERVICES, ("financial services", "capital markets", "asset management", "broker", "araci kurum", "factoring", "leasing", "finansal hizmet")),
+    ("Gayrimenkul", ("real estate", "gayrimenkul", "reit", "gmyo", "property")),
+    ("Enerji", ("utilities", "electric", "renewable", "power", "enerji", "electricity", "solar", "wind")),
+    ("Petrol", ("oil", "gas", "refining", "petroleum", "petrokimya", "petrol")),
+    ("Otomotiv", ("auto", "automotive", "vehicle", "trucks", "car", "motor")),
+    ("Perakende", ("retail", "discount stores", "supermarket", "grocery", "market")),
+    ("Havacılık", ("airline", "air freight", "airport", "havac", "airports")),
+    ("Savunma", ("aerospace", "defense", "savunma")),
+    ("Teknoloji", ("software", "technology", "internet", "semiconductor", "tech", "yazilim", "bilisim")),
+    ("İlaç & Sağlık", ("health", "pharma", "biotech", "drug", "medical", "hospital", "saglik", "ilac")),
+    ("İçecek", ("beverage", "brew", "distiller", "soft drinks")),
+    ("Gıda", ("food", "packaged foods", "tarim", "agricultural", "dairy", "gida")),
+    ("Telekomünikasyon", ("telecom", "wireless", "communication services", "telefon", "mobile")),
+    ("Çimento", ("cement", "construction materials", "ready-mix", "cim")),
+    ("Dayanıklı Tüketim", ("consumer electronics", "furnishing", "home appliance", "durable", "white goods")),
+    ("Turizm", ("travel", "tourism", "hotel", "hospitality", "leisure")),
+    ("Holding & Karma", ("holding", "conglomerate", "investment company", "karma")),
+]
 
-    df = pd.DataFrame(rows)
-    df.to_csv(filename, index=False)
-    print(f"✅ Kaydedildi → {filename}")
+US_CLASSIFIER_RULES = [
+    ("Finans", ("financial services", "capital markets", "asset management", "banks", "insurance", "broker", "credit services")),
+    ("Teknoloji", ("software", "internet", "technology", "it services", "communication equipment")),
+    ("Yarı İletken", ("semiconductor", "semiconductors", "chip")),
+    ("E-Ticaret", ("internet retail", "e-commerce", "online retail")),
+    ("İletişim & Medya", ("entertainment", "media", "streaming", "broadcasting", "communication services")),
+    ("Sağlık & İlaç", ("health", "pharma", "biotech", "medical", "drug", "life sciences")),
+    ("Enerji", ("oil", "gas", "energy", "integrated oil", "exploration")),
+    ("Perakende & Tüketim", ("retail", "consumer staples", "restaurants", "beverages", "household")),
+    ("Sanayi & Savunma", ("aerospace", "defense", "industrial", "machinery", "transportation")),
+    ("Otomotiv", ("auto", "automotive", "vehicle", "ev manufacturer")),
+]
 
-# Türkiye için
-calculate_sector_multiples(sector_tickers_tr, "sector_multiples_tr.csv")
+TR_PROFILE = MarketProfile(
+    market="tr",
+    universe_path="hisseler.txt",
+    ticker_suffix=".IS",
+    other_label="Diğer BIST",
+    base_sector_map=BASE_SECTOR_TICKERS_TR,
+    financial_sectors={"Banka", "Sigorta", SECTOR_FINANCIAL_SERVICES},
+    classifier_rules=TR_CLASSIFIER_RULES,
+)
 
-# ABD için
-calculate_sector_multiples(sector_tickers_us, "sector_multiples_us.csv")
+US_PROFILE = MarketProfile(
+    market="us",
+    universe_path="tickers.txt",
+    ticker_suffix=".IS",
+    other_label="Diğer ABD",
+    base_sector_map=BASE_SECTOR_TICKERS_US,
+    financial_sectors={"Finans"},
+    classifier_rules=US_CLASSIFIER_RULES,
+)
+
+PROFILES = {"tr": TR_PROFILE, "us": US_PROFILE}
+
+
+def normalize_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip().lower()
+
+
+def safe_float(value: Any) -> Optional[float]:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def robust_median(values: Iterable[float]) -> Optional[float]:
+    series = pd.Series(list(values), dtype="float64").dropna()
+    if series.empty:
+        return None
+    if series.shape[0] >= 5:
+        lower = series.quantile(0.10)
+        upper = series.quantile(0.90)
+        series = series.clip(lower=lower, upper=upper)
+    return round(float(series.median()), 2)
+
+
+def load_universe(path: str, market: str) -> set[str]:
+    file_path = Path(path)
+    if not file_path.exists():
+        return set()
+    lines = {line.strip().upper() for line in file_path.read_text(encoding="utf-8").splitlines() if line.strip()}
+    if market == "tr":
+        return {ticker for ticker in lines if ticker.endswith(".IS")}
+    return {ticker for ticker in lines if not ticker.endswith(".IS")}
+
+
+def fetch_info(ticker: str) -> dict:
+    if ticker in INFO_CACHE:
+        return INFO_CACHE[ticker]
+    try:
+        info = yf.Ticker(ticker).info
+        info = info if isinstance(info, dict) else {}
+    except FETCH_ERRORS as error:
+        logger.warning("%s -> %s", ticker, error)
+        info = {}
+    INFO_CACHE[ticker] = info
+    return info
+
+
+def infer_sector_from_info(info: dict, profile: MarketProfile) -> Optional[str]:
+    fields = [
+        info.get("sector"),
+        info.get("industry"),
+        info.get("sectorKey"),
+        info.get("industryKey"),
+        info.get("longBusinessSummary"),
+    ]
+    haystack = " ".join(normalize_text(field) for field in fields if field)
+    if not haystack:
+        return None
+    for sector_name, keywords in profile.classifier_rules:
+        for keyword in keywords:
+            if keyword in haystack:
+                return sector_name
+    return None
+
+
+def resolve_universe(profile: MarketProfile) -> set[str]:
+    universe = load_universe(profile.universe_path, profile.market)
+    if not universe:
+        universe = {ticker for tickers in profile.base_sector_map.values() for ticker in tickers}
+    return universe
+
+
+def seed_prepared_map(profile: MarketProfile, universe: set[str]) -> tuple[dict[str, list[str]], set[str]]:
+    prepared: dict[str, list[str]] = {}
+    used: set[str] = set()
+    for sector, tickers in profile.base_sector_map.items():
+        filtered = []
+        for ticker in tickers:
+            if ticker in universe and ticker not in used:
+                filtered.append(ticker)
+                used.add(ticker)
+        if filtered:
+            prepared[sector] = filtered
+    return prepared, used
+
+
+def auto_classify_missing_tickers(profile: MarketProfile, universe: set[str], prepared: dict[str, list[str]], used: set[str]) -> None:
+    missing = sorted(universe - used)
+    for ticker in missing:
+        info = fetch_info(ticker)
+        inferred_sector = infer_sector_from_info(info, profile)
+        if inferred_sector and inferred_sector != profile.other_label:
+            prepared.setdefault(inferred_sector, []).append(ticker)
+            used.add(ticker)
+
+
+def append_remaining_bucket(profile: MarketProfile, universe: set[str], prepared: dict[str, list[str]], used: set[str]) -> None:
+    remaining = sorted(universe - used)
+    if remaining:
+        prepared[profile.other_label] = remaining
+
+
+def prepare_sector_map(profile: MarketProfile, auto_classify: bool = False) -> dict[str, list[str]]:
+    universe = resolve_universe(profile)
+    prepared, used = seed_prepared_map(profile, universe)
+    if auto_classify:
+        auto_classify_missing_tickers(profile, universe, prepared, used)
+    append_remaining_bucket(profile, universe, prepared, used)
+    return prepared
+
+
+def extract_multiples(info: dict, is_financial_sector: bool) -> tuple[Optional[float], Optional[float], Optional[float]]:
+    pe = safe_float(info.get("trailingPE"))
+    pb = safe_float(info.get("priceToBook"))
+    ev = safe_float(info.get("enterpriseValue"))
+    ebitda = safe_float(info.get("ebitda"))
+    pe = pe if pe is not None and pe > 0 else None
+    pb = pb if pb is not None and pb > 0 else None
+    if is_financial_sector:
+        return pe, pb, None
+    ev_ebitda = None
+    if ev is not None and ebitda is not None and ev > 0 and ebitda > 0:
+        ev_ebitda = ev / ebitda
+    return pe, pb, ev_ebitda
+
+
+def build_sector_row(sector: str, tickers: list[str], profile: MarketProfile) -> dict:
+    pe_values, pb_values, ev_ebitda_values = [], [], []
+    valid_ticker_count = 0
+    is_financial_sector = sector in profile.financial_sectors
+    for ticker in tickers:
+        info = fetch_info(ticker)
+        pe, pb, ev_ebitda = extract_multiples(info, is_financial_sector)
+        if pe is not None:
+            pe_values.append(pe)
+        if pb is not None:
+            pb_values.append(pb)
+        if ev_ebitda is not None:
+            ev_ebitda_values.append(ev_ebitda)
+        if pe is not None or pb is not None or ev_ebitda is not None:
+            valid_ticker_count += 1
+    return {
+        "sector": sector,
+        "pe": robust_median(pe_values),
+        "pb": robust_median(pb_values),
+        "ev_ebitda": robust_median(ev_ebitda_values),
+        "ticker_count": valid_ticker_count,
+        "ticker_count_total": len(tickers),
+        "pe_count": len(pe_values),
+        "pb_count": len(pb_values),
+        "ev_ebitda_count": len(ev_ebitda_values),
+    }
+
+
+def calculate_sector_multiples(sector_tickers: dict[str, list[str]], filename: str, profile: MarketProfile) -> None:
+    rows = [build_sector_row(sector, tickers, profile) for sector, tickers in sector_tickers.items()]
+    result_frame = pd.DataFrame(rows)
+    result_frame.to_csv(filename, index=False)
+    logger.info("Kaydedildi -> %s", filename)
+
+
+def build_sector_maps(auto_classify: bool = False) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    tr_map = prepare_sector_map(TR_PROFILE, auto_classify=auto_classify)
+    us_map = prepare_sector_map(US_PROFILE, auto_classify=auto_classify)
+    return tr_map, us_map
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Sektorel carpani hesaplama")
+    parser.add_argument("--market", choices=["all", "tr", "us"], default="all")
+    parser.add_argument("--no-auto-classify", action="store_true")
+    return parser.parse_args()
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    args = parse_args()
+    auto_classify = not args.no_auto_classify
+    tr_map, us_map = build_sector_maps(auto_classify=auto_classify)
+    if args.market in ("all", "tr"):
+        calculate_sector_multiples(tr_map, "sector_multiples_tr.csv", TR_PROFILE)
+    if args.market in ("all", "us"):
+        calculate_sector_multiples(us_map, "sector_multiples_us.csv", US_PROFILE)
+
+
+sector_tickers_tr, sector_tickers_us = build_sector_maps(auto_classify=False)
+
+if __name__ == "__main__":
+    main()
