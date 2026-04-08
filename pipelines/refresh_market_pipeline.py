@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from sector import TR_PROFILE, US_PROFILE, build_sector_maps, calculate_sector_multiples
-from sector_override_builder import build_sector_overrides, save_sector_overrides
-from update_macro_config import main as update_macro_main
+from data.sector import TR_PROFILE, US_PROFILE, build_sector_maps, calculate_sector_multiples
+from data.sector_override_builder import build_sector_overrides, save_sector_overrides
+from pipelines.update_macro_config import main as update_macro_main
 
 
 def main() -> None:

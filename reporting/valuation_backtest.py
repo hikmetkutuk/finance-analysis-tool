@@ -8,7 +8,7 @@ from typing import Optional
 import pandas as pd
 import yfinance as yf
 
-from market_data_provider import fetch_ticker_bundle, normalized_info
+from data.market_data_provider import fetch_ticker_bundle, normalized_info
 from valuation import AVERAGE_FAIR_PRICE_LABEL, load_tickers, value_ticker
 
 

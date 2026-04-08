@@ -6,7 +6,7 @@ from typing import Optional
 import pandas as pd
 import yfinance as yf
 
-from macro_config import load_macro_config, save_macro_config
+from data.macro_config import load_macro_config, save_macro_config
 
 
 def fetch_last_close(ticker: str) -> Optional[float]:

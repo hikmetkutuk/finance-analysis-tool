@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, TypedDict
 
 import pandas as pd
 
-from sector import (
+from data.sector import (
     MarketProfile,
     TR_PROFILE,
     US_PROFILE,

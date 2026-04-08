@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from sector import build_sector_maps
+from data.sector import build_sector_maps
 
 DEFAULT_TR_MULTIPLES_PATH = Path("sector_multiples_tr.csv")
 DEFAULT_US_MULTIPLES_PATH = Path("sector_multiples_us.csv")

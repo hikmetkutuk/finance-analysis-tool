@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from macro_config import load_macro_config
+from data.macro_config import load_macro_config
 
 
 def test_load_macro_config_defaults_when_missing(tmp_path: Path) -> None:
