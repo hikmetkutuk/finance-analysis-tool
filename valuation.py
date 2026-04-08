@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from statistics import pstdev
 from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
@@ -376,22 +377,69 @@ def calculate_financial_fair_value(info: Dict[str, Optional[float]], params: Dic
     return sum(values) / len(values)
 
 
+def applicable_valuation_keys(is_financial: bool) -> list[str]:
+    if is_financial:
+        return ["fv_fk", "fv_financial", "fv_ddm", "fv_efk", "fv_ndk", "fv_graham"]
+    return ["fv_dcf", "fv_fk", "fv_ev", "fv_ddm", "fv_efk", "fv_ndk", "fv_graham"]
+
+
+def compute_signal_quality_score(
+    valuations: Dict[str, Optional[float]],
+    warnings: list[str],
+    is_financial: bool,
+) -> Tuple[int, str]:
+    keys = applicable_valuation_keys(is_financial)
+    present_values = [valuations[key] for key in keys if valuations.get(key) is not None and valuations.get(key) > 0]
+    expected_count = len(keys)
+    coverage = (len(present_values) / expected_count) if expected_count else 0
+
+    warning_penalty = min(len(set(warnings)) * 8, 40)
+    dispersion_penalty = 0
+    if len(present_values) >= 3:
+        mean_value = sum(present_values) / len(present_values)
+        if mean_value > 0:
+            variation = pstdev(present_values) / mean_value
+            if variation > 1.0:
+                dispersion_penalty = 12
+            elif variation > 0.6:
+                dispersion_penalty = 6
+
+    score = int(round(max(0, min(100, 45 + coverage * 55 - warning_penalty - dispersion_penalty))))
+    if score >= 80:
+        quality = "High"
+    elif score >= 60:
+        quality = "Medium"
+    else:
+        quality = "Low"
+    return score, quality
+
+
 def build_output(
     ticker: str,
     sector_name: str,
     wacc: float,
     avg_growth: float,
     warnings: list[str],
+    signal_quality_score: int,
+    signal_quality_label: str,
+    current_price: Optional[float],
     valuations: Dict[str, Optional[float]],
     fcf_by_year: Dict[int, Optional[float]],
 ) -> Dict[str, str]:
     fair_values = [value for value in valuations.values() if value is not None and value > 0]
     average_fair_value = sum(fair_values) / len(fair_values) if fair_values else None
+    expected_return = None
+    if average_fair_value is not None and current_price is not None and current_price > EPSILON:
+        expected_return = average_fair_value / current_price - 1
 
     output: Dict[str, str] = {
         "Kod": clean_ticker(ticker),
         "Sektör": sector_name,
         "Para Birimi": get_currency_symbol(ticker),
+        "Sinyal Kalite Skoru": str(signal_quality_score),
+        "Sinyal Güven Seviyesi": signal_quality_label,
+        "Güncel Fiyat": format_number_tr(current_price),
+        "Beklenen Getiri (%)": format_percent_tr(expected_return),
         "WACC": format_percent_tr(wacc),
         "Ortalama Büyüme": format_percent_tr(avg_growth),
         "DCF Değerlemesi": format_number_tr(valuations["fv_dcf"]),
@@ -452,12 +500,20 @@ def value_ticker(ticker: str) -> Dict[str, str]:
         "fv_ndk": fair_value_ndk,
         "fv_graham": graham_valuation(eps, params["pe"], params["bond_yield_2"]),
     }
+    signal_quality_score, signal_quality_label = compute_signal_quality_score(
+        valuations=valuations,
+        warnings=warnings,
+        is_financial=is_financial,
+    )
     return build_output(
         ticker=ticker,
         sector_name=sector_name,
         wacc=wacc,
         avg_growth=avg_growth,
         warnings=warnings,
+        signal_quality_score=signal_quality_score,
+        signal_quality_label=signal_quality_label,
+        current_price=info.get("currentPrice"),
         valuations=valuations,
         fcf_by_year=fcf_by_year,
     )
