@@ -5,9 +5,11 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 import yfinance as yf
+from yfinance.exceptions import YFRateLimitError
 
 
-FETCH_ERRORS = (RuntimeError, ValueError, TypeError, KeyError, AttributeError, OSError)
+FETCH_ERRORS = (YFRateLimitError, RuntimeError, ValueError, TypeError, KeyError, AttributeError, OSError)
+FAST_INFO_KEYS = ("marketCap", "shares", "priceToBook", "lastPrice")
 
 
 @dataclass
@@ -38,6 +40,30 @@ def as_dataframe(value: Any) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def extract_fast_info(stock: yf.Ticker) -> tuple[Dict[str, Any], bool]:
+    try:
+        fast_info_obj = stock.fast_info
+    except FETCH_ERRORS:
+        return {}, True
+    if fast_info_obj is None:
+        return {}, True
+
+    fast_info: Dict[str, Any] = {}
+    had_error = False
+    for key in FAST_INFO_KEYS:
+        try:
+            if hasattr(fast_info_obj, "get"):
+                value = fast_info_obj.get(key)
+            else:
+                value = getattr(fast_info_obj, key, None)
+        except FETCH_ERRORS:
+            had_error = True
+            continue
+        if value is not None:
+            fast_info[key] = value
+    return fast_info, had_error
+
+
 def get_last_close(stock: yf.Ticker) -> Optional[float]:
     try:
         history = stock.history(period="5d", interval="1d")
@@ -57,7 +83,7 @@ def get_last_close(stock: yf.Ticker) -> Optional[float]:
     return safe_float(close_values.iloc[-1])
 
 
-def fetch_ticker_bundle(ticker: str) -> TickerBundle:
+def fetch_ticker_bundle(ticker: str, include_last_close: bool = True) -> TickerBundle:
     stock = yf.Ticker(ticker)
     warnings: list[str] = []
 
@@ -68,11 +94,8 @@ def fetch_ticker_bundle(ticker: str) -> TickerBundle:
         info = {}
         warnings.append("info_unavailable")
 
-    try:
-        fast_info_obj = stock.fast_info
-        fast_info = dict(fast_info_obj) if fast_info_obj is not None else {}
-    except FETCH_ERRORS:
-        fast_info = {}
+    fast_info, fast_info_has_errors = extract_fast_info(stock)
+    if fast_info_has_errors or not fast_info:
         warnings.append("fast_info_unavailable")
 
     try:
@@ -93,9 +116,11 @@ def fetch_ticker_bundle(ticker: str) -> TickerBundle:
         cashflow = pd.DataFrame()
         warnings.append("cashflow_unavailable")
 
-    last_close = get_last_close(stock)
-    if last_close is None:
-        warnings.append("last_close_unavailable")
+    last_close = None
+    if include_last_close:
+        last_close = get_last_close(stock)
+        if last_close is None:
+            warnings.append("last_close_unavailable")
 
     return TickerBundle(
         ticker=ticker,

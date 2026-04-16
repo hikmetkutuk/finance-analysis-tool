@@ -1,8 +1,8 @@
 {
-  "as_of": "2026-04-07",
+  "as_of": "2026-04-16",
   "tr": {
-    "bond_yield_2": 0.36,
-    "cost_of_debt": 0.4,
+    "bond_yield_2": 0.4218,
+    "cost_of_debt": 0.4618,
     "ddm_growth": 0.025,
     "defaults": {
       "ev_ebitda": 7.0,
@@ -10,14 +10,14 @@
       "pe": 10.0
     },
     "market_premium": 0.08,
-    "risk_free_rate": 0.36,
-    "source": "manual_fallback",
+    "risk_free_rate": 0.4218,
+    "source": "manual_override_tr_2y_bloomberght_2026_04_07",
     "tax_rate": 0.25,
     "terminal_growth": 0.03
   },
   "us": {
-    "bond_yield_2": 0.041,
-    "cost_of_debt": 0.055,
+    "bond_yield_2": 0.0384,
+    "cost_of_debt": 0.0584,
     "ddm_growth": 0.025,
     "defaults": {
       "ev_ebitda": 11.0,
@@ -25,8 +25,8 @@
       "pe": 22.0
     },
     "market_premium": 0.05,
-    "risk_free_rate": 0.042,
-    "source": "yfinance",
+    "risk_free_rate": 0.0434,
+    "source": "manual_override_treasury_gov_2026_04_06",
     "tax_rate": 0.21,
     "terminal_growth": 0.03
   }

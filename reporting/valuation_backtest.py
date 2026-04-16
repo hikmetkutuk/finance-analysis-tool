@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 import yfinance as yf
@@ -27,8 +27,12 @@ class SnapshotRow:
     warnings: str
 
 
-def parse_tr_formatted_number(value: str) -> Optional[float]:
-    if not value:
+def parse_tr_formatted_number(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not isinstance(value, str) or not value.strip():
         return None
     normalized = value.replace(".", "").replace(",", ".")
     try:

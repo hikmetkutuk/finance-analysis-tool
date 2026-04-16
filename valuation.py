@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import time
+from decimal import Decimal, InvalidOperation
 from statistics import pstdev
 from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
+from openpyxl.utils import get_column_letter
 
 from data.macro_config import load_macro_config
 from data.market_data_provider import fetch_ticker_bundle, normalized_info, validate_bundle
@@ -18,6 +20,7 @@ YEARS_PROJECTION = 5
 MAX_GROWTH_CAP = 0.50
 MIN_GROWTH_CAP = -0.50
 EPSILON = 1e-9
+TICKER_DELAY_SECONDS = 0.15
 
 NUMBER_FORMAT = "{:,.2f}"
 AVERAGE_FAIR_PRICE_LABEL = "Ortalama Adil Fiyat"
@@ -116,6 +119,15 @@ def format_percent_tr(value: Optional[float]) -> str:
         return f"{value * 100:,.2f}%".replace(",", "X").replace(".", ",").replace("X", ".")
     except (TypeError, ValueError):
         return ""
+
+
+def round_or_none(value: Optional[float], digits: int = 2) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        return round(float(value), digits)
+    except (TypeError, ValueError):
+        return None
 
 
 def get_currency_symbol(ticker_code: str) -> str:
@@ -425,40 +437,40 @@ def build_output(
     current_price: Optional[float],
     valuations: Dict[str, Optional[float]],
     fcf_by_year: Dict[int, Optional[float]],
-) -> Dict[str, str]:
+) -> Dict[str, Any]:
     fair_values = [value for value in valuations.values() if value is not None and value > 0]
     average_fair_value = sum(fair_values) / len(fair_values) if fair_values else None
     expected_return = None
     if average_fair_value is not None and current_price is not None and current_price > EPSILON:
         expected_return = average_fair_value / current_price - 1
 
-    output: Dict[str, str] = {
+    output: Dict[str, Any] = {
         "Kod": clean_ticker(ticker),
         "Sektör": sector_name,
         "Para Birimi": get_currency_symbol(ticker),
-        "Sinyal Kalite Skoru": str(signal_quality_score),
+        "Sinyal Kalite Skoru": signal_quality_score,
         "Sinyal Güven Seviyesi": signal_quality_label,
-        "Güncel Fiyat": format_number_tr(current_price),
-        "Beklenen Getiri (%)": format_percent_tr(expected_return),
-        "WACC": format_percent_tr(wacc),
-        "Ortalama Büyüme": format_percent_tr(avg_growth),
-        "DCF Değerlemesi": format_number_tr(valuations["fv_dcf"]),
-        "F/K Değerlemesi": format_number_tr(valuations["fv_fk"]),
-        "PD/DD Finansal Model": format_number_tr(valuations["fv_financial"]),
-        "EV/EBITDA Değerlemesi": format_number_tr(valuations["fv_ev"]),
-        "DDM Değerlemesi": format_number_tr(valuations["fv_ddm"]),
-        "EFK Değerlemesi": format_number_tr(valuations["fv_efk"]),
-        "NDK Değerlemesi": format_number_tr(valuations["fv_ndk"]),
-        "Graham Değerlemesi": format_number_tr(valuations["fv_graham"]),
-        AVERAGE_FAIR_PRICE_LABEL: format_number_tr(average_fair_value),
+        "Güncel Fiyat": round_or_none(current_price),
+        "Beklenen Getiri (%)": round_or_none(expected_return * 100 if expected_return is not None else None),
+        "WACC": round_or_none(wacc * 100 if wacc is not None else None),
+        "Ortalama Büyüme": round_or_none(avg_growth * 100 if avg_growth is not None else None),
+        "DCF Değerlemesi": round_or_none(valuations["fv_dcf"]),
+        "F/K Değerlemesi": round_or_none(valuations["fv_fk"]),
+        "PD/DD Finansal Model": round_or_none(valuations["fv_financial"]),
+        "EV/EBITDA Değerlemesi": round_or_none(valuations["fv_ev"]),
+        "DDM Değerlemesi": round_or_none(valuations["fv_ddm"]),
+        "EFK Değerlemesi": round_or_none(valuations["fv_efk"]),
+        "NDK Değerlemesi": round_or_none(valuations["fv_ndk"]),
+        "Graham Değerlemesi": round_or_none(valuations["fv_graham"]),
+        AVERAGE_FAIR_PRICE_LABEL: round_or_none(average_fair_value),
         "Model Kalite Uyarıları": ",".join(sorted(set(warnings))),
     }
     for year in sorted(fcf_by_year.keys()):
-        output[f"FCF {year}"] = format_number_tr(fcf_by_year[year])
+        output[f"FCF {year}"] = round_or_none(fcf_by_year[year])
     return output
 
 
-def value_ticker(ticker: str) -> Dict[str, str]:
+def value_ticker(ticker: str) -> Dict[str, Any]:
     bundle = fetch_ticker_bundle(ticker)
     info = normalized_info(bundle)
     warnings = validate_bundle(bundle, info)
@@ -530,8 +542,8 @@ def load_tickers(path: str) -> list[str]:
         return []
 
 
-def run_valuation(tickers: list[str]) -> list[Dict[str, str]]:
-    results: list[Dict[str, str]] = []
+def run_valuation(tickers: list[str]) -> list[Dict[str, Any]]:
+    results: list[Dict[str, Any]] = []
     for ticker_code in tickers:
         print("→", ticker_code, "analiz")
         try:
@@ -540,11 +552,12 @@ def run_valuation(tickers: list[str]) -> list[Dict[str, str]]:
                 results.append(result_row)
         except TICKER_PROCESSING_ERRORS as error:
             print("  hata:", error)
-        time.sleep(1)
+        if TICKER_DELAY_SECONDS > 0:
+            time.sleep(TICKER_DELAY_SECONDS)
     return results
 
 
-def save_results(results: list[Dict[str, str]]) -> None:
+def save_results(results: list[Dict[str, Any]]) -> None:
     if not results:
         print("⚠️ sonuç yok")
         return
@@ -552,8 +565,48 @@ def save_results(results: list[Dict[str, str]]) -> None:
     ordered_columns = [column for column in result_frame.columns if column != AVERAGE_FAIR_PRICE_LABEL]
     ordered_columns.append(AVERAGE_FAIR_PRICE_LABEL)
     result_frame = result_frame[ordered_columns]
-    result_frame.to_excel("valuation.xlsx", index=False, engine="openpyxl")
+    display_frame = format_frame_for_tr_display(result_frame)
+    with pd.ExcelWriter("valuation.xlsx", engine="openpyxl") as writer:
+        display_frame.to_excel(writer, sheet_name="Valuation", index=False)
+        worksheet = writer.sheets["Valuation"]
+        for column_index, column_name in enumerate(display_frame.columns, start=1):
+            series = display_frame[column_name]
+            lengths = [len(str(column_name))]
+            lengths.extend(len(str(value)) for value in series.dropna().head(100))
+            worksheet.column_dimensions[get_column_letter(column_index)].width = min(40, max(12, max(lengths) + 2))
     print("✅ yazıldı → valuation.xlsx")
+
+
+def format_tr_numeric(value: Any) -> Any:
+    if value is None or pd.isna(value):
+        return ""
+    try:
+        decimal_value = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        return value
+    sign = "-" if decimal_value < 0 else ""
+    decimal_value = abs(decimal_value)
+    text = format(decimal_value, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    integer_part, dot, fractional_part = text.partition(".")
+    try:
+        grouped_integer = f"{int(integer_part):,}".replace(",", ".")
+    except ValueError:
+        grouped_integer = integer_part
+    if dot and fractional_part:
+        return f"{sign}{grouped_integer},{fractional_part}"
+    return f"{sign}{grouped_integer}"
+
+
+def format_frame_for_tr_display(frame: pd.DataFrame) -> pd.DataFrame:
+    display_frame = frame.copy()
+    for column_name in display_frame.columns:
+        series = display_frame[column_name]
+        if not pd.api.types.is_numeric_dtype(series):
+            continue
+        display_frame[column_name] = series.apply(format_tr_numeric)
+    return display_frame
 
 
 if __name__ == "__main__":

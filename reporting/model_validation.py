@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -12,8 +12,12 @@ from valuation import AVERAGE_FAIR_PRICE_LABEL, load_tickers, value_ticker
 VALIDATION_REPORT_PATH = Path("valuation_validation_report.csv")
 
 
-def parse_tr_formatted_number(value: str) -> Optional[float]:
-    if not value:
+def parse_tr_formatted_number(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not isinstance(value, str) or not value.strip():
         return None
     normalized = value.replace(".", "").replace(",", ".")
     try:

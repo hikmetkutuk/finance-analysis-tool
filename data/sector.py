@@ -382,29 +382,34 @@ def extract_multiples(info: dict, is_financial_sector: bool) -> tuple[Optional[f
 
 
 def build_sector_row(sector: str, tickers: list[str], profile: MarketProfile) -> dict:
-    pe_values, pb_values, ev_ebitda_values = [], [], []
+    pe_values, pb_values, ev_ebitda_values, fd_values = [], [], [], []
     valid_ticker_count = 0
     is_financial_sector = sector in profile.financial_sectors
     for ticker in tickers:
         info = fetch_info(ticker)
         pe, pb, ev_ebitda = extract_multiples(info, is_financial_sector)
+        enterprise_value = safe_float(info.get("enterpriseValue"))
         if pe is not None:
             pe_values.append(pe)
         if pb is not None:
             pb_values.append(pb)
         if ev_ebitda is not None:
             ev_ebitda_values.append(ev_ebitda)
+        if enterprise_value is not None and enterprise_value > 0:
+            fd_values.append(enterprise_value)
         if pe is not None or pb is not None or ev_ebitda is not None:
             valid_ticker_count += 1
     return {
         "sector": sector,
         "pe": robust_median(pe_values),
         "pb": robust_median(pb_values),
+        "fd": robust_median(fd_values),
         "ev_ebitda": robust_median(ev_ebitda_values),
         "ticker_count": valid_ticker_count,
         "ticker_count_total": len(tickers),
         "pe_count": len(pe_values),
         "pb_count": len(pb_values),
+        "fd_count": len(fd_values),
         "ev_ebitda_count": len(ev_ebitda_values),
     }
 
