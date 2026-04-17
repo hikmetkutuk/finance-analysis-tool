@@ -18,7 +18,7 @@ from .constants import (
     COLUMN_TICKER,
     MARKET_AUTO,
 )
-from .dependencies import NetworkRequestError
+from .dependencies import NetworkRequestError, YFRateLimitError
 from .metrics import (
     _f,
     build_liquidity_metrics,
@@ -115,7 +115,7 @@ def analyze_symbols(
         try:
             logger.info("%s is being processed..", symbol)
             rows.append(get_stock_data(symbol, market=market, provider=active_provider))
-        except (RuntimeError, ValueError, TypeError, KeyError, IndexError, OSError, NetworkRequestError) as error:
+        except (RuntimeError, ValueError, TypeError, KeyError, IndexError, OSError, NetworkRequestError, YFRateLimitError) as error:
             failed_symbols.append({COLUMN_TICKER: symbol, COLUMN_ERROR: str(error)})
             logger.warning("Error occurred for %s: %s", symbol, error)
     return rows, failed_symbols

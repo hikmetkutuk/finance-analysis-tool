@@ -15,6 +15,13 @@ def load_dependency(module_name: str) -> Any:
 
 pd = load_dependency("pandas")
 yf = load_dependency("yfinance")
+try:
+    yfinance_exceptions = import_module("yfinance.exceptions")
+    YFRateLimitError = getattr(yfinance_exceptions, "YFRateLimitError")
+except ModuleNotFoundError:
+    YFRateLimitError = OSError
+except AttributeError:
+    YFRateLimitError = OSError
 
 try:
     curl_request_exceptions = import_module("curl_cffi.requests.exceptions")

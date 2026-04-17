@@ -45,6 +45,7 @@ DCF_METRICS = [
     ("Stok", INVENTORY_FIELDS),
     ("Toplam Borç", LIABILITY_FIELDS),
 ]
+DCF_CODE_COLUMN = "Kod"
 
 FINANCIAL_COLUMNS = [
     "Symbol",
@@ -302,12 +303,20 @@ def _financials_row_from_bundle(ticker: str, bundle: TickerBundle) -> dict[str, 
     }
 
 
+def _expected_dcf_columns(years: list[int]) -> list[str]:
+    columns = [DCF_CODE_COLUMN]
+    for metric_name, _ in DCF_METRICS:
+        for year in years:
+            columns.append(f"{metric_name} {year}")
+    return columns
+
+
 def _dcf_row_from_bundle(ticker: str, bundle: TickerBundle, years: list[int]) -> dict[str, Any]:
     annual_income = bundle.financials
     annual_balance = bundle.balance_sheet
     annual_cashflow = bundle.cashflow
 
-    row: dict[str, Any] = {"Kod": _clean_ticker(ticker)}
+    row: dict[str, Any] = {DCF_CODE_COLUMN: _clean_ticker(ticker)}
     for year in years:
         row[f"Net Faaliyet Kârı {year}"] = _round_or_none(_value_for_year(annual_income, OPERATING_INCOME_FIELDS, year))
         row[f"Vergi {year}"] = _round_or_none(_value_for_year(annual_income, TAX_FIELDS, year))
@@ -324,8 +333,10 @@ def _build_rows_for_ticker(ticker: str, years: list[int]) -> tuple[dict[str, Any
     return _financials_row_from_bundle(ticker, bundle), _dcf_row_from_bundle(ticker, bundle, years)
 
 
-def _empty_rows_for_ticker(ticker: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    return {"Symbol": _clean_ticker(ticker)}, {"Kod": _clean_ticker(ticker)}
+def _empty_rows_for_ticker(ticker: str, years: list[int]) -> tuple[dict[str, Any], dict[str, Any]]:
+    dcf_row: dict[str, Any] = dict.fromkeys(_expected_dcf_columns(years))
+    dcf_row[DCF_CODE_COLUMN] = _clean_ticker(ticker)
+    return {"Symbol": _clean_ticker(ticker)}, dcf_row
 
 
 def _build_rows_sequential(
@@ -339,7 +350,7 @@ def _build_rows_sequential(
         try:
             financial_row, dcf_row = _build_rows_for_ticker(ticker, years)
         except FETCH_ERRORS:
-            financial_row, dcf_row = _empty_rows_for_ticker(ticker)
+            financial_row, dcf_row = _empty_rows_for_ticker(ticker, years)
         financial_rows[index] = financial_row
         dcf_rows[index] = dcf_row
         if show_progress:
@@ -366,7 +377,7 @@ def _build_rows_parallel(
             try:
                 financial_row, dcf_row = future.result()
             except FETCH_ERRORS:
-                financial_row, dcf_row = _empty_rows_for_ticker(ticker)
+                financial_row, dcf_row = _empty_rows_for_ticker(ticker, years)
             financial_rows[index] = financial_row
             dcf_rows[index] = dcf_row
             completed += 1
@@ -376,26 +387,21 @@ def _build_rows_parallel(
 
 
 def order_dcf_columns(frame: pd.DataFrame, years: list[int]) -> pd.DataFrame:
+    ordered = _expected_dcf_columns(years)
     if frame.empty:
-        return frame
-    ordered = ["Kod"]
-    for metric_name, _ in DCF_METRICS:
-        for year in years:
-            column_name = f"{metric_name} {year}"
-            if column_name in frame.columns:
-                ordered.append(column_name)
-    ordered.extend(column for column in frame.columns if column not in ordered)
-    return frame[ordered]
+        return frame.reindex(columns=ordered)
+    extras = [column for column in frame.columns if column not in ordered]
+    return frame.reindex(columns=ordered + extras)
 
 
 def build_financials_and_dcf_frames(
     tickers: list[str],
     end_year: Optional[int] = None,
-    rolling_year_count: int = 5,
+    rolling_year_count: int = 6,
     parallel_workers: int = 8,
     show_progress: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    final_year = end_year if end_year is not None else (date.today().year - 1)
+    final_year = end_year if end_year is not None else date.today().year
     years = [final_year - offset for offset in range(rolling_year_count)]
     if not tickers:
         return pd.DataFrame(), pd.DataFrame()

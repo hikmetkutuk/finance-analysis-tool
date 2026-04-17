@@ -11,7 +11,6 @@ from openpyxl.utils import get_column_letter
 
 from reporting.benchmark_report import build_report_rows
 from reporting.financials_report import build_financials_and_dcf_frames
-from reporting.model_validation import build_validation_frame
 from ratio_engine.constants import COLUMNS_ORDER, NUMERIC_COLUMNS
 from ratio_engine.service import analyze_symbols
 from data.sector import TR_PROFILE, US_PROFILE, build_sector_maps, build_sector_row
@@ -24,6 +23,9 @@ DEFAULT_INPUT = "coverage.txt"
 DEFAULT_OUTPUT = "investment_report.xlsx"
 SIGNAL_CONFIDENCE_LABEL = "Sinyal Güven Seviyesi"
 SECTOR_LABEL = "Sektör"
+CODE_COLUMN = "Kod"
+VALUATION_DCF_COLUMN = "DCF Değerlemesi"
+DCF_PROFESSIONAL_VALUE_COLUMN = "Profesyonel Değer"
 
 
 def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
@@ -43,7 +45,7 @@ def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
 
 def order_valuation_columns(frame: pd.DataFrame) -> pd.DataFrame:
     preferred = [
-        "Kod",
+        CODE_COLUMN,
         SECTOR_LABEL,
         "Para Birimi",
         "Sinyal Kalite Skoru",
@@ -52,7 +54,7 @@ def order_valuation_columns(frame: pd.DataFrame) -> pd.DataFrame:
         "Beklenen Getiri (%)",
         "WACC",
         "Ortalama Büyüme",
-        "DCF Değerlemesi",
+        VALUATION_DCF_COLUMN,
         "F/K Değerlemesi",
         "PD/DD Finansal Model",
         "EV/EBITDA Değerlemesi",
@@ -120,6 +122,29 @@ def reorder_sector_frame(frame: pd.DataFrame) -> pd.DataFrame:
     ordered = [column for column in preferred if column in frame.columns]
     ordered.extend(column for column in frame.columns if column not in ordered)
     return frame[ordered]
+
+
+def attach_dcf_professional_value(dcf_frame: pd.DataFrame, valuation_frame: pd.DataFrame) -> pd.DataFrame:
+    if dcf_frame.empty:
+        return dcf_frame
+
+    enriched = dcf_frame.copy()
+    if (
+        valuation_frame.empty
+        or CODE_COLUMN not in valuation_frame.columns
+        or VALUATION_DCF_COLUMN not in valuation_frame.columns
+        or CODE_COLUMN not in enriched.columns
+    ):
+        enriched[DCF_PROFESSIONAL_VALUE_COLUMN] = pd.NA
+        return enriched
+
+    valuation_lookup = valuation_frame[[CODE_COLUMN, VALUATION_DCF_COLUMN]].copy()
+    valuation_lookup = valuation_lookup.dropna(subset=[CODE_COLUMN]).drop_duplicates(subset=[CODE_COLUMN], keep="last")
+    valuation_lookup[VALUATION_DCF_COLUMN] = pd.to_numeric(valuation_lookup[VALUATION_DCF_COLUMN], errors="coerce")
+    enriched[DCF_PROFESSIONAL_VALUE_COLUMN] = enriched[CODE_COLUMN].map(
+        valuation_lookup.set_index(CODE_COLUMN)[VALUATION_DCF_COLUMN]
+    )
+    return enriched
 
 
 def build_summary_frame(
@@ -227,6 +252,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         tickers,
         parallel_workers=max(1, int(args.financials_workers)),
     )
+    dcf_frame = attach_dcf_professional_value(dcf_frame, valuation_frame)
 
     print("Aşama: Oranlar")
     ratio_frame, ratio_errors_frame = build_ratio_frames(tickers)
@@ -243,31 +269,15 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     if not args.skip_benchmark:
         print("Aşama: Benchmark")
         benchmark_frame = pd.DataFrame(build_report_rows())
-    print("Aşama: Doğrulama")
-    validation_frame = build_validation_frame(tickers)
 
-    backtest_frame = pd.DataFrame()
     if args.include_backtest:
         snapshot_valuations(tickers)
-        backtest_frame = evaluate_backtest(
+        evaluate_backtest(
             horizon_days=args.backtest_horizon_days,
             signal_threshold_pct=args.signal_threshold_pct,
         )
 
-    summary_frame = build_summary_frame(
-        input_count=len(tickers),
-        valuation_frame=valuation_frame,
-        financials_frame=financials_frame,
-        dcf_frame=dcf_frame,
-        ratio_frame=ratio_frame,
-        ratio_errors_frame=ratio_errors_frame,
-        benchmark_frame=benchmark_frame,
-        validation_frame=validation_frame,
-        backtest_frame=backtest_frame,
-    )
-
     with pd.ExcelWriter(args.output, engine="openpyxl") as writer:
-        write_sheet(writer, "Summary", summary_frame)
         write_sheet(writer, "Valuation", valuation_frame)
         write_sheet(writer, "Financials", financials_frame)
         write_sheet(writer, "DCF", dcf_frame)
@@ -277,9 +287,6 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         write_sheet(writer, "Sector_US", us_sector_frame)
         if not args.skip_benchmark:
             write_sheet(writer, "Benchmark", benchmark_frame)
-        write_sheet(writer, "Validation", validation_frame)
-        if args.include_backtest:
-            write_sheet(writer, "Backtest", backtest_frame)
 
     elapsed = time.time() - start
     print(f"Kaydedildi -> {args.output} ({elapsed:.1f}s)")
