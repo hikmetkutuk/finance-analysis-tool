@@ -2,18 +2,15 @@ from __future__ import annotations
 
 import argparse
 import time
-from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Optional
 
 import pandas as pd
-from openpyxl.utils import get_column_letter
 
-from reporting.benchmark_report import build_report_rows
 from reporting.financials_report import build_financials_and_dcf_frames
+from reporting.template_report import write_template_report
 from ratio_engine.constants import COLUMNS_ORDER, NUMERIC_COLUMNS
 from ratio_engine.service import analyze_symbols
-from data.sector import TR_PROFILE, US_PROFILE, build_sector_maps, build_sector_row
 from pipelines.update_macro_config import main as update_macro_config_main
 from valuation import AVERAGE_FAIR_PRICE_LABEL, load_tickers, run_valuation
 from reporting.valuation_backtest import evaluate_backtest, snapshot_valuations
@@ -83,47 +80,6 @@ def build_ratio_frames(tickers: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
     return ratio_frame, errors_frame
 
 
-def filter_sector_map(sector_map: dict[str, list[str]], selected_tickers: list[str]) -> dict[str, list[str]]:
-    selected = {ticker.upper() for ticker in selected_tickers}
-    filtered: dict[str, list[str]] = {}
-    for sector_name, sector_tickers in sector_map.items():
-        matched = [ticker for ticker in sector_tickers if ticker.upper() in selected]
-        if matched:
-            filtered[sector_name] = matched
-    return filtered
-
-
-def build_sector_frames(
-    auto_classify: bool,
-    selected_tickers: list[str],
-    full_universe: bool,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    tr_map, us_map = build_sector_maps(auto_classify=auto_classify)
-    if not full_universe:
-        tr_map = filter_sector_map(tr_map, selected_tickers)
-        us_map = filter_sector_map(us_map, selected_tickers)
-    tr_rows = [build_sector_row(sector_name, tickers, TR_PROFILE) for sector_name, tickers in tr_map.items()]
-    us_rows = [build_sector_row(sector_name, tickers, US_PROFILE) for sector_name, tickers in us_map.items()]
-    return reorder_sector_frame(pd.DataFrame(tr_rows)), reorder_sector_frame(pd.DataFrame(us_rows))
-
-
-def reorder_sector_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    if frame.empty:
-        return frame
-    rename_map = {
-        "sector": SECTOR_LABEL,
-        "pb": "PD / DD",
-        "pe": "F/K",
-        "fd": "FD",
-        "ev_ebitda": "Firma Değeri/Favök",
-    }
-    frame = frame.rename(columns=rename_map)
-    preferred = [SECTOR_LABEL, "PD / DD", "F/K", "FD", "Firma Değeri/Favök"]
-    ordered = [column for column in preferred if column in frame.columns]
-    ordered.extend(column for column in frame.columns if column not in ordered)
-    return frame[ordered]
-
-
 def attach_dcf_professional_value(dcf_frame: pd.DataFrame, valuation_frame: pd.DataFrame) -> pd.DataFrame:
     if dcf_frame.empty:
         return dcf_frame
@@ -145,48 +101,6 @@ def attach_dcf_professional_value(dcf_frame: pd.DataFrame, valuation_frame: pd.D
         valuation_lookup.set_index(CODE_COLUMN)[VALUATION_DCF_COLUMN]
     )
     return enriched
-
-
-def build_summary_frame(
-    input_count: int,
-    valuation_frame: pd.DataFrame,
-    financials_frame: pd.DataFrame,
-    dcf_frame: pd.DataFrame,
-    ratio_frame: pd.DataFrame,
-    ratio_errors_frame: pd.DataFrame,
-    benchmark_frame: pd.DataFrame,
-    validation_frame: pd.DataFrame,
-    backtest_frame: pd.DataFrame,
-) -> pd.DataFrame:
-    high_quality = int((valuation_frame.get(SIGNAL_CONFIDENCE_LABEL, pd.Series(dtype=str)) == "High").sum())
-    medium_quality = int((valuation_frame.get(SIGNAL_CONFIDENCE_LABEL, pd.Series(dtype=str)) == "Medium").sum())
-    low_quality = int((valuation_frame.get(SIGNAL_CONFIDENCE_LABEL, pd.Series(dtype=str)) == "Low").sum())
-
-    rows = [
-        {"Metric": "Run Timestamp", "Value": datetime.now().isoformat(timespec="seconds")},
-        {"Metric": "Input Ticker Count", "Value": input_count},
-        {"Metric": "Valuation Rows", "Value": len(valuation_frame)},
-        {"Metric": "Financials Rows", "Value": len(financials_frame)},
-        {"Metric": "DCF Rows", "Value": len(dcf_frame)},
-        {"Metric": "Ratio Rows", "Value": len(ratio_frame)},
-        {"Metric": "Ratio Failed Rows", "Value": len(ratio_errors_frame)},
-        {"Metric": "Benchmark Rows", "Value": len(benchmark_frame)},
-        {"Metric": "Validation Rows", "Value": len(validation_frame)},
-        {"Metric": "Backtest Rows", "Value": len(backtest_frame)},
-        {"Metric": "High Quality Signals", "Value": high_quality},
-        {"Metric": "Medium Quality Signals", "Value": medium_quality},
-        {"Metric": "Low Quality Signals", "Value": low_quality},
-    ]
-    return pd.DataFrame(rows)
-
-
-def write_sheet(writer: pd.ExcelWriter, sheet_name: str, frame: pd.DataFrame) -> None:
-    if frame.empty:
-        pd.DataFrame([{"info": "no data"}]).to_excel(writer, sheet_name=sheet_name, index=False)
-        return
-    display_frame = format_frame_for_tr_display(frame)
-    display_frame.to_excel(writer, sheet_name=sheet_name, index=False)
-    style_numeric_columns(writer, sheet_name, display_frame)
 
 
 def format_tr_numeric(value: Any) -> Any:
@@ -222,18 +136,6 @@ def format_frame_for_tr_display(frame: pd.DataFrame) -> pd.DataFrame:
     return display_frame
 
 
-def style_numeric_columns(writer: pd.ExcelWriter, sheet_name: str, frame: pd.DataFrame) -> None:
-    worksheet = writer.sheets[sheet_name]
-    for column_index, column_name in enumerate(frame.columns, start=1):
-        series = frame[column_name]
-        excel_column = get_column_letter(column_index)
-        lengths = [len(str(column_name))]
-        lengths.extend(len(str(value)) for value in series.dropna().head(100))
-        max_len = max(lengths)
-        worksheet.column_dimensions[excel_column].width = min(40, max(12, max_len + 2))
-
-
-
 def main(argv: Optional[Iterable[str]] = None) -> int:
     args = parse_args(argv)
     if args.refresh_macro:
@@ -255,20 +157,8 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     dcf_frame = attach_dcf_professional_value(dcf_frame, valuation_frame)
 
     print("Aşama: Oranlar")
-    ratio_frame, ratio_errors_frame = build_ratio_frames(tickers)
-    print("Aşama: Sektör")
-    sector_auto_classify = args.auto_classify_sectors and args.full_sector_universe
-    if args.auto_classify_sectors and not args.full_sector_universe:
-        print("Not: --auto-classify-sectors yalnızca --full-sector-universe ile birlikte uygulanır.")
-    tr_sector_frame, us_sector_frame = build_sector_frames(
-        auto_classify=sector_auto_classify,
-        selected_tickers=tickers,
-        full_universe=args.full_sector_universe,
-    )
-    benchmark_frame = pd.DataFrame()
-    if not args.skip_benchmark:
-        print("Aşama: Benchmark")
-        benchmark_frame = pd.DataFrame(build_report_rows())
+    ratio_frame, _ = build_ratio_frames(tickers)
+    print("Aşama: Şablon Rapor")
 
     if args.include_backtest:
         snapshot_valuations(tickers)
@@ -277,16 +167,14 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             signal_threshold_pct=args.signal_threshold_pct,
         )
 
-    with pd.ExcelWriter(args.output, engine="openpyxl") as writer:
-        write_sheet(writer, "Valuation", valuation_frame)
-        write_sheet(writer, "Financials", financials_frame)
-        write_sheet(writer, "DCF", dcf_frame)
-        write_sheet(writer, "Ratios", ratio_frame)
-        write_sheet(writer, "Ratio_Errors", ratio_errors_frame)
-        write_sheet(writer, "Sector_TR", tr_sector_frame)
-        write_sheet(writer, "Sector_US", us_sector_frame)
-        if not args.skip_benchmark:
-            write_sheet(writer, "Benchmark", benchmark_frame)
+    write_template_report(
+        output_path=args.output,
+        tickers=tickers,
+        valuation_frame=valuation_frame,
+        financials_frame=financials_frame,
+        dcf_frame=dcf_frame,
+        ratio_frame=ratio_frame,
+    )
 
     elapsed = time.time() - start
     print(f"Kaydedildi -> {args.output} ({elapsed:.1f}s)")

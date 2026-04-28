@@ -8,9 +8,9 @@ MANUAL_US_RISK_FREE = 0.0434
 MANUAL_US_BOND_2Y = 0.0384
 MANUAL_US_COST_OF_DEBT = 0.0584
 
-MANUAL_TR_RISK_FREE = 0.4218
-MANUAL_TR_BOND_2Y = 0.4218
-MANUAL_TR_COST_OF_DEBT = 0.4618
+MANUAL_TR_RISK_FREE = 0.37
+MANUAL_TR_BOND_2Y = 0.3999
+MANUAL_TR_COST_OF_DEBT = 0.4399
 
 
 def apply_manual_us_block(config: dict) -> None:
@@ -18,7 +18,7 @@ def apply_manual_us_block(config: dict) -> None:
     us["risk_free_rate"] = MANUAL_US_RISK_FREE
     us["bond_yield_2"] = MANUAL_US_BOND_2Y
     us["cost_of_debt"] = MANUAL_US_COST_OF_DEBT
-    us["source"] = "manual_override_treasury_gov_2026_04_06"
+    us["source"] = "manual_override_us_treasury_2026_04_23"
 
 
 def apply_manual_tr_block(config: dict) -> None:
@@ -26,7 +26,7 @@ def apply_manual_tr_block(config: dict) -> None:
     tr["risk_free_rate"] = MANUAL_TR_RISK_FREE
     tr["bond_yield_2"] = MANUAL_TR_BOND_2Y
     tr["cost_of_debt"] = MANUAL_TR_COST_OF_DEBT
-    tr["source"] = "manual_override_tr_2y_bloomberght_2026_04_07"
+    tr["source"] = "manual_override_tcmb_2026_04_22_hmb_2026_03_17"
 
 
 def main() -> None:
