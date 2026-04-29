@@ -145,21 +145,34 @@ def coalesce_numeric(*values: Any) -> Optional[float]:
 def normalized_info(bundle: TickerBundle) -> Dict[str, Optional[float]]:
     info = bundle.info
     fast = bundle.fast_info
+    market_cap = coalesce_numeric(info.get("marketCap"), fast.get("marketCap"))
+    current_price = coalesce_numeric(info.get("currentPrice"), fast.get("lastPrice"), bundle.last_close)
+    implied_shares = market_cap / current_price if market_cap is not None and current_price not in (None, 0) else None
     normalized = {
         "beta": coalesce_numeric(info.get("beta"), 1.0),
-        "marketCap": coalesce_numeric(info.get("marketCap"), fast.get("marketCap")),
+        "marketCap": market_cap,
         "totalDebt": coalesce_numeric(info.get("totalDebt")),
         "interestRate": coalesce_numeric(info.get("interestRate")),
         "sharesOutstanding": coalesce_numeric(info.get("sharesOutstanding"), fast.get("shares")),
         "floatShares": coalesce_numeric(info.get("floatShares")),
+        "impliedShares": implied_shares,
         "totalCash": coalesce_numeric(info.get("totalCash")),
         "trailingEps": coalesce_numeric(info.get("trailingEps")),
+        "forwardEps": coalesce_numeric(info.get("forwardEps")),
+        "forwardPE": coalesce_numeric(info.get("forwardPE")),
+        "targetMeanPrice": coalesce_numeric(info.get("targetMeanPrice")),
+        "targetMedianPrice": coalesce_numeric(info.get("targetMedianPrice")),
+        "numberOfAnalystOpinions": coalesce_numeric(info.get("numberOfAnalystOpinions")),
+        "earningsGrowth": coalesce_numeric(info.get("earningsGrowth")),
+        "revenueGrowth": coalesce_numeric(info.get("revenueGrowth")),
         "dividendRate": coalesce_numeric(info.get("dividendRate"), 0.0),
         "ebitda": coalesce_numeric(info.get("ebitda")),
+        "freeCashflow": coalesce_numeric(info.get("freeCashflow")),
+        "operatingCashflow": coalesce_numeric(info.get("operatingCashflow")),
         "priceToBook": coalesce_numeric(info.get("priceToBook"), fast.get("priceToBook")),
         "bookValue": coalesce_numeric(info.get("bookValue")),
         "returnOnEquity": coalesce_numeric(info.get("returnOnEquity")),
-        "currentPrice": coalesce_numeric(info.get("currentPrice"), fast.get("lastPrice"), bundle.last_close),
+        "currentPrice": current_price,
     }
     return normalized
 

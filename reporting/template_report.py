@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
-from statistics import mean
+from statistics import mean, median
 from typing import Any, Iterable, Optional, Sequence
 
 import pandas as pd
@@ -22,6 +22,11 @@ CODE_COLUMN = "Kod"
 SECTOR_COLUMN = "Sektör"
 INDEX_COLUMN = "Endeks"
 VALUE_COLUMN = "Değer"
+SECTION_COLUMN = "Bölüm"
+TOPIC_COLUMN = "Konu"
+WEIGHT_COLUMN = "Ağırlık"
+TR_VALUE_COLUMN = "TR"
+US_VALUE_COLUMN = "US"
 INDEX_XU100 = "XU100"
 INDEX_XUTUM = "XUTUM"
 INDEX_US = "US"
@@ -32,9 +37,21 @@ SHEET_ENDEKS = INDEX_COLUMN
 SHEET_SEKTOR = SECTOR_COLUMN
 SHEET_VARS = "Vars"
 SHEET_RASYO = "Rasyo"
-OUTPUT_SHEETS = (SHEET_HISSE, SHEET_PUAN, SHEET_ENDEKS, SHEET_SEKTOR, SHEET_VARS, SHEET_RASYO)
+SHEET_NOTLAR = "Notlar"
+OUTPUT_SHEETS = (SHEET_HISSE, SHEET_PUAN, SHEET_ENDEKS, SHEET_SEKTOR, SHEET_VARS, SHEET_RASYO, SHEET_NOTLAR)
 VALUE_NUMBER_FORMAT = "#,##0.00"
 PERCENT_NUMBER_FORMAT = "0.00%"
+GREEN_FONT_COLOR = "FF23BEA8"
+RED_FONT_COLOR = "FFCC0000"
+DEFAULT_FONT_COLOR = "FF666666"
+RASYO_PASS_THRESHOLD = 0.60
+MIN_MODEL_PRICE_MULTIPLE = 0.05
+MAX_MODEL_PRICE_MULTIPLE = 5.0
+MIN_PROFESSIONAL_MODELS = 3
+HIGH_PE_WARNING = 50.0
+EXTREME_PE_WARNING = 100.0
+HIGH_EV_EBITDA_WARNING = 35.0
+EXTREME_EV_EBITDA_WARNING = 60.0
 
 PUAN_CODE = "1-Kod"
 PUAN_NAME = "2-İsim"
@@ -44,6 +61,8 @@ PUAN_EV_EBITDA = "5-FD/ FAVÖK"
 PUAN_PCF = "6-F/NA"
 PUAN_PE = "7-FK"
 PUAN_EPS = "8-HBK"
+PUAN_FORWARD_EPS = "8-İleri HBK"
+PUAN_FORWARD_PE = "8-İleri FK"
 PUAN_PB = "9-PD / DD"
 PUAN_PS = "10-PD / NS"
 PUAN_BETA = "11-Beta"
@@ -56,6 +75,13 @@ PUAN_DEBT_SOURCE = "17-Borç Kaynak"
 PUAN_PAID_IN_CAPITAL = "18-HÖS"
 PUAN_NET_WORKING_CAPITAL = "19-NİS"
 PUAN_NET_DEBT_TO_EBITDA = "20-NB / FAVÖK (Yıllık) (%)"
+PUAN_ANALYST_TARGET_MEAN = "21-Analist Hedef Ort."
+PUAN_ANALYST_TARGET_MEDIAN = "22-Analist Hedef Medyan"
+PUAN_ANALYST_COUNT = "23-Analist Sayısı"
+PUAN_EARNINGS_GROWTH = "24-Kâr Büyüme Bekl."
+PUAN_REVENUE_GROWTH = "25-Ciro Büyüme Bekl."
+PUAN_FREE_CASH_FLOW = "26-Serbest Nakit Akımı"
+PUAN_OPERATING_CASH_FLOW = "27-Operasyonel Nakit Akımı"
 
 RASYO_STOCK = "Hisse"
 RASYO_CURRENT_RATIO = "Cari Oran"
@@ -76,7 +102,11 @@ HISSE_PB = "PD/DD"
 HISSE_NIS = "Nis"
 HISSE_RATIO = "Rasyo"
 HISSE_AVERAGE = "D. Ort"
+HISSE_ANALYST_TARGET = "Analist Hedef"
 HISSE_UPSIDE = "GP %"
+HISSE_ANALYST_UPSIDE = "Analist GP %"
+HISSE_CONFIDENCE = "Güven"
+HISSE_MODEL_COUNT = "D. Ort Model Sayısı"
 
 SECTOR_PB = RASYO_PB
 SECTOR_PE = "F/K"
@@ -92,6 +122,8 @@ PUAN_COLUMNS = (
     PUAN_PCF,
     PUAN_PE,
     PUAN_EPS,
+    PUAN_FORWARD_EPS,
+    PUAN_FORWARD_PE,
     PUAN_PB,
     PUAN_PS,
     PUAN_BETA,
@@ -104,6 +136,13 @@ PUAN_COLUMNS = (
     PUAN_PAID_IN_CAPITAL,
     PUAN_NET_WORKING_CAPITAL,
     PUAN_NET_DEBT_TO_EBITDA,
+    PUAN_ANALYST_TARGET_MEAN,
+    PUAN_ANALYST_TARGET_MEDIAN,
+    PUAN_ANALYST_COUNT,
+    PUAN_EARNINGS_GROWTH,
+    PUAN_REVENUE_GROWTH,
+    PUAN_FREE_CASH_FLOW,
+    PUAN_OPERATING_CASH_FLOW,
 )
 
 RASYO_COLUMNS = (
@@ -144,6 +183,10 @@ HISSE_COLUMNS = (
     "D12",
     HISSE_AVERAGE,
     HISSE_UPSIDE,
+    HISSE_ANALYST_TARGET,
+    HISSE_ANALYST_UPSIDE,
+    HISSE_CONFIDENCE,
+    HISSE_MODEL_COUNT,
 )
 
 HISSE_HEADER_COMMENTS = {
@@ -152,7 +195,7 @@ HISSE_HEADER_COMMENTS = {
     "D3": "NDK * 10 / HOS",
     "D4": "(Ozkaynaklar / HOS) * S(PD/DD)",
     "D5": "Ozkaynaklar / HOS",
-    "D6": "HBK * (1 + Aktif Buyume / 100) * FK",
+    "D6": "İleri HBK ve İleri FK varsa İleri HBK * İleri FK; yoksa HBK * (1 + Aktif Buyume / 100) * FK",
     "D7": "((FAVOK * S(FD/FAVOK)) - Net Borc) / HOS",
     "D8": "(HBK * S(F/K)) / 2Y Tahvil",
     "D9": "(EFK * (1 + terminal_growth) / (AOSM - terminal_growth)) / HOS",
@@ -161,15 +204,91 @@ HISSE_HEADER_COMMENTS = {
     "D12": "(Ozkaynaklar / HOS) * ((ROE - terminal_growth) / (Ozkaynak Maliyeti - terminal_growth))",
 }
 
+D_FIELDS = tuple(f"D{index}" for index in range(1, 13))
+WEIGHT_PROFILE_COLUMN = "Ağırlık Profili"
+WEIGHT_NOTE_COLUMN = "Not"
+WEIGHT_PROFILE_DEFAULT = "Genel Sanayi"
+WEIGHT_PROFILE_FINANCIAL = "Finansal"
+WEIGHT_PROFILE_GROWTH = "Büyüme/Teknoloji"
+WEIGHT_PROFILE_REAL_ESTATE = "Gayrimenkul"
+WEIGHT_PROFILE_HOLDING = "Holding"
+WEIGHT_PROFILE_ENERGY = "Enerji/Altyapı"
+
+MODEL_WEIGHTS = {
+    WEIGHT_PROFILE_FINANCIAL: {
+        "D1": 0.10,
+        "D4": 0.20,
+        "D5": 0.10,
+        "D10": 0.15,
+        "D11": 0.10,
+        "D12": 0.35,
+    },
+    WEIGHT_PROFILE_GROWTH: {
+        "D1": 0.25,
+        "D6": 0.40,
+        "D7": 0.20,
+        "D11": 0.15,
+    },
+    WEIGHT_PROFILE_REAL_ESTATE: {
+        "D4": 0.25,
+        "D5": 0.25,
+        "D10": 0.10,
+        "D11": 0.20,
+        "D12": 0.20,
+    },
+    WEIGHT_PROFILE_HOLDING: {
+        "D4": 0.20,
+        "D5": 0.20,
+        "D10": 0.10,
+        "D11": 0.25,
+        "D12": 0.25,
+    },
+    WEIGHT_PROFILE_ENERGY: {
+        "D4": 0.10,
+        "D7": 0.25,
+        "D9": 0.20,
+        "D10": 0.10,
+        "D11": 0.25,
+        "D12": 0.10,
+    },
+    WEIGHT_PROFILE_DEFAULT: {
+        "D1": 0.10,
+        "D2": 0.05,
+        "D3": 0.05,
+        "D4": 0.10,
+        "D6": 0.10,
+        "D7": 0.20,
+        "D9": 0.15,
+        "D10": 0.10,
+        "D11": 0.15,
+    },
+}
+
+FINANCIAL_SECTORS = {"Banka", "Sigorta", "Finans", "Finansal Hizmetler"}
+GROWTH_SECTORS = {"Teknoloji", "Yarı İletken", "E-Ticaret", "İletişim & Medya", "Otomotiv"}
+REAL_ESTATE_SECTORS = {"Gayrimenkul"}
+HOLDING_SECTORS = {"Holding & Karma"}
+ENERGY_SECTORS = {"Enerji", "Petrol", "Telekomünikasyon", "Havacılık", "Sanayi & Savunma"}
+
 
 @dataclass(frozen=True)
 class MacroRates:
+    market_key: str
     two_year_bond: Optional[float]
     market_premium: Optional[float]
     terminal_growth: Optional[float]
     cost_of_debt: Optional[float]
     tax_rate: Optional[float]
     risk_free_rate: Optional[float]
+
+
+@dataclass(frozen=True)
+class MacroRateBook:
+    tr: MacroRates
+    us: MacroRates
+
+    def for_ticker(self, ticker: str) -> MacroRates:
+        return self.tr if ticker.upper().endswith(".IS") else self.us
 
 
 @dataclass(frozen=True)
@@ -196,17 +315,33 @@ class HisseInputs:
     sector_pb: Optional[float]
     sector_ev_ebitda: Optional[float]
     eps: Optional[float]
+    forward_eps: Optional[float]
+    forward_pe: Optional[float]
     roe: Optional[float]
     beta: Optional[float]
     debt_ratio: Optional[float]
+    net_income_growth: Optional[float]
+    earnings_growth: Optional[float]
+    revenue_growth: Optional[float]
     net_income: Optional[float]
     operating_income: Optional[float]
     equity: Optional[float]
     paid_in_capital: Optional[float]
     ebitda: Optional[float]
+    free_cash_flow: Optional[float]
+    operating_cash_flow: Optional[float]
     net_debt: float
     asset_growth: Optional[float]
     dcf_value: Optional[float]
+    analyst_target: Optional[float]
+    analyst_count: Optional[float]
+
+
+@dataclass(frozen=True)
+class ValuationSummary:
+    fair_value: Optional[float]
+    confidence: Optional[float]
+    model_count: int
 
 SHEET_UPDATES_Q2_2026_XU100_ADD = {"CVKMD", "EUREN", "PAHOL", "PSGYO", "SARKY"}
 SHEET_UPDATES_Q2_2026_XU100_REMOVE = {"EGEEN", "KCAER", "LINK", "TTRAK", "YEOTK"}
@@ -258,6 +393,30 @@ def _rate_decimal(value: Any) -> Optional[float]:
     if rate is None:
         return None
     return rate / 100.0 if abs(rate) > 1 else rate
+
+
+def _rate_percent_points(value: Any) -> Optional[float]:
+    rate = _safe_float(value)
+    if rate is None:
+        return None
+    return rate * 100.0 if abs(rate) <= 1 else rate
+
+
+def _sanity_checked_model_value(value: Any, price: Optional[float]) -> Optional[float]:
+    number = _safe_float(value)
+    if number is None or number <= 0:
+        return None
+    if price is None or price <= 0:
+        return number
+    if number < price * MIN_MODEL_PRICE_MULTIPLE:
+        return None
+    if number > price * MAX_MODEL_PRICE_MULTIPLE:
+        return None
+    return number
+
+
+def sanity_checked_valuation_points(values: dict[str, Optional[float]], price: Optional[float]) -> dict[str, Optional[float]]:
+    return {model_key: _sanity_checked_model_value(value, price) for model_key, value in values.items()}
 
 
 def _debt_weight_from_debt_source(value: Any) -> Optional[float]:
@@ -320,10 +479,203 @@ def _roe_justified_pb_value(
 
 
 def _mean_nonempty(values: Iterable[Any]) -> Optional[float]:
-    numeric_values = [float(value) for value in values if _safe_float(value) is not None]
+    numeric_values = [number for value in values if (number := _safe_float(value)) is not None]
     if not numeric_values:
         return None
     return mean(numeric_values)
+
+
+def _weight_profile_for_sector(sector_name: str) -> str:
+    if sector_name in FINANCIAL_SECTORS:
+        return WEIGHT_PROFILE_FINANCIAL
+    if sector_name in GROWTH_SECTORS:
+        return WEIGHT_PROFILE_GROWTH
+    if sector_name in REAL_ESTATE_SECTORS:
+        return WEIGHT_PROFILE_REAL_ESTATE
+    if sector_name in HOLDING_SECTORS:
+        return WEIGHT_PROFILE_HOLDING
+    if sector_name in ENERGY_SECTORS:
+        return WEIGHT_PROFILE_ENERGY
+    return WEIGHT_PROFILE_DEFAULT
+
+
+def _ratio_weight_factor(inputs: HisseInputs) -> float:
+    if inputs.ratio_score is not None:
+        if inputs.ratio_score < 0.30:
+            return 0.55
+        if inputs.ratio_score < 0.50:
+            return 0.75
+    return 1.0
+
+
+def _pe_weight_factor(model_key: str, inputs: HisseInputs) -> float:
+    if model_key not in {"D1", "D6"}:
+        return 1.0
+
+    pe_reference = inputs.forward_pe if inputs.forward_pe is not None else inputs.company_pe
+    if pe_reference is None:
+        return 1.0
+    if pe_reference > EXTREME_PE_WARNING:
+        return 0.25
+    if pe_reference > HIGH_PE_WARNING:
+        return 0.55
+    return 1.0
+
+
+def _trailing_pe_fallback_factor(model_key: str, inputs: HisseInputs) -> float:
+    if model_key == "D6" and inputs.forward_pe is None and inputs.company_pe is not None and inputs.company_pe > HIGH_PE_WARNING:
+        return 0.60
+    return 1.0
+
+
+def _ev_ebitda_weight_factor(model_key: str, inputs: HisseInputs) -> float:
+    if model_key != "D7" or inputs.sector_ev_ebitda is None:
+        return 1.0
+    if inputs.sector_ev_ebitda > EXTREME_EV_EBITDA_WARNING:
+        return 0.30
+    if inputs.sector_ev_ebitda > HIGH_EV_EBITDA_WARNING:
+        return 0.60
+    return 1.0
+
+
+def _growth_weight_factor(model_key: str, inputs: HisseInputs) -> float:
+    growth_reference = inputs.earnings_growth if inputs.earnings_growth is not None else inputs.net_income_growth
+    if model_key in {"D2", "D3", "D6", "D9", "D10"} and growth_reference is not None and growth_reference < 0:
+        return 0.60
+    return 1.0
+
+
+def _debt_weight_factor(model_key: str, inputs: HisseInputs) -> float:
+    if model_key in {"D9", "D10", "D12"} and inputs.debt_ratio is not None and inputs.debt_ratio > 0.60:
+        return 0.75
+    return 1.0
+
+
+def _model_weight_factor(model_key: str, inputs: HisseInputs) -> float:
+    factors = (
+        _ratio_weight_factor(inputs),
+        _pe_weight_factor(model_key, inputs),
+        _trailing_pe_fallback_factor(model_key, inputs),
+        _ev_ebitda_weight_factor(model_key, inputs),
+        _growth_weight_factor(model_key, inputs),
+        _debt_weight_factor(model_key, inputs),
+    )
+    factor = 1.0
+    for current_factor in factors:
+        factor *= current_factor
+    return factor
+
+
+def _adjusted_model_weights(values: dict[str, Optional[float]], inputs: HisseInputs, weight_profile: str) -> dict[str, float]:
+    base_weights = MODEL_WEIGHTS.get(weight_profile, MODEL_WEIGHTS[WEIGHT_PROFILE_DEFAULT])
+    adjusted: dict[str, float] = {}
+    for model_key, base_weight in base_weights.items():
+        value = _safe_float(values.get(model_key))
+        if value is None or value <= 0:
+            continue
+        adjusted[model_key] = base_weight * _model_weight_factor(model_key, inputs)
+    return adjusted
+
+
+def _active_model_values(values: dict[str, Optional[float]], model_keys: Iterable[str]) -> dict[str, float]:
+    active_values: dict[str, float] = {}
+    for model_key in model_keys:
+        value = _safe_float(values.get(model_key))
+        if value is not None:
+            active_values[model_key] = value
+    return active_values
+
+
+def _trimmed_model_keys(values: dict[str, Optional[float]], weights: dict[str, float]) -> set[str]:
+    active_by_model = _active_model_values(values, weights)
+    active_values = list(active_by_model.values())
+    if len(active_values) < 4:
+        return set(weights)
+    center = median(active_values)
+    if center <= 0:
+        return set(weights)
+    retained = {
+        model_key
+        for model_key, value in active_by_model.items()
+        if center * 0.35 <= value <= center * 2.50
+    }
+    return retained if len(retained) >= 2 else set(weights)
+
+
+def _weighted_average(values: dict[str, Optional[float]], weights: dict[str, float]) -> Optional[float]:
+    weighted_sum = 0.0
+    active_weight = 0.0
+    for model_key, weight in weights.items():
+        value = _safe_float(values.get(model_key))
+        if value is None or value <= 0 or weight <= 0:
+            continue
+        weighted_sum += value * weight
+        active_weight += weight
+    if active_weight <= 0:
+        return None
+    return weighted_sum / active_weight
+
+
+def _model_dispersion(values: dict[str, Optional[float]], weights: dict[str, float], fair_value: Optional[float]) -> Optional[float]:
+    if fair_value is None or fair_value <= 0 or not weights:
+        return None
+    active_values = list(_active_model_values(values, weights).values())
+    if len(active_values) < 2:
+        return None
+    avg_abs_deviation = mean(abs(value - fair_value) for value in active_values)
+    return avg_abs_deviation / fair_value
+
+
+def _confidence_from_dispersion(dispersion: Optional[float]) -> float:
+    if dispersion is None:
+        return 0.55
+    if dispersion <= 0.25:
+        return 1.0
+    if dispersion >= 1.25:
+        return 0.10
+    return max(0.10, 1.0 - ((dispersion - 0.25) / 1.0) * 0.90)
+
+
+def _data_completeness_score(inputs: HisseInputs) -> float:
+    fields = (
+        inputs.price,
+        inputs.paid_in_capital,
+        inputs.eps,
+        inputs.forward_eps,
+        inputs.forward_pe,
+        inputs.ebitda,
+        inputs.net_income,
+        inputs.operating_income,
+        inputs.equity,
+        inputs.sector_pe,
+        inputs.sector_ev_ebitda,
+        inputs.dcf_value,
+        inputs.analyst_target,
+    )
+    return sum(1 for value in fields if _safe_float(value) is not None) / len(fields)
+
+
+def valuation_summary(values: dict[str, Optional[float]], inputs: HisseInputs, weight_profile: str) -> ValuationSummary:
+    adjusted_weights = _adjusted_model_weights(values, inputs, weight_profile)
+    retained_keys = _trimmed_model_keys(values, adjusted_weights)
+    active_weights = {
+        model_key: weight
+        for model_key, weight in adjusted_weights.items()
+        if model_key in retained_keys
+    }
+    fair_value = _weighted_average(values, active_weights)
+    model_count = len(active_weights)
+    if fair_value is None or model_count == 0:
+        return ValuationSummary(None, None, 0)
+
+    model_score = min(1.0, model_count / MIN_PROFESSIONAL_MODELS)
+    ratio_score = inputs.ratio_score if inputs.ratio_score is not None else 0.50
+    dispersion_score = _confidence_from_dispersion(_model_dispersion(values, active_weights, fair_value))
+    data_score = _data_completeness_score(inputs)
+    confidence = (model_score * 0.30) + (dispersion_score * 0.30) + (data_score * 0.25) + (ratio_score * 0.15)
+    if model_count < 2:
+        confidence *= 0.65
+    return ValuationSummary(fair_value, max(0.0, min(1.0, confidence)), model_count)
 
 
 def _median_or_none(series: pd.Series) -> Optional[float]:
@@ -379,6 +731,54 @@ def _sync_excel_table(ws, table_name: str, columns: Sequence[str], header_row: i
         table.autoFilter.ref = table.ref
 
 
+def _copy_cell_style(source, target) -> None:
+    target.font = copy(source.font)
+    target.fill = copy(source.fill)
+    target.border = copy(source.border)
+    target.alignment = copy(source.alignment)
+    target.protection = copy(source.protection)
+    target.number_format = source.number_format
+
+
+def _align_hisse_column_styles(ws, columns: Sequence[str], header_row: int, row_count: int) -> None:
+    headers = {column_name: index for index, column_name in enumerate(columns, start=1)}
+    first_data_row = header_row + 1
+    last_data_row = header_row + row_count
+    data_style_column = headers.get("D1", 1)
+
+    for column_name in (HISSE_RATIO, HISSE_ANALYST_TARGET, HISSE_UPSIDE, HISSE_ANALYST_UPSIDE, HISSE_CONFIDENCE, HISSE_MODEL_COUNT):
+        column_index = headers.get(column_name)
+        if column_index is None or column_index <= 1:
+            continue
+        _copy_cell_style(ws.cell(row=header_row, column=column_index - 1), ws.cell(row=header_row, column=column_index))
+        for row_index in range(first_data_row, last_data_row + 1):
+            _copy_cell_style(ws.cell(row=row_index, column=data_style_column), ws.cell(row=row_index, column=column_index))
+
+
+def _apply_number_format_to_columns(
+    ws,
+    headers: dict[str, int],
+    column_names: Sequence[str],
+    number_format: str,
+    first_row: int,
+    last_row: int,
+) -> None:
+    for column_name in column_names:
+        column_index = headers.get(column_name)
+        if column_index is None:
+            continue
+        for row_index in range(first_row, last_row + 1):
+            ws.cell(row=row_index, column=column_index).number_format = number_format
+
+
+def _existing_column_indexes(headers: dict[str, int], column_names: Iterable[str]) -> set[int]:
+    return {
+        column_index
+        for column_name in column_names
+        if (column_index := headers.get(column_name)) is not None
+    }
+
+
 def _apply_header_comments(ws, columns: Sequence[str], comments: dict[str, str], header_row: int) -> None:
     for column_index, column_name in enumerate(columns, start=1):
         comment_text = comments.get(column_name)
@@ -410,26 +810,47 @@ def _apply_hisse_number_formats(ws, columns: Sequence[str], header_row: int, row
     first_data_row = header_row + 1
     last_data_row = header_row + row_count
 
-    value_columns = tuple(f"D{index}" for index in range(1, 13)) + (HISSE_AVERAGE,)
-    for column_name in value_columns:
-        column_index = headers.get(column_name)
-        if column_index is None:
-            continue
-        for row_index in range(first_data_row, last_data_row + 1):
-            cell = ws.cell(row=row_index, column=column_index)
-            cell.number_format = VALUE_NUMBER_FORMAT
-            if column_name == "D12":
-                cell.font = copy(ws.cell(row=row_index, column=headers["D11"]).font)
+    value_columns = tuple(f"D{index}" for index in range(1, 13)) + (HISSE_AVERAGE, HISSE_ANALYST_TARGET)
+    percent_columns = (HISSE_UPSIDE, HISSE_ANALYST_UPSIDE, HISSE_CONFIDENCE, HISSE_RATIO)
+    _apply_number_format_to_columns(ws, headers, value_columns, VALUE_NUMBER_FORMAT, first_data_row, last_data_row)
+    _apply_number_format_to_columns(ws, headers, percent_columns, PERCENT_NUMBER_FORMAT, first_data_row, last_data_row)
+    _apply_number_format_to_columns(ws, headers, (HISSE_MODEL_COUNT,), "0", first_data_row, last_data_row)
 
-    gp_column = headers.get(HISSE_UPSIDE)
-    if gp_column is not None:
-        for row_index in range(first_data_row, last_data_row + 1):
-            ws.cell(row=row_index, column=gp_column).number_format = PERCENT_NUMBER_FORMAT
-
-    d12_column = headers.get("D12")
-    d_ort_column = headers.get(HISSE_AVERAGE)
-    affected_columns = {column for column in (d12_column, d_ort_column) if column is not None}
+    affected_columns = _existing_column_indexes(
+        headers,
+        ("D12", HISSE_AVERAGE, HISSE_RATIO, HISSE_UPSIDE, HISSE_ANALYST_UPSIDE, HISSE_CONFIDENCE),
+    )
     _remove_conditional_formatting_for_columns(ws, affected_columns)
+
+
+def _apply_threshold_font_color(cell, value: Any, threshold: float) -> None:
+    font = copy(cell.font)
+    number = _safe_float(value)
+    font.color = GREEN_FONT_COLOR if number is not None and number > threshold else RED_FONT_COLOR
+    cell.font = font
+
+
+def _apply_signal_font_colors(ws, columns: Sequence[str], header_row: int, row_count: int) -> None:
+    headers = {column_name: index for index, column_name in enumerate(columns, start=1)}
+    signal_columns = (
+        (HISSE_RATIO, RASYO_PASS_THRESHOLD),
+        (HISSE_UPSIDE, 0.0),
+        (HISSE_ANALYST_UPSIDE, 0.0),
+        (HISSE_CONFIDENCE, RASYO_PASS_THRESHOLD),
+    )
+    for row_index in range(header_row + 1, header_row + row_count + 1):
+        for column_name, threshold in signal_columns:
+            column_index = headers.get(column_name)
+            if column_index is None:
+                continue
+            cell = ws.cell(row=row_index, column=column_index)
+            _apply_threshold_font_color(cell, cell.value, threshold)
+
+
+def _ensure_sheet(workbook, sheet_name: str):
+    if sheet_name in workbook.sheetnames:
+        return workbook[sheet_name]
+    return workbook.create_sheet(sheet_name)
 
 
 def _keep_only_sheets(workbook, sheet_names: Sequence[str]) -> None:
@@ -516,27 +937,92 @@ def build_sector_frame(endeks_frame: pd.DataFrame, puan_frame: pd.DataFrame) -> 
     return pd.DataFrame(rows, columns=_column_index(columns))
 
 
-def build_vars_frame() -> pd.DataFrame:
-    config = load_macro_config()["tr"]
+def _vars_values_for_market(config: dict[str, Any]) -> dict[str, float]:
     risk_free = float(config["risk_free_rate"])
     bond_yield_2 = float(config["bond_yield_2"])
     cost_of_debt = float(config["cost_of_debt"])
-    market_premium = float(config["market_premium"])
     sovereign_spread = max(bond_yield_2 - risk_free, 0.0)
-    five_year_yield = risk_free + sovereign_spread
-    ten_year_yield = risk_free
+    return {
+        " 2Tahvil": bond_yield_2,
+        " 5Tahvil": risk_free + sovereign_spread,
+        "10Tahvil": risk_free,
+        "K. Vergisi": float(config["tax_rate"]),
+        "Faiz Oranı": cost_of_debt,
+        "Risksiz Faiz": risk_free,
+        "CDS 5(Ülke Riski)": sovereign_spread,
+        "Borçlanma Maliyeti": cost_of_debt,
+        "Piyasa Risk Primi": float(config["market_premium"]),
+        "Terminal Büyüme": float(config["terminal_growth"]),
+    }
+
+
+def build_vars_frame() -> pd.DataFrame:
+    config = load_macro_config()
+    tr_values = _vars_values_for_market(config["tr"])
+    us_values = _vars_values_for_market(config["us"])
     rows = [
-        {"Tür": " 2Tahvil", VALUE_COLUMN: bond_yield_2},
-        {"Tür": " 5Tahvil", VALUE_COLUMN: five_year_yield},
-        {"Tür": "10Tahvil", VALUE_COLUMN: ten_year_yield},
-        {"Tür": "K. Vergisi", VALUE_COLUMN: float(config["tax_rate"])},
-        {"Tür": "Faiz Oranı", VALUE_COLUMN: cost_of_debt},
-        {"Tür": "Risksiz Faiz", VALUE_COLUMN: risk_free},
-        {"Tür": "CDS 5(Ülke Riski)", VALUE_COLUMN: sovereign_spread},
-        {"Tür": "Borçlanma Maliyeti", VALUE_COLUMN: cost_of_debt},
-        {"Tür": "Piyasa Risk Primi", VALUE_COLUMN: market_premium},
+        {"Tür": metric_name, TR_VALUE_COLUMN: tr_values[metric_name], US_VALUE_COLUMN: us_values[metric_name]}
+        for metric_name in tr_values
     ]
-    return pd.DataFrame(rows, columns=_column_index(("Tür", VALUE_COLUMN)))
+    return pd.DataFrame(rows, columns=_column_index(("Tür", TR_VALUE_COLUMN, US_VALUE_COLUMN)))
+
+
+def build_notes_frame() -> pd.DataFrame:
+    rows: list[dict[str, Any]] = [
+        {
+            SECTION_COLUMN: "Metodoloji",
+            TOPIC_COLUMN: HISSE_AVERAGE,
+            VALUE_COLUMN: "D. Ort eşit ortalama değildir; sektör profiline, şirket kalitesine, çarpan riskine, veri tamlığına ve model sapmasına göre ayarlanmış ağırlıklı hedef değerdir.",
+        },
+        {
+            SECTION_COLUMN: "Metodoloji",
+            TOPIC_COLUMN: "Geçerlilik",
+            VALUE_COLUMN: "Pozitif olmayan, boş veya güncel fiyatın %5'i ile 5 katı dışındaki model değerleri hedef fiyat hesabına ve rapora alınmaz; kalan ağırlıklar kendi içinde yeniden normalize edilir.",
+        },
+        {
+            SECTION_COLUMN: "Metodoloji",
+            TOPIC_COLUMN: HISSE_CONFIDENCE,
+            VALUE_COLUMN: "Güven; geçerli model sayısı, modeller arası sapma, veri tamlığı ve rasyo skorundan oluşur. Aşırı FK/FD-FAVÖK ve negatif büyüme ilgili model ağırlığını düşürür.",
+        },
+    ]
+    for model_key in D_FIELDS:
+        rows.append(
+            {
+                SECTION_COLUMN: "D Modeli",
+                TOPIC_COLUMN: model_key,
+                VALUE_COLUMN: HISSE_HEADER_COMMENTS.get(model_key, ""),
+            }
+        )
+    for profile_name, weights in MODEL_WEIGHTS.items():
+        for model_key in D_FIELDS:
+            rows.append(
+                {
+                    SECTION_COLUMN: WEIGHT_COLUMN,
+                    TOPIC_COLUMN: profile_name,
+                    VALUE_COLUMN: model_key,
+                    WEIGHT_COLUMN: weights.get(model_key, 0.0),
+                }
+            )
+    rows.extend(
+        [
+            {
+                SECTION_COLUMN: "Profil",
+                TOPIC_COLUMN: WEIGHT_PROFILE_FINANCIAL,
+                VALUE_COLUMN: "Banka, sigorta ve finansal hizmetler. Defter değeri, ROE ve özsermaye maliyeti modelleri daha yüksek ağırlıklıdır.",
+            },
+            {
+                SECTION_COLUMN: "Profil",
+                TOPIC_COLUMN: WEIGHT_PROFILE_GROWTH,
+                VALUE_COLUMN: "Teknoloji, yarı iletken, e-ticaret ve büyüme karakteri yüksek sektörler. İleri HBK/FK, sektör FK, EV/EBITDA ve DCF/INA ağırlıklıdır; defter değeri ve trailing terminal modeller düşük uygunluk nedeniyle dışarıda bırakılır.",
+            },
+            {
+                SECTION_COLUMN: "Profil",
+                TOPIC_COLUMN: WEIGHT_PROFILE_DEFAULT,
+                VALUE_COLUMN: "Standart sanayi ve karma operasyonel şirketler. Çarpan, defter, EV/EBITDA ve gelir kapitalizasyonu dengeli kullanılır.",
+            },
+        ]
+    )
+    return pd.DataFrame(rows, columns=_column_index((SECTION_COLUMN, TOPIC_COLUMN, VALUE_COLUMN, WEIGHT_COLUMN)))
 
 
 def build_puan_frame(financials_frame: pd.DataFrame) -> pd.DataFrame:
@@ -552,6 +1038,8 @@ def build_puan_frame(financials_frame: pd.DataFrame) -> pd.DataFrame:
             "P/CF": PUAN_PCF,
             "P/E": PUAN_PE,
             "EPS": PUAN_EPS,
+            "Forward EPS": PUAN_FORWARD_EPS,
+            "Forward P/E": PUAN_FORWARD_PE,
             "P/B": PUAN_PB,
             "P/S": PUAN_PS,
             "Beta": PUAN_BETA,
@@ -564,6 +1052,13 @@ def build_puan_frame(financials_frame: pd.DataFrame) -> pd.DataFrame:
             "Paid-in Capital": PUAN_PAID_IN_CAPITAL,
             "Net Working Capital": PUAN_NET_WORKING_CAPITAL,
             "Net Debt/EBITDA(Annual, %)": PUAN_NET_DEBT_TO_EBITDA,
+            "Analyst Target Mean": PUAN_ANALYST_TARGET_MEAN,
+            "Analyst Target Median": PUAN_ANALYST_TARGET_MEDIAN,
+            "Analyst Count": PUAN_ANALYST_COUNT,
+            "Earnings Growth": PUAN_EARNINGS_GROWTH,
+            "Revenue Growth": PUAN_REVENUE_GROWTH,
+            "Free Cash Flow": PUAN_FREE_CASH_FLOW,
+            "Operating Cash Flow": PUAN_OPERATING_CASH_FLOW,
         }
     )
     return renamed.reindex(columns=_column_index(PUAN_COLUMNS))
@@ -618,15 +1113,23 @@ def build_rasyo_frame(ratio_frame: pd.DataFrame) -> pd.DataFrame:
     return renamed.reindex(columns=_column_index(RASYO_COLUMNS))
 
 
-def _load_macro_rates() -> MacroRates:
-    macro_config = load_macro_config()["tr"]
+def _macro_rates_from_config(market_key: str, macro_config: dict[str, Any]) -> MacroRates:
     return MacroRates(
+        market_key=market_key,
         two_year_bond=_rate_decimal(macro_config.get("bond_yield_2")),
         market_premium=_rate_decimal(macro_config.get("market_premium")),
         terminal_growth=_rate_decimal(macro_config.get("terminal_growth")),
         cost_of_debt=_rate_decimal(macro_config.get("cost_of_debt")),
         tax_rate=_rate_decimal(macro_config.get("tax_rate")),
         risk_free_rate=_rate_decimal(macro_config.get("risk_free_rate")),
+    )
+
+
+def _load_macro_rate_book() -> MacroRateBook:
+    config = load_macro_config()
+    return MacroRateBook(
+        tr=_macro_rates_from_config("tr", config["tr"]),
+        us=_macro_rates_from_config("us", config["us"]),
     )
 
 
@@ -707,17 +1210,26 @@ def _hisse_inputs(ticker: str, lookups: RowLookups) -> HisseInputs:
         sector_pb=_safe_float(sektor_row.get(SECTOR_PB)),
         sector_ev_ebitda=_safe_float(sektor_row.get(SECTOR_EV_EBITDA)),
         eps=_safe_float(puan_row.get(PUAN_EPS)),
+        forward_eps=_safe_float(puan_row.get(PUAN_FORWARD_EPS)),
+        forward_pe=_safe_float(puan_row.get(PUAN_FORWARD_PE)),
         roe=_rate_decimal(puan_row.get(PUAN_ROE)),
         beta=_safe_float(puan_row.get(PUAN_BETA)),
         debt_ratio=_debt_weight_from_debt_source(puan_row.get(PUAN_DEBT_SOURCE)),
+        net_income_growth=_rate_decimal(puan_row.get(PUAN_NET_INCOME_GROWTH)),
+        earnings_growth=_rate_decimal(puan_row.get(PUAN_EARNINGS_GROWTH)),
+        revenue_growth=_rate_decimal(puan_row.get(PUAN_REVENUE_GROWTH)),
         net_income=_safe_float(puan_row.get(PUAN_NET_INCOME)),
         operating_income=_safe_float(puan_row.get(PUAN_OPERATING_INCOME)),
         equity=_safe_float(puan_row.get(PUAN_EQUITY)),
         paid_in_capital=_safe_float(puan_row.get(PUAN_PAID_IN_CAPITAL)),
         ebitda=ebitda,
+        free_cash_flow=_safe_float(puan_row.get(PUAN_FREE_CASH_FLOW)),
+        operating_cash_flow=_safe_float(puan_row.get(PUAN_OPERATING_CASH_FLOW)),
         net_debt=_net_debt_from_ratio(ebitda, net_debt_to_ebitda),
         asset_growth=_safe_float(puan_row.get(PUAN_ASSET_GROWTH)),
         dcf_value=_positive_or_none(ina_row.get(INA_VALUE_COLUMN)),
+        analyst_target=_safe_float(puan_row.get(PUAN_ANALYST_TARGET_MEAN)) or _safe_float(puan_row.get(PUAN_ANALYST_TARGET_MEDIAN)),
+        analyst_count=_safe_float(puan_row.get(PUAN_ANALYST_COUNT)),
     )
 
 
@@ -753,7 +1265,9 @@ def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str,
         market_premium=macro_rates.market_premium,
     )
     d6 = None
-    if inputs.eps is not None and inputs.asset_growth is not None and inputs.company_pe is not None:
+    if inputs.forward_eps is not None and inputs.forward_pe is not None:
+        d6 = inputs.forward_eps * inputs.forward_pe
+    elif inputs.eps is not None and inputs.asset_growth is not None and inputs.company_pe is not None:
         d6 = inputs.eps * (1 + inputs.asset_growth / 100.0) * inputs.company_pe
     d1 = None
     if inputs.sector_pe is not None and inputs.eps is not None:
@@ -767,7 +1281,7 @@ def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str,
     d8_numerator = None
     if inputs.eps is not None and inputs.sector_pe is not None:
         d8_numerator = inputs.eps * inputs.sector_pe
-    return {
+    raw_values = {
         "D1": d1,
         "D2": _safe_divide(d2_numerator, inputs.paid_in_capital),
         "D3": _safe_divide(d3_numerator, inputs.paid_in_capital),
@@ -775,7 +1289,7 @@ def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str,
         "D5": book_value_per_share,
         "D6": d6,
         "D7": _safe_divide(d7_numerator, inputs.paid_in_capital),
-        "D8": _safe_divide(d8_numerator, macro_rates.two_year_bond),
+        "D8": _safe_divide(d8_numerator, _rate_percent_points(macro_rates.two_year_bond)),
         "D9": _terminal_value_per_share(inputs.operating_income, inputs.paid_in_capital, discount_rate, macro_rates.terminal_growth),
         "D10": _terminal_value_per_share(inputs.net_income, inputs.paid_in_capital, discount_rate, macro_rates.terminal_growth),
         "D11": inputs.dcf_value,
@@ -786,13 +1300,19 @@ def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str,
             terminal_growth=macro_rates.terminal_growth,
         ),
     }
+    return sanity_checked_valuation_points(raw_values, inputs.price)
 
 
 def _hisse_output_row(inputs: HisseInputs, values: dict[str, Optional[float]]) -> dict[str, Any]:
-    avg_fair = _mean_nonempty(values.values())
+    weight_profile = _weight_profile_for_sector(inputs.sector_name)
+    summary = valuation_summary(values, inputs, weight_profile)
+    avg_fair = summary.fair_value
     gp_pct = None
     if avg_fair is not None and inputs.price not in (None, 0):
         gp_pct = (avg_fair - inputs.price) / inputs.price
+    analyst_gp_pct = None
+    if inputs.analyst_target is not None and inputs.price not in (None, 0):
+        analyst_gp_pct = (inputs.analyst_target - inputs.price) / inputs.price
     return {
         CODE_COLUMN: inputs.code,
         SECTOR_COLUMN: inputs.sector_name,
@@ -804,7 +1324,11 @@ def _hisse_output_row(inputs: HisseInputs, values: dict[str, Optional[float]]) -
         HISSE_RATIO: inputs.ratio_score,
         **values,
         HISSE_AVERAGE: _round_or_none(avg_fair),
+        HISSE_ANALYST_TARGET: inputs.analyst_target,
         HISSE_UPSIDE: _round_or_none(gp_pct, 4),
+        HISSE_ANALYST_UPSIDE: _round_or_none(analyst_gp_pct, 4),
+        HISSE_CONFIDENCE: _round_or_none(summary.confidence, 4),
+        HISSE_MODEL_COUNT: summary.model_count,
     }
 
 
@@ -818,10 +1342,11 @@ def build_hisse_frame(
     ina_frame: pd.DataFrame,
 ) -> pd.DataFrame:
     lookups = _build_row_lookups(valuation_frame, puan_frame, rasyo_frame, endeks_frame, sektor_frame, ina_frame)
-    macro_rates = _load_macro_rates()
+    macro_rate_book = _load_macro_rate_book()
     rows = []
     for ticker in tickers:
         inputs = _hisse_inputs(ticker, lookups)
+        macro_rates = macro_rate_book.for_ticker(ticker)
         values = _valuation_points(inputs, macro_rates)
         rows.append(_hisse_output_row(inputs, values))
     return pd.DataFrame(rows, columns=_column_index(HISSE_COLUMNS))
@@ -843,6 +1368,7 @@ def write_template_report(
     sektor_frame = build_sector_frame(endeks_frame, puan_frame)
     vars_frame = build_vars_frame()
     rasyo_frame = build_rasyo_frame(ratio_frame)
+    notes_frame = build_notes_frame()
     ina_frame = dcf_frame.copy()
     if not ina_frame.empty and INA_VALUE_COLUMN not in ina_frame.columns:
         ina_frame[INA_VALUE_COLUMN] = pd.NA
@@ -860,7 +1386,7 @@ def write_template_report(
 
     ws_vars = workbook[SHEET_VARS]
     _unmerge_sheet(ws_vars)
-    _clear_sheet(ws_vars, start_row=1, start_col=1, end_col=2)
+    _clear_sheet(ws_vars, start_row=1, start_col=1, end_col=3)
     _write_table(ws_vars, vars_frame, header_row=1)
 
     ws_rasyo = workbook[SHEET_RASYO]
@@ -873,13 +1399,22 @@ def write_template_report(
     _clear_sheet(ws_puan, start_row=1, start_col=1, end_col=len(PUAN_COLUMNS))
     _write_table(ws_puan, puan_frame, header_row=1)
 
+    ws_notlar = _ensure_sheet(workbook, SHEET_NOTLAR)
+    _unmerge_sheet(ws_notlar)
+    _clear_sheet(ws_notlar, start_row=1, start_col=1)
+    _write_table(ws_notlar, notes_frame, header_row=1)
+    for row_index in range(2, len(notes_frame) + 2):
+        ws_notlar.cell(row=row_index, column=4).number_format = PERCENT_NUMBER_FORMAT
+
     ws_hisse = workbook[SHEET_HISSE]
     _unmerge_sheet(ws_hisse)
     _clear_sheet(ws_hisse, start_row=2, start_col=1, end_col=len(HISSE_COLUMNS))
     _write_table(ws_hisse, hisse_frame, header_row=2)
     _sync_excel_table(ws_hisse, "Hisseler", HISSE_COLUMNS, header_row=2, row_count=len(hisse_frame))
+    _align_hisse_column_styles(ws_hisse, HISSE_COLUMNS, header_row=2, row_count=len(hisse_frame))
     _apply_header_comments(ws_hisse, HISSE_COLUMNS, HISSE_HEADER_COMMENTS, header_row=2)
     _apply_hisse_number_formats(ws_hisse, HISSE_COLUMNS, header_row=2, row_count=len(hisse_frame))
+    _apply_signal_font_colors(ws_hisse, HISSE_COLUMNS, header_row=2, row_count=len(hisse_frame))
 
     _keep_only_sheets(workbook, OUTPUT_SHEETS)
 

@@ -12,8 +12,10 @@ from data.market_data_provider import FETCH_ERRORS, TickerBundle, fetch_ticker_b
 
 ROW_OPERATING_INCOME = "Operating Income"
 ROW_NET_INCOME = "Net Income"
+ROW_OPERATING_CASH_FLOW = "Operating Cash Flow"
 COL_OPERATING_INCOME = ROW_OPERATING_INCOME
 COL_NET_INCOME = ROW_NET_INCOME
+COL_OPERATING_CASH_FLOW = ROW_OPERATING_CASH_FLOW
 
 OPERATING_INCOME_FIELDS = [ROW_OPERATING_INCOME, "Total Operating Income"]
 TAX_FIELDS = ["Tax Provision", "Income Tax Expense"]
@@ -29,7 +31,7 @@ TOTAL_DEBT_FIELDS = ["Total Debt", "Current Debt", "Long Term Debt", "Long Term 
 CURRENT_ASSET_FIELDS = ["Current Assets", "Total Current Assets"]
 CURRENT_LIABILITY_FIELDS = ["Current Liabilities", "Total Current Liabilities"]
 OPERATING_CASH_FLOW_FIELDS = [
-    "Operating Cash Flow",
+    ROW_OPERATING_CASH_FLOW,
     "Total Cash From Operating Activities",
     "Cash Flow From Continuing Operating Activities",
 ]
@@ -56,6 +58,15 @@ FINANCIAL_COLUMNS = [
     "P/CF",
     "P/E",
     "EPS",
+    "Forward EPS",
+    "Forward P/E",
+    "Analyst Target Mean",
+    "Analyst Target Median",
+    "Analyst Count",
+    "Earnings Growth",
+    "Revenue Growth",
+    "Free Cash Flow",
+    COL_OPERATING_CASH_FLOW,
     "P/B",
     "P/S",
     "Beta",
@@ -216,6 +227,29 @@ def _compute_roe(
     return (net_income / shareholders_equity) * 100.0
 
 
+def _valid_share_count(candidate: Optional[float], implied_shares: Optional[float]) -> bool:
+    if candidate is None or candidate <= 0:
+        return False
+    if implied_shares is None or implied_shares <= 0:
+        return True
+    ratio = candidate / implied_shares
+    return 0.5 <= ratio <= 2.0
+
+
+def compute_share_count(info: dict[str, Optional[float]], annual_balance: pd.DataFrame) -> Optional[float]:
+    implied_shares = info.get("impliedShares")
+    candidates = (
+        info.get("sharesOutstanding"),
+        info.get("floatShares"),
+        _latest_value(annual_balance, PAID_IN_CAPITAL_FIELDS),
+        implied_shares,
+    )
+    for candidate in candidates:
+        if _valid_share_count(candidate, implied_shares):
+            return candidate
+    return implied_shares
+
+
 def _extract_growth_metrics(
     annual_income: pd.DataFrame,
     annual_balance: pd.DataFrame,
@@ -243,7 +277,7 @@ def _extract_balance_metrics(
     total_debt = _compute_total_debt(annual_balance)
     current_assets = _latest_value(annual_balance, CURRENT_ASSET_FIELDS)
     current_liabilities = _latest_value(annual_balance, CURRENT_LIABILITY_FIELDS)
-    paid_in_capital = _latest_value(annual_balance, PAID_IN_CAPITAL_FIELDS)
+    paid_in_capital = compute_share_count(info, annual_balance)
     cash_like = _latest_value(annual_balance, CASH_FIELDS)
     if cash_like is None:
         cash_like = info.get("totalCash")
@@ -288,6 +322,15 @@ def _financials_row_from_bundle(ticker: str, bundle: TickerBundle) -> dict[str, 
         "P/CF": _round_or_none(p_cf),
         "P/E": _round_or_none(_safe_float(bundle.info.get("trailingPE"))),
         "EPS": _round_or_none(info.get("trailingEps")),
+        "Forward EPS": _round_or_none(info.get("forwardEps")),
+        "Forward P/E": _round_or_none(info.get("forwardPE")),
+        "Analyst Target Mean": _round_or_none(info.get("targetMeanPrice")),
+        "Analyst Target Median": _round_or_none(info.get("targetMedianPrice")),
+        "Analyst Count": _round_or_none(info.get("numberOfAnalystOpinions"), 0),
+        "Earnings Growth": _round_or_none(info.get("earningsGrowth")),
+        "Revenue Growth": _round_or_none(info.get("revenueGrowth")),
+        "Free Cash Flow": _round_or_none(info.get("freeCashflow")),
+        COL_OPERATING_CASH_FLOW: _round_or_none(info.get("operatingCashflow")),
         "P/B": _round_or_none(info.get("priceToBook")),
         "P/S": _round_or_none(_safe_float(bundle.info.get("priceToSalesTrailing12Months"))),
         "Beta": _round_or_none(info.get("beta"), 3),
