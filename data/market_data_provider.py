@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import time
 from typing import Any, Dict, Optional
 
 import pandas as pd
@@ -10,6 +11,8 @@ from yfinance.exceptions import YFRateLimitError
 
 FETCH_ERRORS = (YFRateLimitError, RuntimeError, ValueError, TypeError, KeyError, AttributeError, OSError)
 FAST_INFO_KEYS = ("marketCap", "shares", "priceToBook", "lastPrice")
+MAX_FETCH_ATTEMPTS = 3
+FETCH_RETRY_DELAY_SECONDS = 0.75
 
 
 @dataclass
@@ -40,9 +43,24 @@ def as_dataframe(value: Any) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def call_with_retries(loader):
+    last_error = None
+    for attempt in range(1, MAX_FETCH_ATTEMPTS + 1):
+        try:
+            return loader()
+        except FETCH_ERRORS as error:
+            last_error = error
+            if attempt >= MAX_FETCH_ATTEMPTS:
+                raise
+            time.sleep(FETCH_RETRY_DELAY_SECONDS * attempt)
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("retry loader exited unexpectedly")
+
+
 def extract_fast_info(stock: yf.Ticker) -> tuple[Dict[str, Any], bool]:
     try:
-        fast_info_obj = stock.fast_info
+        fast_info_obj = call_with_retries(lambda: stock.fast_info)
     except FETCH_ERRORS:
         return {}, True
     if fast_info_obj is None:
@@ -66,7 +84,7 @@ def extract_fast_info(stock: yf.Ticker) -> tuple[Dict[str, Any], bool]:
 
 def get_last_close(stock: yf.Ticker) -> Optional[float]:
     try:
-        history = stock.history(period="5d", interval="1d")
+        history = call_with_retries(lambda: stock.history(period="5d", interval="1d"))
     except FETCH_ERRORS:
         return None
     if history is None:
@@ -88,7 +106,7 @@ def fetch_ticker_bundle(ticker: str, include_last_close: bool = True) -> TickerB
     warnings: list[str] = []
 
     try:
-        info = stock.info
+        info = call_with_retries(lambda: stock.info)
         info = info if isinstance(info, dict) else {}
     except FETCH_ERRORS:
         info = {}
@@ -99,19 +117,19 @@ def fetch_ticker_bundle(ticker: str, include_last_close: bool = True) -> TickerB
         warnings.append("fast_info_unavailable")
 
     try:
-        financials = as_dataframe(stock.financials)
+        financials = as_dataframe(call_with_retries(lambda: stock.financials))
     except FETCH_ERRORS:
         financials = pd.DataFrame()
         warnings.append("financials_unavailable")
 
     try:
-        balance_sheet = as_dataframe(stock.balance_sheet)
+        balance_sheet = as_dataframe(call_with_retries(lambda: stock.balance_sheet))
     except FETCH_ERRORS:
         balance_sheet = pd.DataFrame()
         warnings.append("balance_sheet_unavailable")
 
     try:
-        cashflow = as_dataframe(stock.cashflow)
+        cashflow = as_dataframe(call_with_retries(lambda: stock.cashflow))
     except FETCH_ERRORS:
         cashflow = pd.DataFrame()
         warnings.append("cashflow_unavailable")

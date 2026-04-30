@@ -463,6 +463,7 @@ def build_output(
         "NDK Değerlemesi": round_or_none(valuations["fv_ndk"]),
         "Graham Değerlemesi": round_or_none(valuations["fv_graham"]),
         AVERAGE_FAIR_PRICE_LABEL: round_or_none(average_fair_value),
+        "Model Kalite Uyarı Sayısı": len(sorted(set(warnings))),
         "Model Kalite Uyarıları": ",".join(sorted(set(warnings))),
     }
     for year in sorted(fcf_by_year.keys()):

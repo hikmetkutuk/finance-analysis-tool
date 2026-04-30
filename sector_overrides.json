@@ -1,0 +1,4336 @@
+{
+  "A": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "A1YEN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "AAPL": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ABBV": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "ABT": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "ACGL": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ACN": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ACSEL.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "ADBE": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ADEL.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "ADI": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ADM": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ADP": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ADSK": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "AEE": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "AEP": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "AES": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "AFL": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "AFYON.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "AGESA.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "AGHOL.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "AHGAZ.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "AIG": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "AIZ": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "AJG": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "AKAM": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "AKBNK.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "AKCNS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "AKENR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "AKFYE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "AKGRT.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "AKHAN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "AKSA.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "AKSEN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "AKSUE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "AKYHO.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ALARK.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "ALB": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "ALBRK.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "ALCAR.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "ALFAS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ALGN": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ALKA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ALKIM.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "ALL": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ALLE": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ALTNY.IS": {
+    "ev_ebitda": 30.03,
+    "pb": 5.47,
+    "pe": 55.66
+  },
+  "ALVES.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "AMAT": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "AMCR": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "AMD": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "AME": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "AMGN": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "AMP": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "AMZN": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ANET": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ANGEN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ANHYT.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "ANSGR.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "AON": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "AOS": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "APA": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "APD": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "APH": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "APO": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "APP": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "APTV": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ARASE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ARENA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ARFYE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ARMGD.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ARTMS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ARZUM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ASELS.IS": {
+    "ev_ebitda": 30.03,
+    "pb": 5.47,
+    "pe": 55.66
+  },
+  "ASTOR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ASUZU.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ATAKP.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ATO": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "ATSYH.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "AVGO": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "AVOD.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "AVY": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "AWK": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "AXON": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "AXP": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "AYDEM.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "AYEN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "AYES.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "AYGAZ.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "AZO": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "AZTEK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BA": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "BABA": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "BAC": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "BAHKM.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "BAKAB.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BALAT.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BALL": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "BALSU.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BANVT.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "BARMA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BASCM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BAX": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "BAYRK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BBY": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "BDX": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "BEN": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "BERA.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "BESLR.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "BESTE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BFREN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BG": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "BIENY.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "BIGCH.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BIGEN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BIGTK.IS": {
+    "ev_ebitda": 4.59,
+    "pb": 0.97,
+    "pe": 14.81
+  },
+  "BIIB": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "BINBN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BINHO.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "BIOEN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BIZIM.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "BJKAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BK": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "BKNG": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "BKR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "BLCYT.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BLDR": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "BLK": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "BMSCH.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "BMSTL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BMY": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "BNTAS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "BOBET.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "BOSSA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BR": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "BRISA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BRKO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BRKSN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BRLSM.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "BRMEN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BRO": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "BRSAN.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "BRYAT.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BSOKE.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "BSX": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "BTCIM.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BUCIM.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "BURCE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BURVA.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "BVSAN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "BX": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "BXP": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "C": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CAG": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "CAH": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CANTE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "CARR": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "CASA.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "CAT": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CATES.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "CB": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CBOE": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CBRE": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CCI": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CDNS": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CDW": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CEG": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "CELHA.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "CEMAS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "CEMTS.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "CF": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "CFG": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CGCAM.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "CHD": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "CHRW": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CHTR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CI": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CIMSA.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "CINF": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CL": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "CLEBI.IS": {
+    "ev_ebitda": 51.69,
+    "pb": 7.9,
+    "pe": 11.91
+  },
+  "CLX": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "CMBTN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "CMCSA": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CME": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CMENT.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "CMG": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "CMI": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CMS": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "CNC": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CNP": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "COF": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "COIN": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CONSE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "COO": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "COP": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "COR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "COST": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "CPAY": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CPB": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "CPRT": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CRFSA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "CRL": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CRM": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CRWD": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CSCO": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "CSGP": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CSX": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "CTAS": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "CTRA": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "CTSH": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CTVA": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "CUSAN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "CVKMD.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "CVS": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CVX": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "CWENE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "CZR": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "D": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "DAGI.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DAL": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "DARDL.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "DASH": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "DD": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "DE": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "DECK": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "DELL": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "DERHL.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "DERIM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DESA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DESPC.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DEVA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DG": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "DGATE.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DGNMO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DGX": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "DHI": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "DHR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "DIRIT.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DIS": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "DITAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DLR": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "DLTR": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "DMSAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DNISI.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DOAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DOC": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "DOFER.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DOGUB.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DOHOL.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "DOKTA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DOV": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "DOW": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "DPZ": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "DRI": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "DSTKF.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "DTE": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "DUK": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "DUNYH.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "DURDO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DURKN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "DVA": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "DVN": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "DXCM": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "DYOBY.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "DZGYO.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "EA": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "EBAY": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ECL": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "ECOGR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ED": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "EDATA.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "EFOR.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "EFX": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "EG": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "EGEEN.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "EGEPO.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "EGGUB.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "EGPRO.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "EGSER.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "EIX": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "EKIZ.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "EKOS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "EKSUN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "EL": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "ELV": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "EMKEL.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "EMN": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "EMNIS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "EMPAE.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "EMR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ENDAE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ENERY.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ENJSA.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ENKAI.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "ENPH": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ENSRI.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "EOG": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "EPAM": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "EPLAS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "EQT": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "ERBOS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ERCB.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "EREGL.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "ERIE": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ES": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "ESCAR.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "ESCOM.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ESEN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ETILR.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ETN": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "ETR": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "EUPWR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "EUREN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "EVRG": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "EW": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "EXC": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "EXE": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "EXPD": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "EXPE": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "EXR": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "F": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "FADE.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "FANG": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "FAST": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "FDS": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "FDX": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "FE": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "FFIV": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "FICO": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "FIS": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "FITB": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "FMIZP.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "FORMT.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "FORTE.IS": {
+    "ev_ebitda": 30.03,
+    "pb": 5.47,
+    "pe": 55.66
+  },
+  "FOX": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "FOXA": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "FRIGO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "FRMPL.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "FROTO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "FRT": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "FSLR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "FTNT": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "FTV": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GARAN.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "GARFA.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "GD": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GDDY": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GE": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "GEDZA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "GEHC": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "GEN": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GENIL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "GENKM.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "GENTS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "GEREL.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "GESAN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "GEV": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GILD": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "GIS": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "GL": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "GLRMK.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "GLW": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GLYHO.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "GM": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GNRC": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GOLTS.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "GOODY.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "GOOG": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GOOGL": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GPC": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "GPN": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GRMN": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "GRSEL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "GRTHO.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "GS": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "GUBRF.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "GUNDG.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "GWIND.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "GWW": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "GZNMI.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "HAL": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "HALKB.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "HAS": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "HATSN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "HBAN": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "HCA": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "HD": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "HDFGS.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "HEKTS.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "HIG": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "HII": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "HKTM.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "HLGYO.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "HLT": {
+    "ev_ebitda": 138.5,
+    "pb": 19.54,
+    "pe": 321.91
+  },
+  "HON": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "HOROZ.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "HPE": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "HPQ": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "HRKET.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "HRL": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "HSIC": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "HSY": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "HTTBT.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "HUBB": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "HUM": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "HURGZ.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "HWM": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "IBM": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ICBCT.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "ICE": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ICUGS.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "IDXX": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "IEX": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "IEYHO.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "IFF": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "IHAAS.IS": {
+    "ev_ebitda": 4.59,
+    "pb": 0.97,
+    "pe": 14.81
+  },
+  "IHEVA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "INCY": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "INGRM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "INTC": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "INTEK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "INTL": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "INTU": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "INVEO.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "INVH": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "IP": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "IQV": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "IR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "IRM": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ISBIR.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ISCTR.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "ISDMR.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "ISFIN.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "ISGSY.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "ISGYO.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "ISKPL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ISKUR.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "ISRG": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ISSEN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "IT": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ITW": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "IVZ": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "IZENR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "IZFAS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "IZINV.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "J": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "JANTS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "JBHT": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "JBL": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "JCI": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "JKHY": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "JNJ": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "JPM": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "KAPLM.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "KAREL.IS": {
+    "ev_ebitda": 30.03,
+    "pb": 5.47,
+    "pe": 55.66
+  },
+  "KARTN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KATMR.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KBORU.IS": {
+    "ev_ebitda": 4.59,
+    "pb": 0.97,
+    "pe": 14.81
+  },
+  "KCAER.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "KCHOL.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "KDP": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "KENT.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KEY": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "KEYS": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "KHC": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "KIM": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "KIMMR.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "KKR": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "KLAC": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "KLKIM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KLMSN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KLNMA.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "KLRHO.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "KLSER.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "KLYPV.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "KMB": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "KMI": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "KMPUR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "KMX": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "KNFRT.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KO": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "KOCMT.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KONKA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KONTR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "KONYA.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "KOPOL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KORDS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KOTON.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KR": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "KRDMA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KRDMB.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KRDMD.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "KRGYO.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "KRPLS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "KRSTL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KRTEK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KUVVA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "KVUE": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "L": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "LDOS": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "LEN": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "LH": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "LHX": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "LIDER.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "LII": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "LILAK.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "LIN": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "LINK.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "LKQ": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "LLY": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "LMKDC.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "LMT": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "LNT": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "LOGO.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "LOW": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "LRCX": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "LUKSK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "LULU": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "LUV": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "LVS": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "LW": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "LYB": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "LYV": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MA": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "MACKO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "MAGEN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "MAKIM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "MAKTK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "MANAS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "MAR": {
+    "ev_ebitda": 138.5,
+    "pb": 19.54,
+    "pe": 321.91
+  },
+  "MARBL.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "MARMR.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "MAS": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "MAVI.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "MCARD.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "MCD": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "MCHP": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MCK": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MCO": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "MDLZ": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "MDT": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MEDTR.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "MEGAP.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "MEGMT.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "MEKAG.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "MERCN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "MERKO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "MET": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "META": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MGM": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "MHK": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "MIATK.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "MKC": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "MKTX": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "MLM": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "MMM": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MNDRS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "MNDTR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "MNST": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "MO": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "MOBTL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "MOGAN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "MOH": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "MOPAS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "MOS": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "MPC": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "MPWR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MRK": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "MRNA": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MS": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "MSCI": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "MSFT": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MSI": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MTB": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "MTCH": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MTD": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "MU": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "NATEN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "NCLH": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "NDAQ": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "NDSN": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "NEE": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "NET": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "NETAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "NFLX": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "NI": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "NIBAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "NKE": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "NOC": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "NOW": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "NRG": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "NSC": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "NTAP": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "NTGAZ.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "NTRS": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "NUE": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "NUHCM.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "NVDA": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "NVO": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "NVR": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "NWS": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "NWSA": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "NXPI": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "O": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "OBASE.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ODAS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ODFL": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ODINE.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "OFSYM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "OKE": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "OMC": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "ON": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ONCSM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ONRYT.IS": {
+    "ev_ebitda": 30.03,
+    "pb": 5.47,
+    "pe": 55.66
+  },
+  "ORCAY.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ORCL": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ORGE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ORLY": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "ORMA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "OSMEN.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "OTIS": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "OTKAR.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "OXY": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "OYAKC.IS": {
+    "ev_ebitda": 11.46,
+    "pb": 1.35,
+    "pe": 30.33
+  },
+  "OYYAT.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "OZATD.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "OZRDN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "PAHOL.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "PAMEL.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "PANW": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PAPIL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "PARSN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "PASEU.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "PAYC": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PAYX": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PCAR": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PCG": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "PCILT.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "PEG": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "PENGD.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "PENTA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "PEP": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "PETKM.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "PFE": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "PFG": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PG": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "PGR": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PGSUS.IS": {
+    "ev_ebitda": 51.69,
+    "pb": 7.9,
+    "pe": 11.91
+  },
+  "PH": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "PHM": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PINSU.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "PKART.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "PKG": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "PLD": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "PLTR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "PNC": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PNLSN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "PNR": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PNW": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "PODD": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "POLHO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "POLTK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "POOL": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "PPG": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "PPL": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "PRKAB.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "PRKME.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "PRU": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "PRZMA.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "PSA": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "PSX": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "PTC": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "PWR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "PYPL": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "QCOM": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "QUAGR.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "RALYH.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "RAYSG.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "REEDR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "REG": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "REGN": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "RF": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "RJF": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "RL": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "RMD": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "RNPOL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "RODRG.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ROK": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ROL": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "ROP": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ROST": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "RSG": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "RTALB.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "RTX": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "RUBNS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "RUZYE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "RVTY": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "SAFKR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "SAHOL.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "SAMAT.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "SANEL.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "SANFM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "SANKO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "SASA.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "SAYAS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "SBUX": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "SCHW": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "SDTTR.IS": {
+    "ev_ebitda": 30.03,
+    "pb": 5.47,
+    "pe": 55.66
+  },
+  "SEGYO.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "SEKFK.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "SERNT.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "SEYKM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "SHW": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "SILVR.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "SISE.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "SJM": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "SKBNK.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "SKTAS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "SKYLP.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "SKYMD.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "SLB": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "SMCI": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "SMRTG.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "SMRVA.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "SNA": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "SNDK": {
+    "ev_ebitda": 32.17,
+    "pb": 14.21,
+    "pe": 60.18
+  },
+  "SNICA.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "SNPS": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "SO": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "SOKE.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "SOLV": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "SPG": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "SPGI": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "SRE": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "STE": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "STLD": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "STT": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "STX": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "STZ": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "SUMAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "SUNTK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "SUWEN.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "SW": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "SWK": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "SWKS": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "SYF": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "SYK": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "SYY": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "T": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TABGD.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "TAP": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "TARKM.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "TATEN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "TAVHL.IS": {
+    "ev_ebitda": 51.69,
+    "pb": 7.9,
+    "pe": 11.91
+  },
+  "TCELL.IS": {
+    "ev_ebitda": 4.59,
+    "pb": 0.97,
+    "pe": 14.81
+  },
+  "TCKRC.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "TDG": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TDY": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TECH": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TEKTU.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "TEL": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TER": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TERA.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "TEZOL.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "TFC": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "TGSAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "TGT": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "THYAO.IS": {
+    "ev_ebitda": 51.69,
+    "pb": 7.9,
+    "pe": 11.91
+  },
+  "TJX": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "TKFEN.IS": {
+    "ev_ebitda": -9.79,
+    "pb": 0.91,
+    "pe": 307.37
+  },
+  "TKO": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "TMO": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "TMPOL.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "TMSN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "TMUS": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "TNZTP.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "TOASO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "TPL": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "TPR": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TRALT.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "TRCAS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "TRENJ.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "TRGP": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "TRHOL.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "TRILC.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "TRMB": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TRMET.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "TROW": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "TRV": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "TSCO": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "TSKB.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "TSLA": {
+    "ev_ebitda": 138.5,
+    "pb": 19.54,
+    "pe": 321.91
+  },
+  "TSN": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "TSPOR.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "TT": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "TTKOM.IS": {
+    "ev_ebitda": 4.59,
+    "pb": 0.97,
+    "pe": 14.81
+  },
+  "TTRAK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "TTWO": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TUCLK.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "TUKAS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "TUPRS.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "TURSG.IS": {
+    "ev_ebitda": -2.3,
+    "pb": 1.53,
+    "pe": 3.85
+  },
+  "TXN": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "TXT": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "TYL": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "UAL": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "UBER": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "UCAYM.IS": {
+    "ev_ebitda": 90.9,
+    "pb": 7.39,
+    "pe": 57.21
+  },
+  "UHS": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "ULAS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ULTA": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "ULUSE.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "UNH": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "UNP": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "UPS": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "URI": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "USB": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "V": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "VAKBN.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "VAKFN.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "VAKKO.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "VANGD.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "VERUS.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "VICI": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "VKGYO.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "VKING.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "VLO": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "VLTO": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "VMC": {
+    "ev_ebitda": -10.68,
+    "pb": -8.86,
+    "pe": 15.78
+  },
+  "VRSK": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "VRSN": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "VRTX": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "VSNMD.IS": {
+    "ev_ebitda": 6.88,
+    "pb": 1.25,
+    "pe": 19.09
+  },
+  "VST": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "VTR": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "VTRS": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "VZ": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "WAB": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "WAT": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "WBD": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "WDAY": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "WDC": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "WEC": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "WELL": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "WFC": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "WM": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "WMB": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "WMT": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "WRB": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "WSM": {
+    "ev_ebitda": 16.24,
+    "pb": 0.39,
+    "pe": 19.37
+  },
+  "WST": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  },
+  "WTW": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "WY": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "WYNN": {
+    "ev_ebitda": 24.84,
+    "pb": 9.89,
+    "pe": 31.69
+  },
+  "XEL": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "XOM": {
+    "ev_ebitda": 8.42,
+    "pb": 1.85,
+    "pe": 16.6
+  },
+  "XYL": {
+    "ev_ebitda": 24.52,
+    "pb": 20.79,
+    "pe": 24.45
+  },
+  "YAPRK.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "YATAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "YAYLA.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "YBTAS.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "YEOTK.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "YIGIT.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "YKBNK.IS": {
+    "pb": 1.1,
+    "pe": 5.89
+  },
+  "YKSLN.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "YONGA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "YUM": {
+    "ev_ebitda": 22.77,
+    "pb": 0.21,
+    "pe": 31.69
+  },
+  "YUNSA.IS": {
+    "ev_ebitda": -0.73,
+    "pb": 3.14,
+    "pe": 45.28
+  },
+  "ZBH": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ZBRA": {
+    "ev_ebitda": -60.6,
+    "pb": 19.91,
+    "pe": 87.64
+  },
+  "ZEDUR.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ZOREN.IS": {
+    "ev_ebitda": 9.76,
+    "pb": 2.16,
+    "pe": 35.02
+  },
+  "ZTS": {
+    "ev_ebitda": 13.67,
+    "pb": 7.68,
+    "pe": 21.18
+  }
+}

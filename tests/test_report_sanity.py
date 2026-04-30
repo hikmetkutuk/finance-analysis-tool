@@ -1,7 +1,18 @@
 import pandas as pd
+from openpyxl import load_workbook
 
 from reporting.financials_report import compute_share_count
-from reporting.template_report import HisseInputs, WEIGHT_PROFILE_GROWTH, sanity_checked_valuation_points, valuation_summary
+from reporting.template_report import (
+    CODE_COLUMN,
+    HisseInputs,
+    INA_VALUE_COLUMN,
+    SHEET_KALITE,
+    WEIGHT_PROFILE_GROWTH,
+    _model_value_reason,
+    sanity_checked_valuation_points,
+    valuation_summary,
+    write_template_report,
+)
 
 
 def test_share_count_prefers_implied_shares_when_balance_stock_is_nominal() -> None:
@@ -80,3 +91,48 @@ def test_high_forward_pe_reduces_growth_model_weight() -> None:
     assert summary.fair_value < 180.0
     assert summary.confidence is not None
     assert 0 < summary.confidence <= 1
+
+
+def test_write_template_report_creates_workbook_when_template_is_missing(tmp_path) -> None:
+    output_path = tmp_path / "report.xlsx"
+    missing_template = tmp_path / "missing_template.xlsx"
+
+    valuation_frame = pd.DataFrame(
+        [
+            {
+                CODE_COLUMN: "THYAO",
+                "Sektör": "Havacılık",
+                "Güncel Fiyat": 100.0,
+                "F/K Değerlemesi": 110.0,
+                "PD/DD Finansal Model": 105.0,
+                "EV/EBITDA Değerlemesi": 115.0,
+                "DDM Değerlemesi": 100.0,
+                "EFK Değerlemesi": 98.0,
+                "NDK Değerlemesi": 102.0,
+                "Graham Değerlemesi": 108.0,
+            }
+        ]
+    )
+    financials_frame = pd.DataFrame()
+    dcf_frame = pd.DataFrame([{CODE_COLUMN: "THYAO", INA_VALUE_COLUMN: 120.0}])
+    ratio_frame = pd.DataFrame()
+
+    write_template_report(
+        output_path=str(output_path),
+        tickers=["THYAO.IS"],
+        valuation_frame=valuation_frame,
+        financials_frame=financials_frame,
+        dcf_frame=dcf_frame,
+        ratio_frame=ratio_frame,
+        template_path=missing_template,
+    )
+
+    assert output_path.exists()
+    workbook = load_workbook(output_path, read_only=True)
+    assert SHEET_KALITE in workbook.sheetnames
+    workbook.close()
+
+
+def test_model_value_reason_marks_below_price_threshold() -> None:
+    reason = _model_value_reason(raw_value=9.0, filtered_value=None, price=300.0)
+    assert reason == "fiyata_gore_cok_dusuk"

@@ -7,7 +7,7 @@ from statistics import mean, median
 from typing import Any, Iterable, Optional, Sequence
 
 import pandas as pd
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.cell.cell import MergedCell
 from openpyxl.comments import Comment
 from openpyxl.utils.cell import range_boundaries
@@ -17,7 +17,7 @@ from openpyxl.worksheet.table import TableColumn
 from data.macro_config import load_macro_config
 
 
-DEFAULT_TEMPLATE_PATH = Path("data/report_template.xlsx")
+DEFAULT_TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "data" / "report_template.xlsx"
 CODE_COLUMN = "Kod"
 SECTOR_COLUMN = "Sektör"
 INDEX_COLUMN = "Endeks"
@@ -38,7 +38,8 @@ SHEET_SEKTOR = SECTOR_COLUMN
 SHEET_VARS = "Vars"
 SHEET_RASYO = "Rasyo"
 SHEET_NOTLAR = "Notlar"
-OUTPUT_SHEETS = (SHEET_HISSE, SHEET_PUAN, SHEET_ENDEKS, SHEET_SEKTOR, SHEET_VARS, SHEET_RASYO, SHEET_NOTLAR)
+SHEET_KALITE = "Kalite"
+OUTPUT_SHEETS = (SHEET_HISSE, SHEET_PUAN, SHEET_ENDEKS, SHEET_SEKTOR, SHEET_VARS, SHEET_RASYO, SHEET_NOTLAR, SHEET_KALITE)
 VALUE_NUMBER_FORMAT = "#,##0.00"
 PERCENT_NUMBER_FORMAT = "0.00%"
 GREEN_FONT_COLOR = "FF23BEA8"
@@ -107,6 +108,26 @@ HISSE_UPSIDE = "GP %"
 HISSE_ANALYST_UPSIDE = "Analist GP %"
 HISSE_CONFIDENCE = "Güven"
 HISSE_MODEL_COUNT = "D. Ort Model Sayısı"
+
+QUALITY_CODE = CODE_COLUMN
+QUALITY_MODEL = "Model"
+QUALITY_RAW_VALUE = "Ham Değer"
+QUALITY_FILTERED_VALUE = "Filtrelenmiş Değer"
+QUALITY_STATUS = "Durum"
+QUALITY_REASON = "Gerekçe"
+QUALITY_WEIGHT_PROFILE = "Ağırlık Profili"
+QUALITY_BASE_WEIGHT = "Baz Ağırlık"
+QUALITY_ADJUSTED_WEIGHT = "Ayarlı Ağırlık"
+QUALITY_PRICE = HISSE_PRICE
+QUALITY_SECTOR = SECTOR_COLUMN
+QUALITY_INDEX = INDEX_COLUMN
+QUALITY_SIGNAL_SCORE = "Sinyal Kalite Skoru"
+QUALITY_SIGNAL_LABEL = "Sinyal Güven Seviyesi"
+QUALITY_WARNING_COUNT = "Model Kalite Uyarı Sayısı"
+QUALITY_MODEL_WARNINGS = "Model Kalite Uyarıları"
+QUALITY_DATA_COMPLETENESS = "Veri Tamlık Skoru"
+QUALITY_MODEL_COUNT = "Geçerli Model Sayısı"
+QUALITY_INCLUDED_IN_FAIR_VALUE = "D. Ort Dahil"
 
 SECTOR_PB = RASYO_PB
 SECTOR_PE = "F/K"
@@ -187,6 +208,28 @@ HISSE_COLUMNS = (
     HISSE_ANALYST_UPSIDE,
     HISSE_CONFIDENCE,
     HISSE_MODEL_COUNT,
+)
+
+QUALITY_COLUMNS = (
+    QUALITY_CODE,
+    QUALITY_MODEL,
+    QUALITY_RAW_VALUE,
+    QUALITY_FILTERED_VALUE,
+    QUALITY_STATUS,
+    QUALITY_REASON,
+    QUALITY_WEIGHT_PROFILE,
+    QUALITY_BASE_WEIGHT,
+    QUALITY_ADJUSTED_WEIGHT,
+    QUALITY_INCLUDED_IN_FAIR_VALUE,
+    QUALITY_PRICE,
+    QUALITY_SECTOR,
+    QUALITY_INDEX,
+    QUALITY_SIGNAL_SCORE,
+    QUALITY_SIGNAL_LABEL,
+    QUALITY_WARNING_COUNT,
+    QUALITY_MODEL_WARNINGS,
+    QUALITY_DATA_COMPLETENESS,
+    QUALITY_MODEL_COUNT,
 )
 
 HISSE_HEADER_COMMENTS = {
@@ -417,6 +460,24 @@ def _sanity_checked_model_value(value: Any, price: Optional[float]) -> Optional[
 
 def sanity_checked_valuation_points(values: dict[str, Optional[float]], price: Optional[float]) -> dict[str, Optional[float]]:
     return {model_key: _sanity_checked_model_value(value, price) for model_key, value in values.items()}
+
+
+def _model_value_reason(raw_value: Any, filtered_value: Any, price: Optional[float]) -> str:
+    raw_number = _safe_float(raw_value)
+    filtered_number = _safe_float(filtered_value)
+    if filtered_number is not None:
+        return "kullanilabilir"
+    if raw_number is None:
+        return "girdi_eksik"
+    if raw_number <= 0:
+        return "pozitif_degil"
+    if price is None or price <= 0:
+        return "fiyat_eksik"
+    if raw_number < price * MIN_MODEL_PRICE_MULTIPLE:
+        return "fiyata_gore_cok_dusuk"
+    if raw_number > price * MAX_MODEL_PRICE_MULTIPLE:
+        return "fiyata_gore_cok_yuksek"
+    return "filtre_disinda"
 
 
 def _debt_weight_from_debt_source(value: Any) -> Optional[float]:
@@ -853,6 +914,20 @@ def _ensure_sheet(workbook, sheet_name: str):
     return workbook.create_sheet(sheet_name)
 
 
+def _build_empty_report_workbook():
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+    for sheet_name in OUTPUT_SHEETS:
+        workbook.create_sheet(sheet_name)
+    return workbook
+
+
+def _load_or_create_report_workbook(template_path: Path):
+    if template_path.exists():
+        return load_workbook(template_path, data_only=False)
+    return _build_empty_report_workbook()
+
+
 def _keep_only_sheets(workbook, sheet_names: Sequence[str]) -> None:
     keep = set(sheet_names)
     for sheet_name in tuple(workbook.sheetnames):
@@ -864,6 +939,8 @@ def _keep_only_sheets(workbook, sheet_names: Sequence[str]) -> None:
 
 
 def _load_template_index_map(template_path: Path) -> dict[str, str]:
+    if not template_path.exists():
+        return {}
     workbook = load_workbook(template_path, data_only=False)
     ws = workbook[SHEET_ENDEKS]
     index_map: dict[str, str] = {}
@@ -983,6 +1060,11 @@ def build_notes_frame() -> pd.DataFrame:
             SECTION_COLUMN: "Metodoloji",
             TOPIC_COLUMN: HISSE_CONFIDENCE,
             VALUE_COLUMN: "Güven; geçerli model sayısı, modeller arası sapma, veri tamlığı ve rasyo skorundan oluşur. Aşırı FK/FD-FAVÖK ve negatif büyüme ilgili model ağırlığını düşürür.",
+        },
+        {
+            SECTION_COLUMN: "Metodoloji",
+            TOPIC_COLUMN: SHEET_KALITE,
+            VALUE_COLUMN: "Kalite sayfası her D modeli için ham değer, filtre sonrası değer, ağırlık profili, trim durumu ve dışlanma gerekçesini gösterir. Bu sayfa denetim izi olarak kullanılmalıdır.",
         },
     ]
     for model_key in D_FIELDS:
@@ -1246,7 +1328,7 @@ def _terminal_value_per_share(
     return _safe_divide(total_value, paid_in_capital)
 
 
-def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str, Optional[float]]:
+def _raw_valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str, Optional[float]]:
     book_value_per_share = _safe_divide(inputs.equity, inputs.paid_in_capital)
     enterprise_value = None
     if inputs.ebitda is not None and inputs.sector_ev_ebitda is not None:
@@ -1281,7 +1363,7 @@ def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str,
     d8_numerator = None
     if inputs.eps is not None and inputs.sector_pe is not None:
         d8_numerator = inputs.eps * inputs.sector_pe
-    raw_values = {
+    return {
         "D1": d1,
         "D2": _safe_divide(d2_numerator, inputs.paid_in_capital),
         "D3": _safe_divide(d3_numerator, inputs.paid_in_capital),
@@ -1300,6 +1382,10 @@ def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str,
             terminal_growth=macro_rates.terminal_growth,
         ),
     }
+
+
+def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str, Optional[float]]:
+    raw_values = _raw_valuation_points(inputs, macro_rates)
     return sanity_checked_valuation_points(raw_values, inputs.price)
 
 
@@ -1352,6 +1438,74 @@ def build_hisse_frame(
     return pd.DataFrame(rows, columns=_column_index(HISSE_COLUMNS))
 
 
+def build_quality_frame(
+    tickers: list[str],
+    valuation_frame: pd.DataFrame,
+    puan_frame: pd.DataFrame,
+    rasyo_frame: pd.DataFrame,
+    endeks_frame: pd.DataFrame,
+    sektor_frame: pd.DataFrame,
+    ina_frame: pd.DataFrame,
+) -> pd.DataFrame:
+    lookups = _build_row_lookups(valuation_frame, puan_frame, rasyo_frame, endeks_frame, sektor_frame, ina_frame)
+    macro_rate_book = _load_macro_rate_book()
+    valuation_lookup = valuation_frame.set_index(CODE_COLUMN) if not valuation_frame.empty and CODE_COLUMN in valuation_frame.columns else pd.DataFrame()
+    rows: list[dict[str, Any]] = []
+
+    for ticker in tickers:
+        inputs = _hisse_inputs(ticker, lookups)
+        macro_rates = macro_rate_book.for_ticker(ticker)
+        raw_values = _raw_valuation_points(inputs, macro_rates)
+        filtered_values = sanity_checked_valuation_points(raw_values, inputs.price)
+        weight_profile = _weight_profile_for_sector(inputs.sector_name)
+        base_weights = MODEL_WEIGHTS.get(weight_profile, MODEL_WEIGHTS[WEIGHT_PROFILE_DEFAULT])
+        adjusted_weights = _adjusted_model_weights(filtered_values, inputs, weight_profile)
+        retained_keys = _trimmed_model_keys(filtered_values, adjusted_weights)
+        valuation_row = _lookup_row(valuation_lookup, inputs.code)
+        signal_score = _safe_float(valuation_row.get(QUALITY_SIGNAL_SCORE))
+        signal_label = str(valuation_row.get(QUALITY_SIGNAL_LABEL, "") or "")
+        warning_count = _safe_float(valuation_row.get(QUALITY_WARNING_COUNT))
+        model_warnings = str(valuation_row.get(QUALITY_MODEL_WARNINGS, "") or "")
+        data_completeness = _data_completeness_score(inputs)
+
+        for model_key in D_FIELDS:
+            filtered_value = filtered_values.get(model_key)
+            adjusted_weight = adjusted_weights.get(model_key, 0.0)
+            included_in_fair_value = model_key in retained_keys and adjusted_weight > 0
+            if filtered_value is None:
+                status = "Filtrelendi"
+            elif adjusted_weight <= 0:
+                status = "Ağırlıksız"
+            elif model_key not in retained_keys:
+                status = "Trimlendi"
+            else:
+                status = "Kullanıldı"
+            rows.append(
+                {
+                    QUALITY_CODE: inputs.code,
+                    QUALITY_MODEL: model_key,
+                    QUALITY_RAW_VALUE: _round_or_none(raw_values.get(model_key)),
+                    QUALITY_FILTERED_VALUE: _round_or_none(filtered_value),
+                    QUALITY_STATUS: status,
+                    QUALITY_REASON: _model_value_reason(raw_values.get(model_key), filtered_value, inputs.price),
+                    QUALITY_WEIGHT_PROFILE: weight_profile,
+                    QUALITY_BASE_WEIGHT: _round_or_none(base_weights.get(model_key, 0.0), 4),
+                    QUALITY_ADJUSTED_WEIGHT: _round_or_none(adjusted_weight, 4),
+                    QUALITY_INCLUDED_IN_FAIR_VALUE: "Evet" if included_in_fair_value else "Hayır",
+                    QUALITY_PRICE: _round_or_none(inputs.price),
+                    QUALITY_SECTOR: inputs.sector_name,
+                    QUALITY_INDEX: inputs.index_name,
+                    QUALITY_SIGNAL_SCORE: _round_or_none(signal_score, 0),
+                    QUALITY_SIGNAL_LABEL: signal_label,
+                    QUALITY_WARNING_COUNT: _round_or_none(warning_count, 0),
+                    QUALITY_MODEL_WARNINGS: model_warnings,
+                    QUALITY_DATA_COMPLETENESS: _round_or_none(data_completeness, 4),
+                    QUALITY_MODEL_COUNT: len(adjusted_weights),
+                }
+            )
+    return pd.DataFrame(rows, columns=_column_index(QUALITY_COLUMNS))
+
+
 def write_template_report(
     output_path: str,
     tickers: list[str],
@@ -1361,7 +1515,7 @@ def write_template_report(
     ratio_frame: pd.DataFrame,
     template_path: Path = DEFAULT_TEMPLATE_PATH,
 ) -> None:
-    workbook = load_workbook(template_path, data_only=False)
+    workbook = _load_or_create_report_workbook(template_path)
 
     endeks_frame = build_endeks_frame(tickers, valuation_frame, template_path)
     puan_frame = build_puan_frame(financials_frame)
@@ -1373,28 +1527,29 @@ def write_template_report(
     if not ina_frame.empty and INA_VALUE_COLUMN not in ina_frame.columns:
         ina_frame[INA_VALUE_COLUMN] = pd.NA
     hisse_frame = build_hisse_frame(tickers, valuation_frame, puan_frame, rasyo_frame, endeks_frame, sektor_frame, ina_frame)
+    quality_frame = build_quality_frame(tickers, valuation_frame, puan_frame, rasyo_frame, endeks_frame, sektor_frame, ina_frame)
 
-    ws_endeks = workbook[SHEET_ENDEKS]
+    ws_endeks = _ensure_sheet(workbook, SHEET_ENDEKS)
     _unmerge_sheet(ws_endeks)
     _clear_sheet(ws_endeks, start_row=1, start_col=1, end_col=3)
     _write_table(ws_endeks, endeks_frame, header_row=1, include_header=False)
 
-    ws_sektor = workbook[SHEET_SEKTOR]
+    ws_sektor = _ensure_sheet(workbook, SHEET_SEKTOR)
     _unmerge_sheet(ws_sektor)
     _clear_sheet(ws_sektor, start_row=1, start_col=1, end_col=6)
     _write_table(ws_sektor, sektor_frame, header_row=1)
 
-    ws_vars = workbook[SHEET_VARS]
+    ws_vars = _ensure_sheet(workbook, SHEET_VARS)
     _unmerge_sheet(ws_vars)
     _clear_sheet(ws_vars, start_row=1, start_col=1, end_col=3)
     _write_table(ws_vars, vars_frame, header_row=1)
 
-    ws_rasyo = workbook[SHEET_RASYO]
+    ws_rasyo = _ensure_sheet(workbook, SHEET_RASYO)
     _unmerge_sheet(ws_rasyo)
     _clear_sheet(ws_rasyo, start_row=1, start_col=1, end_col=len(RASYO_COLUMNS))
     _write_table(ws_rasyo, rasyo_frame, header_row=1)
 
-    ws_puan = workbook[SHEET_PUAN]
+    ws_puan = _ensure_sheet(workbook, SHEET_PUAN)
     _unmerge_sheet(ws_puan)
     _clear_sheet(ws_puan, start_row=1, start_col=1, end_col=len(PUAN_COLUMNS))
     _write_table(ws_puan, puan_frame, header_row=1)
@@ -1406,7 +1561,12 @@ def write_template_report(
     for row_index in range(2, len(notes_frame) + 2):
         ws_notlar.cell(row=row_index, column=4).number_format = PERCENT_NUMBER_FORMAT
 
-    ws_hisse = workbook[SHEET_HISSE]
+    ws_kalite = _ensure_sheet(workbook, SHEET_KALITE)
+    _unmerge_sheet(ws_kalite)
+    _clear_sheet(ws_kalite, start_row=1, start_col=1, end_col=len(QUALITY_COLUMNS))
+    _write_table(ws_kalite, quality_frame, header_row=1)
+
+    ws_hisse = _ensure_sheet(workbook, SHEET_HISSE)
     _unmerge_sheet(ws_hisse)
     _clear_sheet(ws_hisse, start_row=2, start_col=1, end_col=len(HISSE_COLUMNS))
     _write_table(ws_hisse, hisse_frame, header_row=2)
