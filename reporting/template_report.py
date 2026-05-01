@@ -15,6 +15,9 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import TableColumn
 
 from data.macro_config import load_macro_config
+from data.ratio_profile_config import build_ratio_profile_map, load_ratio_profile_config
+from data.sector_profile_config import build_sector_profile_maps, load_sector_profile_config
+from data.valuation_profile_config import build_valuation_profile_maps, load_valuation_profile_config
 
 
 DEFAULT_TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "data" / "report_template.xlsx"
@@ -49,6 +52,9 @@ RASYO_PASS_THRESHOLD = 0.60
 MIN_MODEL_PRICE_MULTIPLE = 0.05
 MAX_MODEL_PRICE_MULTIPLE = 5.0
 MIN_PROFESSIONAL_MODELS = 3
+MIN_PUBLISHABLE_MODELS = 2
+MIN_PUBLISHABLE_CONFIDENCE = 0.35
+MIN_PUBLISHABLE_DATA_COMPLETENESS = 0.45
 HIGH_PE_WARNING = 50.0
 EXTREME_PE_WARNING = 100.0
 HIGH_EV_EBITDA_WARNING = 35.0
@@ -95,7 +101,16 @@ RASYO_EBITDA_GROWTH = "FAVÖK Büyüme (%) (Yıllık)"
 RASYO_PEG = "Peg Oranı"
 RASYO_ROIC = "Roic"
 RASYO_ASSET_TURNOVER = "Aktif Devir Hızı"
-RASYO_SCORE = "Oran"
+RASYO_PROFILE = "Profil"
+RASYO_SCORE_100 = "Oran Skoru (0-100)"
+RASYO_SCORE = "Oran Skoru (0-1)"
+RASYO_COVERAGE = "Veri Kapsamı"
+RASYO_MISSING_PENALTY = "Eksik Veri Cezası"
+RASYO_LIQUIDITY_SCORE = "Likidite Skoru"
+RASYO_PROFITABILITY_SCORE = "Karlılık Skoru"
+RASYO_VALUATION_SCORE = "Değerleme Skoru"
+RASYO_GROWTH_SCORE = "Büyüme Skoru"
+RASYO_EFFICIENCY_SCORE = "Verimlilik Skoru"
 
 HISSE_PRICE = "Fiyat"
 HISSE_PE = "FK"
@@ -108,6 +123,8 @@ HISSE_UPSIDE = "GP %"
 HISSE_ANALYST_UPSIDE = "Analist GP %"
 HISSE_CONFIDENCE = "Güven"
 HISSE_MODEL_COUNT = "D. Ort Model Sayısı"
+HISSE_STATUS = "Sonuç Durumu"
+HISSE_STATUS_NOTE = "Yayın Notu"
 
 QUALITY_CODE = CODE_COLUMN
 QUALITY_MODEL = "Model"
@@ -128,6 +145,20 @@ QUALITY_MODEL_WARNINGS = "Model Kalite Uyarıları"
 QUALITY_DATA_COMPLETENESS = "Veri Tamlık Skoru"
 QUALITY_MODEL_COUNT = "Geçerli Model Sayısı"
 QUALITY_INCLUDED_IN_FAIR_VALUE = "D. Ort Dahil"
+QUALITY_RESULT_STATUS = HISSE_STATUS
+QUALITY_RESULT_NOTE = HISSE_STATUS_NOTE
+STATUS_PUBLISHABLE = "Yayınlanabilir"
+STATUS_REVIEW = "İnceleme Gerekli"
+STATUS_UNPUBLISHABLE = "Yayınlanamaz"
+QUALITY_STATUS_FILTERED = "Filtrelendi"
+QUALITY_STATUS_UNWEIGHTED = "Ağırlıksız"
+QUALITY_STATUS_TRIMMED = "Trimlendi"
+QUALITY_STATUS_USED = "Kullanıldı"
+RATIO_CATEGORY_LIQUIDITY = "Likidite"
+RATIO_CATEGORY_PROFITABILITY = "Karlılık"
+RATIO_CATEGORY_VALUATION = "Değerleme"
+RATIO_CATEGORY_GROWTH = "Büyüme"
+RATIO_CATEGORY_EFFICIENCY = "Verimlilik"
 
 SECTOR_PB = RASYO_PB
 SECTOR_PE = "F/K"
@@ -168,6 +199,7 @@ PUAN_COLUMNS = (
 
 RASYO_COLUMNS = (
     RASYO_STOCK,
+    RASYO_PROFILE,
     RASYO_CURRENT_RATIO,
     RASYO_QUICK_RATIO,
     RASYO_CASH_RATIO,
@@ -178,7 +210,15 @@ RASYO_COLUMNS = (
     RASYO_PEG,
     RASYO_ROIC,
     RASYO_ASSET_TURNOVER,
+    RASYO_SCORE_100,
     RASYO_SCORE,
+    RASYO_COVERAGE,
+    RASYO_MISSING_PENALTY,
+    RASYO_LIQUIDITY_SCORE,
+    RASYO_PROFITABILITY_SCORE,
+    RASYO_VALUATION_SCORE,
+    RASYO_GROWTH_SCORE,
+    RASYO_EFFICIENCY_SCORE,
 )
 
 HISSE_COLUMNS = (
@@ -208,6 +248,8 @@ HISSE_COLUMNS = (
     HISSE_ANALYST_UPSIDE,
     HISSE_CONFIDENCE,
     HISSE_MODEL_COUNT,
+    HISSE_STATUS,
+    HISSE_STATUS_NOTE,
 )
 
 QUALITY_COLUMNS = (
@@ -230,6 +272,8 @@ QUALITY_COLUMNS = (
     QUALITY_MODEL_WARNINGS,
     QUALITY_DATA_COMPLETENESS,
     QUALITY_MODEL_COUNT,
+    QUALITY_RESULT_STATUS,
+    QUALITY_RESULT_NOTE,
 )
 
 HISSE_HEADER_COMMENTS = {
@@ -255,63 +299,15 @@ WEIGHT_PROFILE_FINANCIAL = "Finansal"
 WEIGHT_PROFILE_GROWTH = "Büyüme/Teknoloji"
 WEIGHT_PROFILE_REAL_ESTATE = "Gayrimenkul"
 WEIGHT_PROFILE_HOLDING = "Holding"
-WEIGHT_PROFILE_ENERGY = "Enerji/Altyapı"
+WEIGHT_PROFILE_ENERGY_UTILITY = "Enerji Utility/Altyapı"
+WEIGHT_PROFILE_ENERGY_EQUIPMENT = "Enerji Ekipman/Taahhüt"
 
-MODEL_WEIGHTS = {
-    WEIGHT_PROFILE_FINANCIAL: {
-        "D1": 0.10,
-        "D4": 0.20,
-        "D5": 0.10,
-        "D10": 0.15,
-        "D11": 0.10,
-        "D12": 0.35,
-    },
-    WEIGHT_PROFILE_GROWTH: {
-        "D1": 0.25,
-        "D6": 0.40,
-        "D7": 0.20,
-        "D11": 0.15,
-    },
-    WEIGHT_PROFILE_REAL_ESTATE: {
-        "D4": 0.25,
-        "D5": 0.25,
-        "D10": 0.10,
-        "D11": 0.20,
-        "D12": 0.20,
-    },
-    WEIGHT_PROFILE_HOLDING: {
-        "D4": 0.20,
-        "D5": 0.20,
-        "D10": 0.10,
-        "D11": 0.25,
-        "D12": 0.25,
-    },
-    WEIGHT_PROFILE_ENERGY: {
-        "D4": 0.10,
-        "D7": 0.25,
-        "D9": 0.20,
-        "D10": 0.10,
-        "D11": 0.25,
-        "D12": 0.10,
-    },
-    WEIGHT_PROFILE_DEFAULT: {
-        "D1": 0.10,
-        "D2": 0.05,
-        "D3": 0.05,
-        "D4": 0.10,
-        "D6": 0.10,
-        "D7": 0.20,
-        "D9": 0.15,
-        "D10": 0.10,
-        "D11": 0.15,
-    },
-}
-
-FINANCIAL_SECTORS = {"Banka", "Sigorta", "Finans", "Finansal Hizmetler"}
-GROWTH_SECTORS = {"Teknoloji", "Yarı İletken", "E-Ticaret", "İletişim & Medya", "Otomotiv"}
-REAL_ESTATE_SECTORS = {"Gayrimenkul"}
-HOLDING_SECTORS = {"Holding & Karma"}
-ENERGY_SECTORS = {"Enerji", "Petrol", "Telekomünikasyon", "Havacılık", "Sanayi & Savunma"}
+SECTOR_PROFILE_CONFIG = load_sector_profile_config()
+SECTOR_PROFILE_LOOKUP, SECTOR_PROFILE_KEYWORDS = build_sector_profile_maps(SECTOR_PROFILE_CONFIG)
+VALUATION_PROFILE_CONFIG = load_valuation_profile_config()
+MODEL_WEIGHTS, PROFILE_NOTES = build_valuation_profile_maps(VALUATION_PROFILE_CONFIG)
+RATIO_PROFILE_CONFIG = load_ratio_profile_config()
+RATIO_PROFILES = build_ratio_profile_map(RATIO_PROFILE_CONFIG)
 
 
 @dataclass(frozen=True)
@@ -385,6 +381,30 @@ class ValuationSummary:
     fair_value: Optional[float]
     confidence: Optional[float]
     model_count: int
+    publishable: bool
+    status: str
+    note: str
+    data_completeness: Optional[float]
+
+
+@dataclass(frozen=True)
+class RatioScoreSummary:
+    profile_name: str
+    normalized_score: Optional[float]
+    score_100: Optional[float]
+    coverage: Optional[float]
+    missing_penalty: Optional[float]
+    category_scores: dict[str, Optional[float]]
+
+
+@dataclass(frozen=True)
+class QualityRowContext:
+    signal_score: Optional[float]
+    signal_label: str
+    warning_count: Optional[float]
+    model_warnings: str
+    data_completeness: float
+    summary: ValuationSummary
 
 SHEET_UPDATES_Q2_2026_XU100_ADD = {"CVKMD", "EUREN", "PAHOL", "PSGYO", "SARKY"}
 SHEET_UPDATES_Q2_2026_XU100_REMOVE = {"EGEEN", "KCAER", "LINK", "TTRAK", "YEOTK"}
@@ -547,16 +567,16 @@ def _mean_nonempty(values: Iterable[Any]) -> Optional[float]:
 
 
 def _weight_profile_for_sector(sector_name: str) -> str:
-    if sector_name in FINANCIAL_SECTORS:
-        return WEIGHT_PROFILE_FINANCIAL
-    if sector_name in GROWTH_SECTORS:
-        return WEIGHT_PROFILE_GROWTH
-    if sector_name in REAL_ESTATE_SECTORS:
-        return WEIGHT_PROFILE_REAL_ESTATE
-    if sector_name in HOLDING_SECTORS:
-        return WEIGHT_PROFILE_HOLDING
-    if sector_name in ENERGY_SECTORS:
-        return WEIGHT_PROFILE_ENERGY
+    normalized = str(sector_name or "").strip()
+    if not normalized:
+        return WEIGHT_PROFILE_DEFAULT
+    direct = SECTOR_PROFILE_LOOKUP.get(normalized)
+    if direct is not None:
+        return direct
+    lowered = normalized.casefold()
+    for keyword, profile_name in SECTOR_PROFILE_KEYWORDS:
+        if keyword in lowered:
+            return profile_name
     return WEIGHT_PROFILE_DEFAULT
 
 
@@ -716,6 +736,23 @@ def _data_completeness_score(inputs: HisseInputs) -> float:
     return sum(1 for value in fields if _safe_float(value) is not None) / len(fields)
 
 
+def _publication_decision(
+    fair_value: Optional[float],
+    confidence: Optional[float],
+    model_count: int,
+    data_score: float,
+) -> tuple[bool, str, str]:
+    if fair_value is None or model_count == 0:
+        return False, STATUS_UNPUBLISHABLE, "gecerli_model_yok"
+    if model_count < MIN_PUBLISHABLE_MODELS:
+        return False, STATUS_REVIEW, "model_sayisi_yetersiz"
+    if data_score < MIN_PUBLISHABLE_DATA_COMPLETENESS:
+        return False, STATUS_REVIEW, "veri_tamligi_dusuk"
+    if confidence is None or confidence < MIN_PUBLISHABLE_CONFIDENCE:
+        return False, STATUS_REVIEW, "guven_dusuk"
+    return True, STATUS_PUBLISHABLE, "yeterli_kanit"
+
+
 def valuation_summary(values: dict[str, Optional[float]], inputs: HisseInputs, weight_profile: str) -> ValuationSummary:
     adjusted_weights = _adjusted_model_weights(values, inputs, weight_profile)
     retained_keys = _trimmed_model_keys(values, adjusted_weights)
@@ -724,19 +761,22 @@ def valuation_summary(values: dict[str, Optional[float]], inputs: HisseInputs, w
         for model_key, weight in adjusted_weights.items()
         if model_key in retained_keys
     }
-    fair_value = _weighted_average(values, active_weights)
+    raw_fair_value = _weighted_average(values, active_weights)
     model_count = len(active_weights)
-    if fair_value is None or model_count == 0:
-        return ValuationSummary(None, None, 0)
+    data_score = _data_completeness_score(inputs)
+    if raw_fair_value is None or model_count == 0:
+        return ValuationSummary(None, None, 0, False, "Yayınlanamaz", "gecerli_model_yok", data_score)
 
     model_score = min(1.0, model_count / MIN_PROFESSIONAL_MODELS)
     ratio_score = inputs.ratio_score if inputs.ratio_score is not None else 0.50
-    dispersion_score = _confidence_from_dispersion(_model_dispersion(values, active_weights, fair_value))
-    data_score = _data_completeness_score(inputs)
+    dispersion_score = _confidence_from_dispersion(_model_dispersion(values, active_weights, raw_fair_value))
     confidence = (model_score * 0.30) + (dispersion_score * 0.30) + (data_score * 0.25) + (ratio_score * 0.15)
     if model_count < 2:
         confidence *= 0.65
-    return ValuationSummary(fair_value, max(0.0, min(1.0, confidence)), model_count)
+    normalized_confidence = max(0.0, min(1.0, confidence))
+    publishable, status, note = _publication_decision(raw_fair_value, normalized_confidence, model_count, data_score)
+    published_fair_value = raw_fair_value if publishable else None
+    return ValuationSummary(published_fair_value, normalized_confidence, model_count, publishable, status, note, data_score)
 
 
 def _median_or_none(series: pd.Series) -> Optional[float]:
@@ -1066,6 +1106,11 @@ def build_notes_frame() -> pd.DataFrame:
             TOPIC_COLUMN: SHEET_KALITE,
             VALUE_COLUMN: "Kalite sayfası her D modeli için ham değer, filtre sonrası değer, ağırlık profili, trim durumu ve dışlanma gerekçesini gösterir. Bu sayfa denetim izi olarak kullanılmalıdır.",
         },
+        {
+            SECTION_COLUMN: "Metodoloji",
+            TOPIC_COLUMN: WEIGHT_PROFILE_COLUMN,
+            VALUE_COLUMN: "Ağırlık profili seçimleri repo kökündeki sector_profiles.json içindeki merkezi sektör→profil sözlüğü ve anahtar kelime fallback mantığıyla yapılır. Profil bazlı model ağırlıkları ve açıklamalar ise valuation_profiles.json dosyasından yüklenir.",
+        },
     ]
     for model_key in D_FIELDS:
         rows.append(
@@ -1085,25 +1130,14 @@ def build_notes_frame() -> pd.DataFrame:
                     WEIGHT_COLUMN: weights.get(model_key, 0.0),
                 }
             )
-    rows.extend(
-        [
+    for profile_name, note in PROFILE_NOTES.items():
+        rows.append(
             {
                 SECTION_COLUMN: "Profil",
-                TOPIC_COLUMN: WEIGHT_PROFILE_FINANCIAL,
-                VALUE_COLUMN: "Banka, sigorta ve finansal hizmetler. Defter değeri, ROE ve özsermaye maliyeti modelleri daha yüksek ağırlıklıdır.",
-            },
-            {
-                SECTION_COLUMN: "Profil",
-                TOPIC_COLUMN: WEIGHT_PROFILE_GROWTH,
-                VALUE_COLUMN: "Teknoloji, yarı iletken, e-ticaret ve büyüme karakteri yüksek sektörler. İleri HBK/FK, sektör FK, EV/EBITDA ve DCF/INA ağırlıklıdır; defter değeri ve trailing terminal modeller düşük uygunluk nedeniyle dışarıda bırakılır.",
-            },
-            {
-                SECTION_COLUMN: "Profil",
-                TOPIC_COLUMN: WEIGHT_PROFILE_DEFAULT,
-                VALUE_COLUMN: "Standart sanayi ve karma operasyonel şirketler. Çarpan, defter, EV/EBITDA ve gelir kapitalizasyonu dengeli kullanılır.",
-            },
-        ]
-    )
+                TOPIC_COLUMN: profile_name,
+                VALUE_COLUMN: note,
+            }
+        )
     return pd.DataFrame(rows, columns=_column_index((SECTION_COLUMN, TOPIC_COLUMN, VALUE_COLUMN, WEIGHT_COLUMN)))
 
 
@@ -1160,38 +1194,268 @@ def _greater_than(value: Any, threshold: float) -> Optional[bool]:
     return number > threshold
 
 
-def _ratio_score(row: pd.Series) -> Optional[float]:
-    checks = [
-        _between(row.get(RASYO_CURRENT_RATIO), 1, 2),
-        _between(row.get(RASYO_QUICK_RATIO), 1, 2),
-        _between(row.get(RASYO_CASH_RATIO), 0.2, 1),
-        _greater_than(row.get(RASYO_ROE), 15),
-        _between(row.get(RASYO_PE), 0, 20),
-        _between(row.get(RASYO_PB), 0, 2),
-        _greater_than(row.get(RASYO_EBITDA_GROWTH), 10),
-        _between(row.get(RASYO_PEG), 0, 1),
-        _greater_than(row.get(RASYO_ROIC), 10),
-        _greater_than(row.get(RASYO_ASSET_TURNOVER), 1),
-    ]
-    present = [check for check in checks if check is not None]
-    if not present:
+def _clamp_score(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
+
+
+def _score_band(value: Optional[float], rule: dict[str, Any]) -> Optional[float]:
+    if value is None:
         return None
-    return round(sum(1 for check in present if check) / len(present), 4)
+    soft_min = _safe_float(rule.get("soft_min"))
+    target_min = _safe_float(rule.get("target_min"))
+    target_max = _safe_float(rule.get("target_max"))
+    soft_max = _safe_float(rule.get("soft_max"))
+    if None in (soft_min, target_min, target_max, soft_max):
+        return None
+    if value <= soft_min or value >= soft_max:
+        return 0.0
+    if target_min <= value <= target_max:
+        return 1.0
+    if value < target_min:
+        return _clamp_score((value - soft_min) / (target_min - soft_min))
+    return _clamp_score((soft_max - value) / (soft_max - target_max))
 
 
-def build_rasyo_frame(ratio_frame: pd.DataFrame) -> pd.DataFrame:
+def _score_min(value: Optional[float], rule: dict[str, Any]) -> Optional[float]:
+    if value is None:
+        return None
+    soft_min = _safe_float(rule.get("soft_min"))
+    target_min = _safe_float(rule.get("target_min"))
+    if None in (soft_min, target_min):
+        return None
+    if value <= soft_min:
+        return 0.0
+    if value >= target_min:
+        return 1.0
+    return _clamp_score((value - soft_min) / (target_min - soft_min))
+
+
+def _metric_score(value: Optional[float], rule: dict[str, Any]) -> Optional[float]:
+    kind = str(rule.get("kind", "") or "").strip()
+    if kind == "band":
+        return _score_band(value, rule)
+    if kind == "min":
+        return _score_min(value, rule)
+    return None
+
+
+def _ratio_metric_values(row: pd.Series) -> dict[str, Optional[float]]:
+    return {
+        "current_ratio": _safe_float(row.get(RASYO_CURRENT_RATIO)),
+        "quick_ratio": _safe_float(row.get(RASYO_QUICK_RATIO)),
+        "cash_ratio": _safe_float(row.get(RASYO_CASH_RATIO)),
+        "roe": _safe_float(row.get(RASYO_ROE)),
+        "pe": _safe_float(row.get(RASYO_PE)),
+        "pb": _safe_float(row.get(RASYO_PB)),
+        "ebitda_growth": _safe_float(row.get(RASYO_EBITDA_GROWTH)),
+        "peg": _safe_float(row.get(RASYO_PEG)),
+        "roic": _safe_float(row.get(RASYO_ROIC)),
+        "asset_turnover": _safe_float(row.get(RASYO_ASSET_TURNOVER)),
+    }
+
+
+def _category_score_from_parts(parts: list[tuple[float, float]]) -> Optional[float]:
+    total_weight = sum(weight for _, weight in parts)
+    if total_weight <= 0:
+        return None
+    return _clamp_score(sum(score * weight for score, weight in parts) / total_weight)
+
+
+def _empty_ratio_category_scores() -> dict[str, Optional[float]]:
+    return dict.fromkeys(
+        (
+            RATIO_CATEGORY_LIQUIDITY,
+            RATIO_CATEGORY_PROFITABILITY,
+            RATIO_CATEGORY_VALUATION,
+            RATIO_CATEGORY_GROWTH,
+            RATIO_CATEGORY_EFFICIENCY,
+        )
+    )
+
+
+def _base_ratio_category_parts() -> dict[str, list[tuple[float, float]]]:
+    return {
+        RATIO_CATEGORY_LIQUIDITY: [],
+        RATIO_CATEGORY_PROFITABILITY: [],
+        RATIO_CATEGORY_VALUATION: [],
+        RATIO_CATEGORY_GROWTH: [],
+        RATIO_CATEGORY_EFFICIENCY: [],
+    }
+
+
+def _ratio_profile_metrics(profile_name: str) -> tuple[dict[str, Any], Optional[float]]:
+    profile = RATIO_PROFILES.get(profile_name, RATIO_PROFILES.get(WEIGHT_PROFILE_DEFAULT, {}))
+    if not isinstance(profile, dict):
+        return {}, None
+    metrics = profile.get("metrics", {})
+    return (metrics if isinstance(metrics, dict) else {}), _safe_float(profile.get("missing_penalty"))
+
+
+def _accumulate_ratio_metric_scores(
+    metrics: dict[str, Any],
+    metric_values: dict[str, Optional[float]],
+    category_parts: dict[str, list[tuple[float, float]]],
+) -> tuple[float, float, float]:
+    total_weight = 0.0
+    present_weight = 0.0
+    weighted_score = 0.0
+    for metric_name, rule in metrics.items():
+        if not isinstance(rule, dict):
+            continue
+        weight = _safe_float(rule.get("weight")) or 0.0
+        if weight <= 0:
+            continue
+        total_weight += weight
+        score = _metric_score(metric_values.get(metric_name), rule)
+        if score is None:
+            continue
+        present_weight += weight
+        weighted_score += score * weight
+        category_name = str(rule.get("category", "") or "").strip()
+        if category_name in category_parts:
+            category_parts[category_name].append((score, weight))
+    return total_weight, present_weight, weighted_score
+
+
+def _ratio_score_summary(row: pd.Series, profile_name: str) -> RatioScoreSummary:
+    metrics, missing_penalty_factor = _ratio_profile_metrics(profile_name)
+    metric_values = _ratio_metric_values(row)
+    category_parts = _base_ratio_category_parts()
+    total_weight, present_weight, weighted_score = _accumulate_ratio_metric_scores(
+        metrics,
+        metric_values,
+        category_parts,
+    )
+
+    if total_weight <= 0 or present_weight <= 0:
+        return RatioScoreSummary(
+            profile_name=profile_name,
+            normalized_score=None,
+            score_100=None,
+            coverage=None,
+            missing_penalty=None,
+            category_scores=_empty_ratio_category_scores(),
+        )
+
+    coverage = _clamp_score(present_weight / total_weight)
+    present_average = weighted_score / present_weight
+    missing_penalty = (1.0 - coverage) * (missing_penalty_factor if missing_penalty_factor is not None else 0.15)
+    normalized_score = _clamp_score((present_average * coverage) + (0.50 * (1.0 - coverage)) - missing_penalty)
+    category_scores = {
+        category: _category_score_from_parts(parts)
+        for category, parts in category_parts.items()
+    }
+    return RatioScoreSummary(
+        profile_name=profile_name,
+        normalized_score=normalized_score,
+        score_100=round(normalized_score * 100.0, 1),
+        coverage=coverage,
+        missing_penalty=missing_penalty,
+        category_scores=category_scores,
+    )
+
+
+def _sector_lookup_for_ratio(endeks_frame: pd.DataFrame) -> dict[str, str]:
+    if endeks_frame.empty or CODE_COLUMN not in endeks_frame.columns or SECTOR_COLUMN not in endeks_frame.columns:
+        return {}
+    lookup: dict[str, str] = {}
+    for _, row in endeks_frame.iterrows():
+        code = _normalized_code(str(row.get(CODE_COLUMN, "") or ""))
+        sector_name = str(row.get(SECTOR_COLUMN, "") or "")
+        if code:
+            lookup[code] = sector_name
+    return lookup
+
+
+def _quality_status(
+    filtered_value: Optional[float],
+    adjusted_weight: float,
+    model_key: str,
+    retained_keys: set[str],
+) -> str:
+    if filtered_value is None:
+        return QUALITY_STATUS_FILTERED
+    if adjusted_weight <= 0:
+        return QUALITY_STATUS_UNWEIGHTED
+    if model_key not in retained_keys:
+        return QUALITY_STATUS_TRIMMED
+    return QUALITY_STATUS_USED
+
+
+def _quality_row(
+    inputs: HisseInputs,
+    model_key: str,
+    raw_values: dict[str, Optional[float]],
+    filtered_values: dict[str, Optional[float]],
+    weight_profile: str,
+    base_weights: dict[str, float],
+    adjusted_weights: dict[str, float],
+    retained_keys: set[str],
+    quality_context: QualityRowContext,
+) -> dict[str, Any]:
+    filtered_value = filtered_values.get(model_key)
+    adjusted_weight = adjusted_weights.get(model_key, 0.0)
+    included_in_fair_value = model_key in retained_keys and adjusted_weight > 0
+    status = _quality_status(filtered_value, adjusted_weight, model_key, retained_keys)
+    return {
+        QUALITY_CODE: inputs.code,
+        QUALITY_MODEL: model_key,
+        QUALITY_RAW_VALUE: _round_or_none(raw_values.get(model_key)),
+        QUALITY_FILTERED_VALUE: _round_or_none(filtered_value),
+        QUALITY_STATUS: status,
+        QUALITY_REASON: _model_value_reason(raw_values.get(model_key), filtered_value, inputs.price),
+        QUALITY_WEIGHT_PROFILE: weight_profile,
+        QUALITY_BASE_WEIGHT: _round_or_none(base_weights.get(model_key, 0.0), 4),
+        QUALITY_ADJUSTED_WEIGHT: _round_or_none(adjusted_weight, 4),
+        QUALITY_INCLUDED_IN_FAIR_VALUE: "Evet" if included_in_fair_value else "Hayır",
+        QUALITY_PRICE: _round_or_none(inputs.price),
+        QUALITY_SECTOR: inputs.sector_name,
+        QUALITY_INDEX: inputs.index_name,
+        QUALITY_SIGNAL_SCORE: _round_or_none(quality_context.signal_score, 0),
+        QUALITY_SIGNAL_LABEL: quality_context.signal_label,
+        QUALITY_WARNING_COUNT: _round_or_none(quality_context.warning_count, 0),
+        QUALITY_MODEL_WARNINGS: quality_context.model_warnings,
+        QUALITY_DATA_COMPLETENESS: _round_or_none(quality_context.data_completeness, 4),
+        QUALITY_MODEL_COUNT: len(adjusted_weights),
+        QUALITY_RESULT_STATUS: quality_context.summary.status,
+        QUALITY_RESULT_NOTE: quality_context.summary.note,
+    }
+
+
+def build_rasyo_frame(ratio_frame: pd.DataFrame, endeks_frame: pd.DataFrame) -> pd.DataFrame:
     if ratio_frame.empty:
         return pd.DataFrame(columns=_column_index(RASYO_COLUMNS))
     renamed = ratio_frame.rename(
         columns={
+            "F/K": RASYO_PE,
             HISSE_PE: RASYO_PE,
+            "Özsermaye Kârlılığı (ROE) (%) Yıllık": RASYO_ROE,
             HISSE_PB: RASYO_PB,
             "PEG Oranı": RASYO_PEG,
             "ROIC (%)": RASYO_ROIC,
             RASYO_STOCK: RASYO_STOCK,
         }
     )
-    renamed[RASYO_SCORE] = renamed.apply(_ratio_score, axis=1)
+    sector_lookup = _sector_lookup_for_ratio(endeks_frame)
+    summaries: list[RatioScoreSummary] = []
+    for _, row in renamed.iterrows():
+        code = _normalized_code(str(row.get(RASYO_STOCK, "") or ""))
+        sector_name = sector_lookup.get(code, "")
+        if not sector_name and bool(row.get("Finansal Sektor")):
+            sector_name = "Banka"
+        profile_name = _weight_profile_for_sector(sector_name)
+        summaries.append(_ratio_score_summary(row, profile_name))
+
+    renamed[RASYO_PROFILE] = [summary.profile_name for summary in summaries]
+    renamed[RASYO_SCORE_100] = [_round_or_none(summary.score_100, 1) for summary in summaries]
+    renamed[RASYO_SCORE] = [_round_or_none(summary.normalized_score, 4) for summary in summaries]
+    renamed[RASYO_COVERAGE] = [_round_or_none(summary.coverage, 4) for summary in summaries]
+    renamed[RASYO_MISSING_PENALTY] = [_round_or_none(summary.missing_penalty, 4) for summary in summaries]
+    renamed[RASYO_LIQUIDITY_SCORE] = [_round_or_none(summary.category_scores.get("Likidite"), 4) for summary in summaries]
+    renamed[RASYO_PROFITABILITY_SCORE] = [_round_or_none(summary.category_scores.get("Karlılık"), 4) for summary in summaries]
+    renamed[RASYO_VALUATION_SCORE] = [_round_or_none(summary.category_scores.get("Değerleme"), 4) for summary in summaries]
+    renamed[RASYO_GROWTH_SCORE] = [_round_or_none(summary.category_scores.get("Büyüme"), 4) for summary in summaries]
+    renamed[RASYO_EFFICIENCY_SCORE] = [_round_or_none(summary.category_scores.get("Verimlilik"), 4) for summary in summaries]
     return renamed.reindex(columns=_column_index(RASYO_COLUMNS))
 
 
@@ -1415,6 +1679,8 @@ def _hisse_output_row(inputs: HisseInputs, values: dict[str, Optional[float]]) -
         HISSE_ANALYST_UPSIDE: _round_or_none(analyst_gp_pct, 4),
         HISSE_CONFIDENCE: _round_or_none(summary.confidence, 4),
         HISSE_MODEL_COUNT: summary.model_count,
+        HISSE_STATUS: summary.status,
+        HISSE_STATUS_NOTE: summary.note,
     }
 
 
@@ -1458,6 +1724,7 @@ def build_quality_frame(
         raw_values = _raw_valuation_points(inputs, macro_rates)
         filtered_values = sanity_checked_valuation_points(raw_values, inputs.price)
         weight_profile = _weight_profile_for_sector(inputs.sector_name)
+        summary = valuation_summary(filtered_values, inputs, weight_profile)
         base_weights = MODEL_WEIGHTS.get(weight_profile, MODEL_WEIGHTS[WEIGHT_PROFILE_DEFAULT])
         adjusted_weights = _adjusted_model_weights(filtered_values, inputs, weight_profile)
         retained_keys = _trimmed_model_keys(filtered_values, adjusted_weights)
@@ -1467,41 +1734,28 @@ def build_quality_frame(
         warning_count = _safe_float(valuation_row.get(QUALITY_WARNING_COUNT))
         model_warnings = str(valuation_row.get(QUALITY_MODEL_WARNINGS, "") or "")
         data_completeness = _data_completeness_score(inputs)
+        quality_context = QualityRowContext(
+            signal_score=signal_score,
+            signal_label=signal_label,
+            warning_count=warning_count,
+            model_warnings=model_warnings,
+            data_completeness=data_completeness,
+            summary=summary,
+        )
 
         for model_key in D_FIELDS:
-            filtered_value = filtered_values.get(model_key)
-            adjusted_weight = adjusted_weights.get(model_key, 0.0)
-            included_in_fair_value = model_key in retained_keys and adjusted_weight > 0
-            if filtered_value is None:
-                status = "Filtrelendi"
-            elif adjusted_weight <= 0:
-                status = "Ağırlıksız"
-            elif model_key not in retained_keys:
-                status = "Trimlendi"
-            else:
-                status = "Kullanıldı"
             rows.append(
-                {
-                    QUALITY_CODE: inputs.code,
-                    QUALITY_MODEL: model_key,
-                    QUALITY_RAW_VALUE: _round_or_none(raw_values.get(model_key)),
-                    QUALITY_FILTERED_VALUE: _round_or_none(filtered_value),
-                    QUALITY_STATUS: status,
-                    QUALITY_REASON: _model_value_reason(raw_values.get(model_key), filtered_value, inputs.price),
-                    QUALITY_WEIGHT_PROFILE: weight_profile,
-                    QUALITY_BASE_WEIGHT: _round_or_none(base_weights.get(model_key, 0.0), 4),
-                    QUALITY_ADJUSTED_WEIGHT: _round_or_none(adjusted_weight, 4),
-                    QUALITY_INCLUDED_IN_FAIR_VALUE: "Evet" if included_in_fair_value else "Hayır",
-                    QUALITY_PRICE: _round_or_none(inputs.price),
-                    QUALITY_SECTOR: inputs.sector_name,
-                    QUALITY_INDEX: inputs.index_name,
-                    QUALITY_SIGNAL_SCORE: _round_or_none(signal_score, 0),
-                    QUALITY_SIGNAL_LABEL: signal_label,
-                    QUALITY_WARNING_COUNT: _round_or_none(warning_count, 0),
-                    QUALITY_MODEL_WARNINGS: model_warnings,
-                    QUALITY_DATA_COMPLETENESS: _round_or_none(data_completeness, 4),
-                    QUALITY_MODEL_COUNT: len(adjusted_weights),
-                }
+                _quality_row(
+                    inputs,
+                    model_key,
+                    raw_values,
+                    filtered_values,
+                    weight_profile,
+                    base_weights,
+                    adjusted_weights,
+                    retained_keys,
+                    quality_context,
+                )
             )
     return pd.DataFrame(rows, columns=_column_index(QUALITY_COLUMNS))
 
@@ -1521,7 +1775,7 @@ def write_template_report(
     puan_frame = build_puan_frame(financials_frame)
     sektor_frame = build_sector_frame(endeks_frame, puan_frame)
     vars_frame = build_vars_frame()
-    rasyo_frame = build_rasyo_frame(ratio_frame)
+    rasyo_frame = build_rasyo_frame(ratio_frame, endeks_frame)
     notes_frame = build_notes_frame()
     ina_frame = dcf_frame.copy()
     if not ina_frame.empty and INA_VALUE_COLUMN not in ina_frame.columns:

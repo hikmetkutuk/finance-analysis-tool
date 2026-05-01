@@ -1,0 +1,119 @@
+{
+  "keyword_profiles": [
+    [
+      "finans",
+      "Finansal"
+    ],
+    [
+      "sigorta",
+      "Finansal"
+    ],
+    [
+      "gayrimenkul",
+      "Gayrimenkul"
+    ],
+    [
+      "holding",
+      "Holding"
+    ],
+    [
+      "teknoloji",
+      "Büyüme/Teknoloji"
+    ],
+    [
+      "yarı iletken",
+      "Büyüme/Teknoloji"
+    ],
+    [
+      "iletisim",
+      "Büyüme/Teknoloji"
+    ],
+    [
+      "iletişim",
+      "Büyüme/Teknoloji"
+    ],
+    [
+      "e-ticaret",
+      "Büyüme/Teknoloji"
+    ],
+    [
+      "enerji ekipman",
+      "Enerji Ekipman/Taahhüt"
+    ],
+    [
+      "taahhüt",
+      "Enerji Ekipman/Taahhüt"
+    ],
+    [
+      "taahhut",
+      "Enerji Ekipman/Taahhüt"
+    ],
+    [
+      "savunma",
+      "Enerji Ekipman/Taahhüt"
+    ],
+    [
+      "sanayi",
+      "Enerji Ekipman/Taahhüt"
+    ],
+    [
+      "çimento",
+      "Enerji Ekipman/Taahhüt"
+    ],
+    [
+      "cimento",
+      "Enerji Ekipman/Taahhüt"
+    ],
+    [
+      "petrol",
+      "Enerji Utility/Altyapı"
+    ],
+    [
+      "telekom",
+      "Enerji Utility/Altyapı"
+    ],
+    [
+      "havac",
+      "Enerji Utility/Altyapı"
+    ],
+    [
+      "enerji",
+      "Enerji Utility/Altyapı"
+    ]
+  ],
+  "sector_groups": {
+    "Büyüme/Teknoloji": [
+      "Teknoloji",
+      "Yarı İletken",
+      "E-Ticaret",
+      "İletişim & Medya",
+      "Otomotiv"
+    ],
+    "Enerji Ekipman/Taahhüt": [
+      "Enerji Ekipman & Taahhüt",
+      "Sanayi & Savunma",
+      "Sanayi & Üretim",
+      "Savunma",
+      "Çimento"
+    ],
+    "Enerji Utility/Altyapı": [
+      "Enerji",
+      "Enerji Altyapı",
+      "Petrol",
+      "Telekomünikasyon",
+      "Havacılık"
+    ],
+    "Finansal": [
+      "Banka",
+      "Sigorta",
+      "Finans",
+      "Finansal Hizmetler"
+    ],
+    "Gayrimenkul": [
+      "Gayrimenkul"
+    ],
+    "Holding": [
+      "Holding & Karma"
+    ]
+  }
+}

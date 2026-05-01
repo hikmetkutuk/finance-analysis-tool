@@ -42,7 +42,10 @@ BASE_SECTOR_TICKERS_TR = {
         "A1CAP.IS", "ISMEN.IS", "GEDIK.IS", "INFO.IS", "UNLU.IS", "QNBTR.IS", "QNBFK.IS", "BRKVY.IS", "VAKFA.IS"
     ],
     "Enerji": [
-        "AKSEN.IS", "ENJSA.IS", "ASTOR.IS", "ZOREN.IS", "GWIND.IS", "CWENE.IS", "SMRTG.IS", "TATEN.IS", "ARFYE.IS", "BESTE.IS", "ECOGR.IS"
+        "AKSEN.IS", "ENJSA.IS", "ZOREN.IS", "GWIND.IS", "TATEN.IS", "ARFYE.IS", "BESTE.IS", "ECOGR.IS", "AYDEM.IS", "AYEN.IS", "AKENR.IS", "CANTE.IS", "CATES.IS", "BIOEN.IS"
+    ],
+    "Enerji Ekipman & Taahhüt": [
+        "GESAN.IS", "ASTOR.IS", "ALFAS.IS", "CWENE.IS", "EUPWR.IS", "EMKEL.IS", "EKOS.IS", "KONTR.IS", "SMRTG.IS", "YEOTK.IS", "ORGE.IS", "PRKAB.IS", "SAYAS.IS", "GEREL.IS"
     ],
     "Petrol": [
         "PETKM.IS", "TUPRS.IS", "TRENJ.IS", "TRCAS.IS"
@@ -135,7 +138,8 @@ TR_CLASSIFIER_RULES = [
     ("Sigorta", ("insurance", "sigorta", "insur", "reinsurance", "hayat emeklilik")),
     (SECTOR_FINANCIAL_SERVICES, ("financial services", "capital markets", "asset management", "broker", "araci kurum", "factoring", "leasing", "finansal hizmet")),
     ("Gayrimenkul", ("real estate", "gayrimenkul", "reit", "gmyo", "property")),
-    ("Enerji", ("utilities", "electric", "renewable", "power", "enerji", "electricity", "solar", "wind")),
+    ("Enerji Ekipman & Taahhüt", ("electrical equipment", "power equipment", "energy equipment", "engineering", "epc", "contracting", "taahhut", "taahhüt", "transformer", "cable", "inverter", "panel", "solar equipment")),
+    ("Enerji", ("utilities", "electric utility", "renewable power", "power generation", "independent power", "enerji", "electricity", "solar", "wind")),
     ("Petrol", ("oil", "gas", "refining", "petroleum", "petrokimya", "petrol")),
     ("Otomotiv", ("auto", "automotive", "vehicle", "trucks", "car", "motor")),
     ("Perakende", ("retail", "discount stores", "supermarket", "grocery", "market")),

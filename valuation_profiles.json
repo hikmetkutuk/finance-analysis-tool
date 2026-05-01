@@ -1,0 +1,80 @@
+{
+  "profile_notes": {
+    "Büyüme/Teknoloji": "Teknoloji, yarı iletken, e-ticaret ve büyüme karakteri yüksek sektörler. İleri HBK/FK, sektör FK, EV/EBITDA ve DCF/INA ağırlıklıdır; defter değeri ve trailing terminal modeller düşük uygunluk nedeniyle dışarıda bırakılır.",
+    "Enerji Ekipman/Taahhüt": "Enerji ekipman, EPC/taahhüt, kablo, inverter, trafo ve proje odaklı sanayi şirketleri. İleri FK, sektör FK ve EV/EBITDA daha görünür ağırlık alırken terminal ve defter modelleri destekleyici roldedir.",
+    "Enerji Utility/Altyapı": "Elektrik üretim/dağıtım, utility ve altyapı karakteri baskın şirketler. EV/EBITDA, terminal gelir ve DCF ağırlığı yüksek tutulur; ancak çarpan ve karlılık modelleri artık düşük ama pozitif ağırlık alır.",
+    "Finansal": "Banka, sigorta ve finansal hizmetler. Defter değeri, ROE ve özsermaye maliyeti modelleri daha yüksek ağırlıklıdır.",
+    "Gayrimenkul": "Gayrimenkul şirketleri için defter değeri, özkaynak ve terminal gelir modelleri daha baskındır.",
+    "Genel Sanayi": "Standart sanayi ve karma operasyonel şirketler. Çarpan, defter, EV/EBITDA ve gelir kapitalizasyonu dengeli kullanılır.",
+    "Holding": "Holding ve karma yapıdaki şirketlerde net aktif değer, özkaynak ve terminal gelir yaklaşımı daha baskındır."
+  },
+  "weights": {
+    "Büyüme/Teknoloji": {
+      "D1": 0.25,
+      "D11": 0.15,
+      "D6": 0.4,
+      "D7": 0.2
+    },
+    "Enerji Ekipman/Taahhüt": {
+      "D1": 0.12,
+      "D10": 0.06,
+      "D11": 0.1,
+      "D12": 0.04,
+      "D2": 0.06,
+      "D3": 0.05,
+      "D4": 0.08,
+      "D5": 0.04,
+      "D6": 0.16,
+      "D7": 0.18,
+      "D8": 0.03,
+      "D9": 0.08
+    },
+    "Enerji Utility/Altyapı": {
+      "D1": 0.05,
+      "D10": 0.1,
+      "D11": 0.15,
+      "D12": 0.05,
+      "D2": 0.03,
+      "D3": 0.03,
+      "D4": 0.1,
+      "D5": 0.04,
+      "D6": 0.05,
+      "D7": 0.22,
+      "D8": 0.03,
+      "D9": 0.15
+    },
+    "Finansal": {
+      "D1": 0.1,
+      "D10": 0.15,
+      "D11": 0.1,
+      "D12": 0.35,
+      "D4": 0.2,
+      "D5": 0.1
+    },
+    "Gayrimenkul": {
+      "D10": 0.1,
+      "D11": 0.2,
+      "D12": 0.2,
+      "D4": 0.25,
+      "D5": 0.25
+    },
+    "Genel Sanayi": {
+      "D1": 0.1,
+      "D10": 0.1,
+      "D11": 0.15,
+      "D2": 0.05,
+      "D3": 0.05,
+      "D4": 0.1,
+      "D6": 0.1,
+      "D7": 0.2,
+      "D9": 0.15
+    },
+    "Holding": {
+      "D10": 0.1,
+      "D11": 0.25,
+      "D12": 0.25,
+      "D4": 0.2,
+      "D5": 0.2
+    }
+  }
+}

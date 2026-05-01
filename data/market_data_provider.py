@@ -8,11 +8,15 @@ import pandas as pd
 import yfinance as yf
 from yfinance.exceptions import YFRateLimitError
 
+from .cache_store import load_fresh_cache, load_latest_cache, save_cache
+
 
 FETCH_ERRORS = (YFRateLimitError, RuntimeError, ValueError, TypeError, KeyError, AttributeError, OSError)
 FAST_INFO_KEYS = ("marketCap", "shares", "priceToBook", "lastPrice")
 MAX_FETCH_ATTEMPTS = 3
 FETCH_RETRY_DELAY_SECONDS = 0.75
+TICKER_BUNDLE_CACHE_NAMESPACE = "ticker_bundle_v1"
+TICKER_BUNDLE_CACHE_MAX_AGE_SECONDS = 6 * 60 * 60
 
 
 @dataclass
@@ -25,6 +29,10 @@ class TickerBundle:
     cashflow: pd.DataFrame
     last_close: Optional[float]
     warnings: list[str]
+
+
+def _dedupe_warnings(warnings: list[str]) -> list[str]:
+    return list(dict.fromkeys(item for item in warnings if item))
 
 
 def safe_float(value: Any) -> Optional[float]:
@@ -41,6 +49,112 @@ def as_dataframe(value: Any) -> pd.DataFrame:
     if isinstance(value, pd.DataFrame):
         return value
     return pd.DataFrame()
+
+
+def _frame_has_rows(frame: pd.DataFrame) -> bool:
+    return isinstance(frame, pd.DataFrame) and not frame.empty
+
+
+def _serialize_bundle(bundle: TickerBundle) -> dict[str, Any]:
+    return {
+        "ticker": bundle.ticker,
+        "info": dict(bundle.info),
+        "fast_info": dict(bundle.fast_info),
+        "financials": bundle.financials.copy(),
+        "balance_sheet": bundle.balance_sheet.copy(),
+        "cashflow": bundle.cashflow.copy(),
+        "last_close": bundle.last_close,
+        "warnings": list(bundle.warnings),
+    }
+
+
+def _deserialize_bundle(payload: Any) -> Optional[TickerBundle]:
+    if not isinstance(payload, dict):
+        return None
+    ticker = payload.get("ticker")
+    if not isinstance(ticker, str) or not ticker.strip():
+        return None
+    return TickerBundle(
+        ticker=ticker.strip(),
+        info=payload.get("info") if isinstance(payload.get("info"), dict) else {},
+        fast_info=payload.get("fast_info") if isinstance(payload.get("fast_info"), dict) else {},
+        financials=as_dataframe(payload.get("financials")),
+        balance_sheet=as_dataframe(payload.get("balance_sheet")),
+        cashflow=as_dataframe(payload.get("cashflow")),
+        last_close=safe_float(payload.get("last_close")),
+        warnings=[str(item) for item in payload.get("warnings", []) if isinstance(item, str)],
+    )
+
+
+def _bundle_has_substantive_data(bundle: TickerBundle) -> bool:
+    return bool(bundle.info) or bool(bundle.fast_info) or any(
+        (
+            _frame_has_rows(bundle.financials),
+            _frame_has_rows(bundle.balance_sheet),
+            _frame_has_rows(bundle.cashflow),
+            bundle.last_close is not None,
+        )
+    )
+
+
+def _load_cached_bundle(namespace: str, key: str, max_age_seconds: Optional[int] = None) -> Optional[TickerBundle]:
+    if max_age_seconds is None:
+        cached = load_latest_cache(namespace, key)
+    else:
+        cached = load_fresh_cache(namespace, key, max_age_seconds)
+    if cached is None:
+        return None
+    return _deserialize_bundle(cached.payload)
+
+
+def _merge_bundle_with_cache(bundle: TickerBundle, cached_bundle: Optional[TickerBundle]) -> TickerBundle:
+    if cached_bundle is None:
+        return bundle
+
+    used_cache = False
+    info = bundle.info
+    if not info and cached_bundle.info:
+        info = dict(cached_bundle.info)
+        used_cache = True
+
+    fast_info = bundle.fast_info
+    if not fast_info and cached_bundle.fast_info:
+        fast_info = dict(cached_bundle.fast_info)
+        used_cache = True
+
+    financials = bundle.financials
+    if not _frame_has_rows(financials) and _frame_has_rows(cached_bundle.financials):
+        financials = cached_bundle.financials.copy()
+        used_cache = True
+
+    balance_sheet = bundle.balance_sheet
+    if not _frame_has_rows(balance_sheet) and _frame_has_rows(cached_bundle.balance_sheet):
+        balance_sheet = cached_bundle.balance_sheet.copy()
+        used_cache = True
+
+    cashflow = bundle.cashflow
+    if not _frame_has_rows(cashflow) and _frame_has_rows(cached_bundle.cashflow):
+        cashflow = cached_bundle.cashflow.copy()
+        used_cache = True
+
+    last_close = bundle.last_close
+    if last_close is None and cached_bundle.last_close is not None:
+        last_close = cached_bundle.last_close
+        used_cache = True
+
+    warnings = list(bundle.warnings)
+    if used_cache:
+        warnings.append("cache_backfill_used")
+    return TickerBundle(
+        ticker=bundle.ticker,
+        info=info,
+        fast_info=fast_info,
+        financials=financials,
+        balance_sheet=balance_sheet,
+        cashflow=cashflow,
+        last_close=last_close,
+        warnings=_dedupe_warnings(warnings),
+    )
 
 
 def call_with_retries(loader):
@@ -102,8 +216,17 @@ def get_last_close(stock: yf.Ticker) -> Optional[float]:
 
 
 def fetch_ticker_bundle(ticker: str, include_last_close: bool = True) -> TickerBundle:
+    fresh_cached_bundle = _load_cached_bundle(
+        TICKER_BUNDLE_CACHE_NAMESPACE,
+        ticker,
+        max_age_seconds=TICKER_BUNDLE_CACHE_MAX_AGE_SECONDS,
+    )
+    if fresh_cached_bundle is not None:
+        return fresh_cached_bundle
+
     stock = yf.Ticker(ticker)
     warnings: list[str] = []
+    stale_cached_bundle = _load_cached_bundle(TICKER_BUNDLE_CACHE_NAMESPACE, ticker)
 
     try:
         info = call_with_retries(lambda: stock.info)
@@ -140,7 +263,7 @@ def fetch_ticker_bundle(ticker: str, include_last_close: bool = True) -> TickerB
         if last_close is None:
             warnings.append("last_close_unavailable")
 
-    return TickerBundle(
+    bundle = TickerBundle(
         ticker=ticker,
         info=info,
         fast_info=fast_info,
@@ -148,8 +271,24 @@ def fetch_ticker_bundle(ticker: str, include_last_close: bool = True) -> TickerB
         balance_sheet=balance_sheet,
         cashflow=cashflow,
         last_close=last_close,
-        warnings=warnings,
+        warnings=_dedupe_warnings(warnings),
     )
+    bundle = _merge_bundle_with_cache(bundle, stale_cached_bundle)
+    if _bundle_has_substantive_data(bundle):
+        save_cache(TICKER_BUNDLE_CACHE_NAMESPACE, ticker, _serialize_bundle(bundle))
+        return bundle
+    if stale_cached_bundle is not None:
+        return TickerBundle(
+            ticker=stale_cached_bundle.ticker,
+            info=dict(stale_cached_bundle.info),
+            fast_info=dict(stale_cached_bundle.fast_info),
+            financials=stale_cached_bundle.financials.copy(),
+            balance_sheet=stale_cached_bundle.balance_sheet.copy(),
+            cashflow=stale_cached_bundle.cashflow.copy(),
+            last_close=stale_cached_bundle.last_close,
+            warnings=_dedupe_warnings(list(stale_cached_bundle.warnings) + bundle.warnings + ["cache_fallback_stale"]),
+        )
+    return bundle
 
 
 def coalesce_numeric(*values: Any) -> Optional[float]:

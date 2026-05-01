@@ -1,0 +1,25 @@
+{
+  "profiles": {
+    "Finansal": {
+      "missing_penalty": 0.12
+    },
+    "Büyüme/Teknoloji": {
+      "missing_penalty": 0.15
+    },
+    "Gayrimenkul": {
+      "missing_penalty": 0.16
+    },
+    "Holding": {
+      "missing_penalty": 0.16
+    },
+    "Enerji Utility/Altyapı": {
+      "missing_penalty": 0.17
+    },
+    "Enerji Ekipman/Taahhüt": {
+      "missing_penalty": 0.16
+    },
+    "Genel Sanayi": {
+      "missing_penalty": 0.18
+    }
+  }
+}
