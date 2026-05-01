@@ -22,6 +22,7 @@ DEFAULT_SECTOR_PROFILE_CONFIG: dict[str, Any] = {
         PROFILE_HOLDING: ["Holding & Karma"],
         PROFILE_ENERGY_UTILITY: ["Enerji", "Enerji Altyapı", "Petrol", "Telekomünikasyon", "Havacılık"],
         PROFILE_ENERGY_EQUIPMENT: ["Enerji Ekipman & Taahhüt", "Sanayi & Savunma", "Sanayi & Üretim", "Savunma", "Çimento"],
+        "Genel Sanayi": ["Sağlık & İlaç", "Perakende & Tüketim"],
     },
     "keyword_profiles": [
         ["finans", PROFILE_FINANCIAL],

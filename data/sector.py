@@ -102,34 +102,36 @@ BASE_SECTOR_TICKERS_TR = {
 
 BASE_SECTOR_TICKERS_US = {
     "Teknoloji": [
-        "AAPL", "GOOG", "GOOGL", "MSFT", "META", "PLTR", "ORCL", "ADBE", "CRM", "AMZN", "CSCO", "DELL", "APP", "NET"
+        "AAPL", "GOOG", "GOOGL", "MSFT", "META", "PLTR", "ORCL", "ADBE", "CRM", "AMZN", "CSCO", "DELL", "APP", "NET",
+        "ACN", "ADP", "ADSK", "AKAM", "ANET", "CDNS", "CDW", "CRWD", "CTSH", "EA", "EPAM", "FFIV", "FICO", "FTNT",
+        "GDDY", "GEN", "INTU", "NOW", "PANW", "SNPS", "TYL", "WDAY", "ZM"
     ],
     "Yarı İletken": [
-        "QCOM", "AMD", "NVDA", "INTC", "INTL", "AVGO", "SNDK"
+        "QCOM", "AMD", "NVDA", "INTC", "INTL", "AVGO", "SNDK", "ADI", "AMAT", "KLAC", "LRCX", "MU", "NXPI", "ON", "TXN"
     ],
     "E-Ticaret": [
-        "BABA"
+        "BABA", "ABNB", "BKNG", "DASH", "EBAY", "ETSY", "EXPE", "MELI"
     ],
     "İletişim & Medya": [
-        "DIS", "NFLX"
+        "DIS", "NFLX", "CMCSA", "CHTR", "FOX", "FOXA", "TMUS", "T", "VZ", "SPOT"
     ],
     "Sağlık & İlaç": [
-        "LLY", "JNJ", "MRK", "UNH", "PFE", "TMO", "NVO"
+        "LLY", "JNJ", "MRK", "UNH", "PFE", "TMO", "NVO", "ABBV", "ABT", "AMGN", "BMY", "BSX", "CI", "CVS", "DHR", "ELV", "GILD", "HCA", "ISRG", "MDT", "MRNA", "REGN", "VRTX"
     ],
     "Finans": [
-        "JPM", "WFC", "MA", "V", "BRK.B"
+        "JPM", "WFC", "MA", "V", "BRK.B", "AFL", "AIG", "AJG", "ALL", "AXP", "BAC", "BLK", "BX", "C", "CB", "COF", "CME", "DFS", "GS", "ICE", "KKR", "MET", "MMC", "MS", "PNC", "PYPL", "SCHW", "SPGI", "TROW", "USB"
     ],
     "Enerji": [
-        "XOM"
+        "XOM", "AEE", "AEP", "AES", "AWK", "CEG", "COP", "CVX", "DUK", "ED", "EIX", "EOG", "ES", "ETR", "EXC", "FE", "FSLR", "NEE", "NRG", "OXY", "PEG", "SO", "SRE", "VST", "XEL"
     ],
     "Perakende & Tüketim": [
-        "MCD", "WMT", "COST", "HD", "KO", "PEP"
+        "MCD", "WMT", "COST", "HD", "KO", "PEP", "ADM", "AZO", "BBY", "CAG", "CHD", "CL", "CMG", "CPB", "DECK", "DG", "DLTR", "DPZ", "EL", "GIS", "HAS", "KHC", "KMB", "KR", "LULU", "MAR", "MDLZ", "MO", "NKE", "PG", "SBUX", "TJX", "TSN", "ULTA", "YUM"
     ],
     "Sanayi & Savunma": [
-        "BA", "L"
+        "BA", "L", "ALB", "AME", "APH", "AOS", "CAT", "CARR", "CMI", "CTAS", "CSX", "DE", "DOV", "ETN", "EXPD", "FDX", "GD", "GE", "GEHC", "HON", "HWM", "IR", "ITW", "JCI", "LHX", "MMM", "NOC", "NSC", "OTIS", "PCAR", "PH", "PWR", "RTX", "ROP", "ROK", "TT", "TXT", "UNP", "URI", "UPS", "WM", "XYL"
     ],
     "Otomotiv": [
-        "TSLA"
+        "TSLA", "F", "GM", "APTV"
     ],
 }
 
@@ -158,14 +160,14 @@ TR_CLASSIFIER_RULES = [
 
 US_CLASSIFIER_RULES = [
     ("Finans", ("financial services", "capital markets", "asset management", "banks", "insurance", "broker", "credit services")),
-    ("Teknoloji", ("software", "internet", "technology", "it services", "communication equipment")),
+    ("Teknoloji", ("software", "internet", "technology", "it services", "communication equipment", "consulting services", "data processing", "cloud", "cybersecurity")),
     ("Yarı İletken", ("semiconductor", "semiconductors", "chip")),
     ("E-Ticaret", ("internet retail", "e-commerce", "online retail")),
     ("İletişim & Medya", ("entertainment", "media", "streaming", "broadcasting", "communication services")),
     ("Sağlık & İlaç", ("health", "pharma", "biotech", "medical", "drug", "life sciences")),
-    ("Enerji", ("oil", "gas", "energy", "integrated oil", "exploration")),
-    ("Perakende & Tüketim", ("retail", "consumer staples", "restaurants", "beverages", "household")),
-    ("Sanayi & Savunma", ("aerospace", "defense", "industrial", "machinery", "transportation")),
+    ("Enerji", ("oil", "gas", "energy", "integrated oil", "exploration", "utility", "utilities", "electric utilities", "renewable utilities", "independent power")),
+    ("Perakende & Tüketim", ("retail", "consumer staples", "restaurants", "beverages", "household", "packaged foods", "discount stores", "food distribution")),
+    ("Sanayi & Savunma", ("aerospace", "defense", "industrial", "machinery", "transportation", "chemicals", "specialty chemicals", "building products", "electrical equipment")),
     ("Otomotiv", ("auto", "automotive", "vehicle", "ev manufacturer")),
 ]
 
@@ -182,7 +184,7 @@ TR_PROFILE = MarketProfile(
 US_PROFILE = MarketProfile(
     market="us",
     universe_path="tickers.txt",
-    ticker_suffix=".IS",
+    ticker_suffix="",
     other_label="Diğer ABD",
     base_sector_map=BASE_SECTOR_TICKERS_US,
     financial_sectors={"Finans"},

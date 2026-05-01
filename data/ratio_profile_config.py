@@ -12,6 +12,7 @@ CATEGORY_PROFITABILITY = "Karlılık"
 CATEGORY_VALUATION = "Değerleme"
 CATEGORY_GROWTH = "Büyüme"
 CATEGORY_EFFICIENCY = "Verimlilik"
+PROFILE_DEFAULT = "Genel Sanayi"
 
 DEFAULT_RATIO_PROFILE_CONFIG: dict[str, Any] = {
     "profiles": {
@@ -97,7 +98,7 @@ DEFAULT_RATIO_PROFILE_CONFIG: dict[str, Any] = {
                 "asset_turnover": {"category": CATEGORY_EFFICIENCY, "kind": "min", "weight": 0.7, "soft_min": 0.20, "target_min": 0.90}
             }
         },
-        "Genel Sanayi": {
+        PROFILE_DEFAULT: {
             "missing_penalty": 0.18,
             "metrics": {
                 "current_ratio": {"category": CATEGORY_LIQUIDITY, "kind": "band", "weight": 0.5, "soft_min": 0.5, "target_min": 1.2, "target_max": 2.5, "soft_max": 4.5},
@@ -112,7 +113,44 @@ DEFAULT_RATIO_PROFILE_CONFIG: dict[str, Any] = {
                 "asset_turnover": {"category": CATEGORY_EFFICIENCY, "kind": "min", "weight": 0.7, "soft_min": 0.20, "target_min": 0.90}
             }
         }
-    }
+    },
+    "market_overrides": {
+        "us": {
+            "profiles": {
+                "Büyüme/Teknoloji": {
+                    "missing_penalty": 0.12,
+                    "metrics": {
+                        "pe": {"target_max": 36.0, "soft_max": 72.0},
+                        "pb": {"target_max": 10.0, "soft_max": 18.0},
+                        "peg": {"target_max": 2.1, "soft_max": 4.0},
+                        "asset_turnover": {"target_min": 0.55},
+                    },
+                },
+                "Finansal": {
+                    "missing_penalty": 0.10,
+                    "metrics": {
+                        "pe": {"target_max": 14.0, "soft_max": 28.0},
+                        "pb": {"target_max": 2.8, "soft_max": 5.0},
+                    },
+                },
+                PROFILE_DEFAULT: {
+                    "missing_penalty": 0.15,
+                    "metrics": {
+                        "pe": {"target_max": 22.0, "soft_max": 40.0},
+                        "pb": {"target_max": 3.0, "soft_max": 6.0},
+                        "asset_turnover": {"target_min": 0.70},
+                    },
+                },
+                "Enerji Utility/Altyapı": {
+                    "missing_penalty": 0.14,
+                    "metrics": {
+                        "pe": {"target_max": 18.0, "soft_max": 32.0},
+                        "pb": {"target_max": 3.5, "soft_max": 6.0},
+                    },
+                },
+            }
+        }
+    },
 }
 
 
@@ -144,3 +182,21 @@ def build_ratio_profile_map(config: dict[str, Any]) -> dict[str, Any]:
         return deepcopy(DEFAULT_RATIO_PROFILE_CONFIG["profiles"])
     merged = _deep_update(DEFAULT_RATIO_PROFILE_CONFIG["profiles"], raw_profiles)
     return merged if isinstance(merged, dict) else deepcopy(DEFAULT_RATIO_PROFILE_CONFIG["profiles"])
+
+
+def resolve_ratio_profile(config: dict[str, Any], profile_name: str, market_key: str) -> dict[str, Any]:
+    base_profiles = build_ratio_profile_map(config)
+    base_profile = deepcopy(base_profiles.get(profile_name, base_profiles.get(PROFILE_DEFAULT, {})))
+    raw_market_overrides = config.get("market_overrides", {})
+    if not isinstance(raw_market_overrides, dict):
+        return base_profile
+    market_override = raw_market_overrides.get(market_key, {})
+    if not isinstance(market_override, dict):
+        return base_profile
+    raw_profile_overrides = market_override.get("profiles", {})
+    if not isinstance(raw_profile_overrides, dict):
+        return base_profile
+    profile_override = raw_profile_overrides.get(profile_name, {})
+    if not isinstance(profile_override, dict):
+        return base_profile
+    return _deep_update(base_profile, profile_override)

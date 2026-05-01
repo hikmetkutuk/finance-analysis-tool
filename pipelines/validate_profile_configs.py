@@ -68,6 +68,59 @@ def _collect_ratio_rule_issues(ratio_profiles: dict[str, object]) -> list[str]:
     return issues
 
 
+def _collect_market_overlay_issues(
+    valuation_config: dict[str, object],
+    ratio_config: dict[str, object],
+    available_profiles: set[str],
+) -> list[str]:
+    issues: list[str] = []
+    issues.extend(_collect_valuation_overlay_issues(valuation_config, available_profiles))
+    issues.extend(_collect_ratio_overlay_issues(ratio_config, available_profiles))
+    return issues
+
+
+def _collect_valuation_overlay_issues(
+    valuation_config: dict[str, object],
+    available_profiles: set[str],
+) -> list[str]:
+    issues: list[str] = []
+    raw_valuation_overrides = valuation_config.get("market_overrides", {})
+    if not isinstance(raw_valuation_overrides, dict):
+        return issues
+    for market_key, market_override in raw_valuation_overrides.items():
+        if not isinstance(market_override, dict):
+            issues.append(f"Valuation market override {market_key} is not a mapping")
+            continue
+        weight_overrides = market_override.get("weights", {})
+        if not isinstance(weight_overrides, dict):
+            continue
+        for profile_name in weight_overrides.keys():
+            if profile_name not in available_profiles:
+                issues.append(f"Unknown valuation override profile {profile_name} for market {market_key}")
+    return issues
+
+
+def _collect_ratio_overlay_issues(
+    ratio_config: dict[str, object],
+    available_profiles: set[str],
+) -> list[str]:
+    issues: list[str] = []
+    raw_ratio_overrides = ratio_config.get("market_overrides", {})
+    if not isinstance(raw_ratio_overrides, dict):
+        return issues
+    for market_key, market_override in raw_ratio_overrides.items():
+        if not isinstance(market_override, dict):
+            issues.append(f"Ratio market override {market_key} is not a mapping")
+            continue
+        profile_overrides = market_override.get("profiles", {})
+        if not isinstance(profile_overrides, dict):
+            continue
+        for profile_name in profile_overrides.keys():
+            if profile_name not in available_profiles:
+                issues.append(f"Unknown ratio override profile {profile_name} for market {market_key}")
+    return issues
+
+
 def validate_profile_configs() -> List[str]:
     issues: List[str] = []
     sector_config = load_sector_profile_config()
@@ -82,6 +135,7 @@ def validate_profile_configs() -> List[str]:
     issues.extend(_collect_weight_issues(weights))
     issues.extend(_collect_ratio_profile_issues(available_profiles, ratio_profiles))
     issues.extend(_collect_ratio_rule_issues(ratio_profiles))
+    issues.extend(_collect_market_overlay_issues(valuation_config, ratio_config, available_profiles))
     return issues
 
 

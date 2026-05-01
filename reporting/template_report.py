@@ -15,9 +15,9 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import TableColumn
 
 from data.macro_config import load_macro_config
-from data.ratio_profile_config import build_ratio_profile_map, load_ratio_profile_config
+from data.ratio_profile_config import build_ratio_profile_map, load_ratio_profile_config, resolve_ratio_profile
 from data.sector_profile_config import build_sector_profile_maps, load_sector_profile_config
-from data.valuation_profile_config import build_valuation_profile_maps, load_valuation_profile_config
+from data.valuation_profile_config import build_valuation_profile_maps, load_valuation_profile_config, resolve_valuation_weight_map
 
 
 DEFAULT_TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "data" / "report_template.xlsx"
@@ -345,6 +345,7 @@ class HisseInputs:
     code: str
     sector_name: str
     index_name: str
+    market_key: str
     price: Optional[float]
     company_pe: Optional[float]
     company_pb: Optional[float]
@@ -648,7 +649,7 @@ def _model_weight_factor(model_key: str, inputs: HisseInputs) -> float:
 
 
 def _adjusted_model_weights(values: dict[str, Optional[float]], inputs: HisseInputs, weight_profile: str) -> dict[str, float]:
-    base_weights = MODEL_WEIGHTS.get(weight_profile, MODEL_WEIGHTS[WEIGHT_PROFILE_DEFAULT])
+    base_weights = resolve_valuation_weight_map(VALUATION_PROFILE_CONFIG, weight_profile, inputs.market_key)
     adjusted: dict[str, float] = {}
     for model_key, base_weight in base_weights.items():
         value = _safe_float(values.get(model_key))
@@ -1284,7 +1285,15 @@ def _base_ratio_category_parts() -> dict[str, list[tuple[float, float]]]:
 
 
 def _ratio_profile_metrics(profile_name: str) -> tuple[dict[str, Any], Optional[float]]:
-    profile = RATIO_PROFILES.get(profile_name, RATIO_PROFILES.get(WEIGHT_PROFILE_DEFAULT, {}))
+    profile = resolve_ratio_profile(RATIO_PROFILE_CONFIG, profile_name, "tr")
+    if not isinstance(profile, dict):
+        return {}, None
+    metrics = profile.get("metrics", {})
+    return (metrics if isinstance(metrics, dict) else {}), _safe_float(profile.get("missing_penalty"))
+
+
+def _ratio_profile_metrics_for_market(profile_name: str, market_key: str) -> tuple[dict[str, Any], Optional[float]]:
+    profile = resolve_ratio_profile(RATIO_PROFILE_CONFIG, profile_name, market_key)
     if not isinstance(profile, dict):
         return {}, None
     metrics = profile.get("metrics", {})
@@ -1317,8 +1326,8 @@ def _accumulate_ratio_metric_scores(
     return total_weight, present_weight, weighted_score
 
 
-def _ratio_score_summary(row: pd.Series, profile_name: str) -> RatioScoreSummary:
-    metrics, missing_penalty_factor = _ratio_profile_metrics(profile_name)
+def _ratio_score_summary(row: pd.Series, profile_name: str, market_key: str) -> RatioScoreSummary:
+    metrics, missing_penalty_factor = _ratio_profile_metrics_for_market(profile_name, market_key)
     metric_values = _ratio_metric_values(row)
     category_parts = _base_ratio_category_parts()
     total_weight, present_weight, weighted_score = _accumulate_ratio_metric_scores(
@@ -1365,6 +1374,10 @@ def _sector_lookup_for_ratio(endeks_frame: pd.DataFrame) -> dict[str, str]:
         if code:
             lookup[code] = sector_name
     return lookup
+
+
+def _market_key_from_symbol(symbol: str) -> str:
+    return "tr" if str(symbol or "").upper().endswith(".IS") else "us"
 
 
 def _quality_status(
@@ -1439,12 +1452,14 @@ def build_rasyo_frame(ratio_frame: pd.DataFrame, endeks_frame: pd.DataFrame) -> 
     sector_lookup = _sector_lookup_for_ratio(endeks_frame)
     summaries: list[RatioScoreSummary] = []
     for _, row in renamed.iterrows():
-        code = _normalized_code(str(row.get(RASYO_STOCK, "") or ""))
+        raw_symbol = str(row.get(RASYO_STOCK, "") or "")
+        code = _normalized_code(raw_symbol)
         sector_name = sector_lookup.get(code, "")
+        market_key = _market_key_from_symbol(raw_symbol)
         if not sector_name and bool(row.get("Finansal Sektor")):
             sector_name = "Banka"
         profile_name = _weight_profile_for_sector(sector_name)
-        summaries.append(_ratio_score_summary(row, profile_name))
+        summaries.append(_ratio_score_summary(row, profile_name, market_key))
 
     renamed[RASYO_PROFILE] = [summary.profile_name for summary in summaries]
     renamed[RASYO_SCORE_100] = [_round_or_none(summary.score_100, 1) for summary in summaries]
@@ -1547,6 +1562,7 @@ def _hisse_inputs(ticker: str, lookups: RowLookups) -> HisseInputs:
         code=code,
         sector_name=sector_name,
         index_name=str(endeks_row.get(INDEX_COLUMN, index_default) or index_default),
+        market_key="tr" if ticker.upper().endswith(".IS") else "us",
         price=_safe_float(valuation_row.get("Güncel Fiyat")),
         company_pe=_safe_float(puan_row.get(PUAN_PE)),
         company_pb=_safe_float(puan_row.get(PUAN_PB)),
@@ -1725,7 +1741,7 @@ def build_quality_frame(
         filtered_values = sanity_checked_valuation_points(raw_values, inputs.price)
         weight_profile = _weight_profile_for_sector(inputs.sector_name)
         summary = valuation_summary(filtered_values, inputs, weight_profile)
-        base_weights = MODEL_WEIGHTS.get(weight_profile, MODEL_WEIGHTS[WEIGHT_PROFILE_DEFAULT])
+        base_weights = resolve_valuation_weight_map(VALUATION_PROFILE_CONFIG, weight_profile, inputs.market_key)
         adjusted_weights = _adjusted_model_weights(filtered_values, inputs, weight_profile)
         retained_keys = _trimmed_model_keys(filtered_values, adjusted_weights)
         valuation_row = _lookup_row(valuation_lookup, inputs.code)

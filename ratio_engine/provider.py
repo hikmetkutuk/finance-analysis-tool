@@ -148,23 +148,43 @@ class YahooProvider:
         )
 
     def fetch(self, symbol: str) -> StockDataset:
-        fresh_cached_dataset = self._load_cached_dataset(symbol, RATIO_DATASET_CACHE_MAX_AGE_SECONDS)
-        if isinstance(fresh_cached_dataset, StockDataset):
-            return fresh_cached_dataset
-
         stock = yf.Ticker(symbol)
-        stale_cached_dataset = self._load_cached_dataset(symbol)
-        dataset = StockDataset(
+        return StockDataset(
             info=self.get_info(stock),
             quarterly_financials=self.get_safe_frame(stock, "quarterly_financials"),
             quarterly_balance_sheet=self.get_safe_frame(stock, "quarterly_balance_sheet"),
             annual_financials=self.get_safe_frame(stock, "financials"),
             annual_balance_sheet=self.get_safe_frame(stock, "balance_sheet"),
         )
-        dataset = self._merge_dataset_with_cache(dataset, stale_cached_dataset)
-        if self._dataset_has_substantive_data(dataset):
-            save_cache(RATIO_DATASET_CACHE_NAMESPACE, symbol, self._serialize_dataset(dataset))
-            return dataset
+
+
+class FreshCacheDatasetProvider:
+    def fetch(self, symbol: str) -> Any:
+        return YahooProvider._load_cached_dataset(symbol, RATIO_DATASET_CACHE_MAX_AGE_SECONDS)
+
+
+class StaleCacheDatasetProvider:
+    def fetch(self, symbol: str) -> Any:
+        return YahooProvider._load_cached_dataset(symbol)
+
+
+class DatasetProviderChain:
+    def __init__(self) -> None:
+        self.fresh_cache_provider = FreshCacheDatasetProvider()
+        self.live_provider = YahooProvider()
+        self.stale_cache_provider = StaleCacheDatasetProvider()
+
+    def fetch(self, symbol: str) -> StockDataset:
+        fresh_cached_dataset = self.fresh_cache_provider.fetch(symbol)
+        if isinstance(fresh_cached_dataset, StockDataset):
+            return fresh_cached_dataset
+
+        stale_cached_dataset = self.stale_cache_provider.fetch(symbol)
+        live_dataset = self.live_provider.fetch(symbol)
+        merged_dataset = YahooProvider._merge_dataset_with_cache(live_dataset, stale_cached_dataset)
+        if YahooProvider._dataset_has_substantive_data(merged_dataset):
+            save_cache(RATIO_DATASET_CACHE_NAMESPACE, symbol, YahooProvider._serialize_dataset(merged_dataset))
+            return merged_dataset
         if isinstance(stale_cached_dataset, StockDataset):
             return stale_cached_dataset
-        return dataset
+        return merged_dataset

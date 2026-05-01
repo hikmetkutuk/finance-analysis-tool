@@ -7,25 +7,43 @@ from typing import Any
 
 
 VALUATION_PROFILE_CONFIG_PATH = Path(__file__).resolve().parent.parent / "valuation_profiles.json"
+PROFILE_FINANCIAL = "Finansal"
+PROFILE_GROWTH = "Büyüme/Teknoloji"
+PROFILE_ENERGY_UTILITY = "Enerji Utility/Altyapı"
+PROFILE_ENERGY_EQUIPMENT = "Enerji Ekipman/Taahhüt"
+PROFILE_DEFAULT = "Genel Sanayi"
+PROFILE_REAL_ESTATE = "Gayrimenkul"
+PROFILE_HOLDING = "Holding"
 
 DEFAULT_VALUATION_PROFILE_CONFIG: dict[str, Any] = {
     "profile_notes": {
-        "Finansal": "Banka, sigorta ve finansal hizmetler. Defter değeri, ROE ve özsermaye maliyeti modelleri daha yüksek ağırlıklıdır.",
-        "Büyüme/Teknoloji": "Teknoloji, yarı iletken, e-ticaret ve büyüme karakteri yüksek sektörler. İleri HBK/FK, sektör FK, EV/EBITDA ve DCF/INA ağırlıklıdır; defter değeri ve trailing terminal modeller düşük uygunluk nedeniyle dışarıda bırakılır.",
-        "Enerji Utility/Altyapı": "Elektrik üretim/dağıtım, utility ve altyapı karakteri baskın şirketler. EV/EBITDA, terminal gelir ve DCF ağırlığı yüksek tutulur; ancak çarpan ve karlılık modelleri artık düşük ama pozitif ağırlık alır.",
-        "Enerji Ekipman/Taahhüt": "Enerji ekipman, EPC/taahhüt, kablo, inverter, trafo ve proje odaklı sanayi şirketleri. İleri FK, sektör FK ve EV/EBITDA daha görünür ağırlık alırken terminal ve defter modelleri destekleyici roldedir.",
-        "Genel Sanayi": "Standart sanayi ve karma operasyonel şirketler. Çarpan, defter, EV/EBITDA ve gelir kapitalizasyonu dengeli kullanılır.",
-        "Gayrimenkul": "Gayrimenkul şirketleri için defter değeri, özkaynak ve terminal gelir modelleri daha baskındır.",
-        "Holding": "Holding ve karma yapıdaki şirketlerde net aktif değer, özkaynak ve terminal gelir yaklaşımı daha baskındır.",
+        PROFILE_FINANCIAL: "Banka, sigorta ve finansal hizmetler. Defter değeri, ROE ve özsermaye maliyeti modelleri daha yüksek ağırlıklıdır.",
+        PROFILE_GROWTH: "Teknoloji, yarı iletken, e-ticaret ve büyüme karakteri yüksek sektörler. İleri HBK/FK, sektör FK, EV/EBITDA ve DCF/INA ağırlıklıdır; defter değeri ve trailing terminal modeller düşük uygunluk nedeniyle dışarıda bırakılır.",
+        PROFILE_ENERGY_UTILITY: "Elektrik üretim/dağıtım, utility ve altyapı karakteri baskın şirketler. EV/EBITDA, terminal gelir ve DCF ağırlığı yüksek tutulur; ancak çarpan ve karlılık modelleri artık düşük ama pozitif ağırlık alır.",
+        PROFILE_ENERGY_EQUIPMENT: "Enerji ekipman, EPC/taahhüt, kablo, inverter, trafo ve proje odaklı sanayi şirketleri. İleri FK, sektör FK ve EV/EBITDA daha görünür ağırlık alırken terminal ve defter modelleri destekleyici roldedir.",
+        PROFILE_DEFAULT: "Standart sanayi ve karma operasyonel şirketler. Çarpan, defter, EV/EBITDA ve gelir kapitalizasyonu dengeli kullanılır.",
+        PROFILE_REAL_ESTATE: "Gayrimenkul şirketleri için defter değeri, özkaynak ve terminal gelir modelleri daha baskındır.",
+        PROFILE_HOLDING: "Holding ve karma yapıdaki şirketlerde net aktif değer, özkaynak ve terminal gelir yaklaşımı daha baskındır.",
     },
     "weights": {
-        "Finansal": {"D1": 0.10, "D4": 0.20, "D5": 0.10, "D10": 0.15, "D11": 0.10, "D12": 0.35},
-        "Büyüme/Teknoloji": {"D1": 0.25, "D6": 0.40, "D7": 0.20, "D11": 0.15},
-        "Gayrimenkul": {"D4": 0.25, "D5": 0.25, "D10": 0.10, "D11": 0.20, "D12": 0.20},
-        "Holding": {"D4": 0.20, "D5": 0.20, "D10": 0.10, "D11": 0.25, "D12": 0.25},
-        "Enerji Utility/Altyapı": {"D1": 0.05, "D2": 0.03, "D3": 0.03, "D4": 0.10, "D5": 0.04, "D6": 0.05, "D7": 0.22, "D8": 0.03, "D9": 0.15, "D10": 0.10, "D11": 0.15, "D12": 0.05},
-        "Enerji Ekipman/Taahhüt": {"D1": 0.12, "D2": 0.06, "D3": 0.05, "D4": 0.08, "D5": 0.04, "D6": 0.16, "D7": 0.18, "D8": 0.03, "D9": 0.08, "D10": 0.06, "D11": 0.10, "D12": 0.04},
-        "Genel Sanayi": {"D1": 0.10, "D2": 0.05, "D3": 0.05, "D4": 0.10, "D6": 0.10, "D7": 0.20, "D9": 0.15, "D10": 0.10, "D11": 0.15},
+        PROFILE_FINANCIAL: {"D1": 0.10, "D4": 0.20, "D5": 0.10, "D10": 0.15, "D11": 0.10, "D12": 0.35},
+        PROFILE_GROWTH: {"D1": 0.25, "D6": 0.40, "D7": 0.20, "D11": 0.15},
+        PROFILE_REAL_ESTATE: {"D4": 0.25, "D5": 0.25, "D10": 0.10, "D11": 0.20, "D12": 0.20},
+        PROFILE_HOLDING: {"D4": 0.20, "D5": 0.20, "D10": 0.10, "D11": 0.25, "D12": 0.25},
+        PROFILE_ENERGY_UTILITY: {"D1": 0.05, "D2": 0.03, "D3": 0.03, "D4": 0.10, "D5": 0.04, "D6": 0.05, "D7": 0.22, "D8": 0.03, "D9": 0.15, "D10": 0.10, "D11": 0.15, "D12": 0.05},
+        PROFILE_ENERGY_EQUIPMENT: {"D1": 0.12, "D2": 0.06, "D3": 0.05, "D4": 0.08, "D5": 0.04, "D6": 0.16, "D7": 0.18, "D8": 0.03, "D9": 0.08, "D10": 0.06, "D11": 0.10, "D12": 0.04},
+        PROFILE_DEFAULT: {"D1": 0.10, "D2": 0.05, "D3": 0.05, "D4": 0.10, "D6": 0.10, "D7": 0.20, "D9": 0.15, "D10": 0.10, "D11": 0.15},
+    },
+    "market_overrides": {
+        "us": {
+            "weights": {
+                PROFILE_GROWTH: {"D1": 0.20, "D6": 0.35, "D7": 0.20, "D11": 0.25},
+                PROFILE_FINANCIAL: {"D1": 0.15, "D4": 0.25, "D5": 0.10, "D10": 0.10, "D11": 0.10, "D12": 0.30},
+                PROFILE_DEFAULT: {"D1": 0.15, "D2": 0.03, "D3": 0.02, "D4": 0.08, "D6": 0.15, "D7": 0.22, "D9": 0.10, "D10": 0.07, "D11": 0.18},
+                PROFILE_ENERGY_UTILITY: {"D1": 0.07, "D4": 0.08, "D6": 0.06, "D7": 0.26, "D9": 0.13, "D10": 0.11, "D11": 0.20, "D12": 0.09},
+                PROFILE_HOLDING: {"D4": 0.20, "D5": 0.15, "D10": 0.10, "D11": 0.30, "D12": 0.25},
+            }
+        }
     },
 }
 
@@ -96,3 +114,29 @@ def build_valuation_profile_maps(config: dict[str, Any]) -> tuple[dict[str, dict
                 notes[profile_name.strip()] = note.strip()
 
     return weights, notes
+
+
+def resolve_valuation_weight_map(
+    config: dict[str, Any],
+    profile_name: str,
+    market_key: str,
+) -> dict[str, float]:
+    weights, _ = build_valuation_profile_maps(config)
+    base_weights = dict(weights.get(profile_name, weights.get(PROFILE_DEFAULT, {})))
+    raw_market_overrides = config.get("market_overrides", {})
+    if not isinstance(raw_market_overrides, dict):
+        return base_weights
+    market_override = raw_market_overrides.get(market_key, {})
+    if not isinstance(market_override, dict):
+        return base_weights
+    raw_weight_overrides = market_override.get("weights", {})
+    if not isinstance(raw_weight_overrides, dict):
+        return base_weights
+    profile_override = raw_weight_overrides.get(profile_name, {})
+    if not isinstance(profile_override, dict):
+        return base_weights
+    merged = dict(base_weights)
+    for model_name, weight in profile_override.items():
+        if isinstance(model_name, str) and model_name.strip():
+            merged[model_name.strip()] = _safe_weight(weight)
+    return _normalize_weights(merged)

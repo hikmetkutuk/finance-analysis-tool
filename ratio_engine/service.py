@@ -31,7 +31,7 @@ from .metrics import (
     yoy_growth_from_annual_or_quarterly,
 )
 from .profiles import get_profile
-from .provider import StockDataset, YahooProvider
+from .provider import DatasetProviderChain, StockDataset
 
 logger = logging.getLogger("ratio")
 
@@ -97,8 +97,8 @@ def build_stock_row(symbol: str, dataset: StockDataset, market: str) -> dict:
     return result_row
 
 
-def get_stock_data(symbol: str, market: str = MARKET_AUTO, provider: Optional[YahooProvider] = None) -> dict:
-    active_provider = provider or YahooProvider()
+def get_stock_data(symbol: str, market: str = MARKET_AUTO, provider: Optional[object] = None) -> dict:
+    active_provider = provider or DatasetProviderChain()
     dataset = active_provider.fetch(symbol)
     return build_stock_row(symbol, dataset, market)
 
@@ -106,9 +106,9 @@ def get_stock_data(symbol: str, market: str = MARKET_AUTO, provider: Optional[Ya
 def analyze_symbols(
     symbols: Iterable[str],
     market: str = MARKET_AUTO,
-    provider: Optional[YahooProvider] = None,
+    provider: Optional[object] = None,
 ) -> Tuple[List[dict], List[dict]]:
-    active_provider = provider or YahooProvider()
+    active_provider = provider or DatasetProviderChain()
     rows: List[dict] = []
     failed_symbols: List[dict] = []
     for symbol in symbols:

@@ -2,9 +2,10 @@ import pandas as pd
 from openpyxl import load_workbook
 
 from reporting.financials_report import compute_share_count
-from data.ratio_profile_config import load_ratio_profile_config
+from data.ratio_profile_config import load_ratio_profile_config, resolve_ratio_profile
+from data.sector import US_PROFILE
 from data.sector_profile_config import load_sector_profile_config
-from data.valuation_profile_config import load_valuation_profile_config
+from data.valuation_profile_config import load_valuation_profile_config, resolve_valuation_weight_map
 from reporting.template_report import (
     CODE_COLUMN,
     HisseInputs,
@@ -63,6 +64,7 @@ def test_high_forward_pe_reduces_growth_model_weight() -> None:
         code="TEST",
         sector_name="Teknoloji",
         index_name="US",
+        market_key="us",
         price=100.0,
         company_pe=150.0,
         company_pb=10.0,
@@ -260,6 +262,7 @@ def test_single_model_result_is_flagged_for_review() -> None:
         code="TEST",
         sector_name="Enerji",
         index_name="XUTUM",
+        market_key="tr",
         price=100.0,
         company_pe=10.0,
         company_pb=1.0,
@@ -296,3 +299,22 @@ def test_single_model_result_is_flagged_for_review() -> None:
     assert summary.publishable is False
     assert summary.status == "İnceleme Gerekli"
     assert summary.note == "model_sayisi_yetersiz"
+
+
+def test_us_market_profile_has_no_is_suffix() -> None:
+    assert US_PROFILE.ticker_suffix == ""
+
+
+def test_us_valuation_overlay_changes_growth_weights() -> None:
+    config = load_valuation_profile_config()
+    us_weights = resolve_valuation_weight_map(config, "Büyüme/Teknoloji", "us")
+    tr_weights = resolve_valuation_weight_map(config, "Büyüme/Teknoloji", "tr")
+    assert us_weights["D11"] > tr_weights["D11"]
+    assert us_weights["D6"] < tr_weights["D6"]
+
+
+def test_us_ratio_overlay_changes_growth_thresholds() -> None:
+    config = load_ratio_profile_config()
+    us_profile = resolve_ratio_profile(config, "Büyüme/Teknoloji", "us")
+    tr_profile = resolve_ratio_profile(config, "Büyüme/Teknoloji", "tr")
+    assert us_profile["metrics"]["pe"]["target_max"] > tr_profile["metrics"]["pe"]["target_max"]

@@ -14,16 +14,21 @@ from valuation import AVERAGE_FAIR_PRICE_LABEL, load_tickers, value_ticker
 
 HISTORY_PATH = Path("valuation_history.csv")
 BACKTEST_REPORT_PATH = Path("valuation_backtest_report.csv")
+CALIBRATION_REPORT_PATH = Path("valuation_calibration_report.csv")
 
 
 @dataclass
 class SnapshotRow:
     as_of: str
     ticker: str
+    market: str
     sector: str
     fair_value: Optional[float]
     current_price: Optional[float]
     upside_pct: Optional[float]
+    confidence: Optional[float]
+    ratio_score: Optional[float]
+    status: str
     warnings: str
 
 
@@ -65,6 +70,22 @@ def fetch_price_near(ticker: str, target_date: datetime) -> Optional[float]:
         return None
 
 
+def infer_market(ticker: str) -> str:
+    return "tr" if ticker.upper().endswith(".IS") else "us"
+
+
+def signal_bucket(upside_pct: float) -> str:
+    if upside_pct < 0:
+        return "negative"
+    if upside_pct < 10:
+        return "0_10"
+    if upside_pct < 20:
+        return "10_20"
+    if upside_pct < 35:
+        return "20_35"
+    return "35_plus"
+
+
 def build_snapshot_row(ticker: str, as_of: str) -> SnapshotRow:
     result = value_ticker(ticker)
     fair_value = parse_tr_formatted_number(result.get(AVERAGE_FAIR_PRICE_LABEL, ""))
@@ -76,10 +97,14 @@ def build_snapshot_row(ticker: str, as_of: str) -> SnapshotRow:
     return SnapshotRow(
         as_of=as_of,
         ticker=ticker,
+        market=infer_market(ticker),
         sector=result.get("Sektör", ""),
         fair_value=fair_value,
         current_price=current_price,
         upside_pct=upside_pct,
+        confidence=parse_tr_formatted_number(result.get("Güven")),
+        ratio_score=parse_tr_formatted_number(result.get("Rasyo")),
+        status=str(result.get("Sonuç Durumu", "") or ""),
         warnings=result.get("Model Kalite Uyarıları", ""),
     )
 
@@ -95,6 +120,35 @@ def snapshot_valuations(tickers: list[str], as_of: Optional[str] = None) -> pd.D
         frame = frame.drop_duplicates(subset=["as_of", "ticker"], keep="last")
     frame.to_csv(HISTORY_PATH, index=False)
     return frame
+
+
+def build_calibration_report(report: pd.DataFrame) -> pd.DataFrame:
+    if report.empty:
+        return pd.DataFrame()
+    enriched = report.copy()
+    enriched["signal_bucket"] = enriched["upside_pct"].apply(signal_bucket)
+    grouped_rows: list[dict[str, Any]] = []
+    group_columns = ["market", "sector", "signal_bucket"]
+    for keys, group in enriched.groupby(group_columns, dropna=False):
+        market, sector, bucket = keys
+        signals = group[group["signal"] == True]  # noqa: E712
+        grouped_rows.append(
+            {
+                "market": market,
+                "sector": sector,
+                "signal_bucket": bucket,
+                "rows": len(group),
+                "signals": int(group["signal"].sum()),
+                "hit_rate_pct": round((signals["hit"].mean() * 100.0), 2) if not signals.empty else None,
+                "avg_signal_return_pct": round(float(signals["forward_return_pct"].mean()), 2) if not signals.empty else None,
+                "avg_all_return_pct": round(float(group["forward_return_pct"].mean()), 2),
+                "median_return_pct": round(float(group["forward_return_pct"].median()), 2),
+            }
+        )
+    calibration = pd.DataFrame(grouped_rows)
+    calibration = calibration.sort_values(by=["market", "sector", "signal_bucket"], kind="stable").reset_index(drop=True)
+    calibration.to_csv(CALIBRATION_REPORT_PATH, index=False)
+    return calibration
 
 
 def evaluate_backtest(horizon_days: int = 30, signal_threshold_pct: float = 10.0) -> pd.DataFrame:
@@ -129,18 +183,23 @@ def evaluate_backtest(horizon_days: int = 30, signal_threshold_pct: float = 10.0
             {
                 "as_of": as_of_value,
                 "ticker": ticker,
+                "market": row.get("market", infer_market(ticker)),
                 "sector": row.get("sector", ""),
                 "upside_pct": float(upside),
                 "signal": signal,
                 "current_price": float(current_price),
                 "future_price": future_price,
                 "forward_return_pct": forward_return_pct,
+                "confidence": row.get("confidence"),
+                "ratio_score": row.get("ratio_score"),
+                "status": row.get("status", ""),
                 "hit": bool(signal and forward_return_pct > 0),
             }
         )
 
     report = pd.DataFrame(evaluations)
     report.to_csv(BACKTEST_REPORT_PATH, index=False)
+    build_calibration_report(report)
     return report
 
 
@@ -157,6 +216,12 @@ def print_backtest_summary(report: pd.DataFrame) -> None:
     print(f"Hit rate: {hit_rate:.2f}%")
     print(f"Avg signal return: {avg_signal_return:.2f}%")
     print(f"Avg all return: {avg_all_return:.2f}%")
+    if "market" in report.columns:
+        for market, market_group in report.groupby("market", dropna=False):
+            market_signals = market_group[market_group["signal"] == True]  # noqa: E712
+            market_hit_rate = (market_signals["hit"].mean() * 100.0) if not market_signals.empty else 0.0
+            market_avg_return = market_group["forward_return_pct"].mean()
+            print(f"{market} avg return: {market_avg_return:.2f}% | hit rate: {market_hit_rate:.2f}%")
 
 
 def main() -> None:
@@ -165,6 +230,8 @@ def main() -> None:
     report = evaluate_backtest(horizon_days=30, signal_threshold_pct=10.0)
     print(f"Kaydedildi -> {HISTORY_PATH}")
     print(f"Kaydedildi -> {BACKTEST_REPORT_PATH}")
+    if CALIBRATION_REPORT_PATH.exists():
+        print(f"Kaydedildi -> {CALIBRATION_REPORT_PATH}")
     print_backtest_summary(report)
 
 
