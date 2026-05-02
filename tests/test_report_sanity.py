@@ -417,6 +417,101 @@ def test_valuation_summary_keeps_high_but_valid_models_in_average() -> None:
     assert summary.fair_value > 250.0
 
 
+def test_valuation_summary_marks_extreme_price_and_consensus_mismatch_for_review() -> None:
+    inputs = HisseInputs(
+        code="TEST",
+        sector_name="Sanayi",
+        index_name="XUTUM",
+        market_key="tr",
+        price=420.0,
+        company_pe=12.0,
+        company_pb=1.5,
+        nis_sign="+",
+        ratio_score=0.70,
+        sector_pe=12.0,
+        sector_pb=1.5,
+        sector_ev_ebitda=8.0,
+        eps=10.0,
+        forward_eps=10.5,
+        forward_pe=12.0,
+        roe=0.18,
+        beta=1.0,
+        debt_ratio=0.15,
+        net_income_growth=0.10,
+        earnings_growth=0.10,
+        revenue_growth=0.10,
+        net_income=100.0,
+        operating_income=120.0,
+        equity=500.0,
+        paid_in_capital=10.0,
+        ebitda=150.0,
+        free_cash_flow=90.0,
+        operating_cash_flow=110.0,
+        net_debt=20.0,
+        asset_growth=10.0,
+        dcf_value=95.0,
+        analyst_target=350.0,
+        analyst_count=12.0,
+    )
+
+    summary = valuation_summary(
+        {"D2": 90.0, "D3": 92.0, "D5": 88.0, "D8": 100.0, "D11": 95.0},
+        inputs,
+        WEIGHT_PROFILE_DEFAULT,
+    )
+
+    assert summary.publishable is False
+    assert summary.status == "İnceleme Gerekli"
+    assert summary.note == "piyasa_konsensus_uyumsuzlugu"
+
+
+def test_valuation_summary_stays_publishable_when_price_and_consensus_are_reasonably_aligned() -> None:
+    inputs = HisseInputs(
+        code="TEST",
+        sector_name="Sanayi",
+        index_name="XUTUM",
+        market_key="tr",
+        price=420.0,
+        company_pe=12.0,
+        company_pb=1.5,
+        nis_sign="+",
+        ratio_score=0.70,
+        sector_pe=12.0,
+        sector_pb=1.5,
+        sector_ev_ebitda=8.0,
+        eps=10.0,
+        forward_eps=10.5,
+        forward_pe=12.0,
+        roe=0.18,
+        beta=1.0,
+        debt_ratio=0.15,
+        net_income_growth=0.10,
+        earnings_growth=0.10,
+        revenue_growth=0.10,
+        net_income=100.0,
+        operating_income=120.0,
+        equity=500.0,
+        paid_in_capital=10.0,
+        ebitda=150.0,
+        free_cash_flow=90.0,
+        operating_cash_flow=110.0,
+        net_debt=20.0,
+        asset_growth=10.0,
+        dcf_value=410.0,
+        analyst_target=390.0,
+        analyst_count=12.0,
+    )
+
+    summary = valuation_summary(
+        {"D1": 420.0, "D4": 400.0, "D7": 430.0, "D8": 390.0, "D11": 410.0},
+        inputs,
+        WEIGHT_PROFILE_DEFAULT,
+    )
+
+    assert summary.publishable is True
+    assert summary.fair_value is not None
+
+
 def test_us_market_profile_has_no_is_suffix() -> None:
     assert US_PROFILE.ticker_suffix == ""
 

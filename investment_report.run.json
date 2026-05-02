@@ -1,23 +1,23 @@
 {
-  "elapsed_seconds": 1.38,
-  "financial_rows": 8,
+  "elapsed_seconds": 2575.36,
+  "financial_rows": 609,
   "financials_workers": 4,
-  "finished_at": "2026-05-02T19:47:17.085095+00:00",
-  "git_revision": "116000c0bcb87285acf72d12747878557f5e89ce",
+  "finished_at": "2026-05-02T22:23:55.641131+00:00",
+  "git_revision": "6e0108149e31dca8487ea91b3fae4fcfd18b5733",
   "include_backtest": true,
-  "input_path": "test.txt",
+  "input_path": "hisseler.txt",
   "log_path": "logs/investment_report.log",
-  "macro_config_as_of": "2026-05-02",
+  "macro_config_as_of": "2026-05-03",
   "market_counts": {
-    "tr": 8,
+    "tr": 609,
     "us": 0
   },
   "metadata_path": "investment_report.run.json",
   "output_path": "investment_report.xlsx",
   "platform": "macOS-26.3.1-arm64-arm-64bit",
   "python_version": "3.12.0",
-  "ratio_rows": 8,
-  "started_at": "2026-05-02T19:47:15.679215+00:00",
-  "tickers_total": 8,
-  "valuation_rows": 8
+  "ratio_rows": 609,
+  "started_at": "2026-05-02T21:41:00.223995+00:00",
+  "tickers_total": 609,
+  "valuation_rows": 609
 }

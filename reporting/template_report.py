@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
-from statistics import mean, median
+from statistics import mean
 from typing import Any, Iterable, Optional, Sequence
 
 import pandas as pd
@@ -65,6 +65,9 @@ BOND_REFERENCE_YIELDS = {
     "tr": 0.20,
     "us": 0.04,
 }
+MIN_PUBLISHABLE_ANCHOR_SCORE = 0.35
+MAX_PRICE_ANCHOR_GAP = 0.75
+MAX_ANALYST_ANCHOR_GAP = 0.60
 
 PUAN_CODE = "1-Kod"
 PUAN_NAME = "2-İsim"
@@ -742,11 +745,48 @@ def _data_completeness_score(inputs: HisseInputs) -> float:
     return sum(1 for value in fields if _safe_float(value) is not None) / len(fields)
 
 
+def _relative_gap(reference_value: Optional[float], compared_value: Optional[float]) -> Optional[float]:
+    reference = _safe_float(reference_value)
+    compared = _safe_float(compared_value)
+    if reference is None or compared is None or reference <= 0 or compared <= 0:
+        return None
+    return abs(compared - reference) / reference
+
+
+def _anchor_gap_score(gap: Optional[float], max_gap: float) -> Optional[float]:
+    if gap is None:
+        return None
+    if gap <= 0.15:
+        return 1.0
+    if gap >= max_gap:
+        return 0.10
+    return max(0.10, 1.0 - ((gap - 0.15) / (max_gap - 0.15)) * 0.90)
+
+
+def _anchor_consistency_score(
+    fair_value: Optional[float],
+    price: Optional[float],
+    analyst_target: Optional[float],
+) -> float:
+    scores: list[tuple[float, float]] = []
+    price_score = _anchor_gap_score(_relative_gap(price, fair_value), MAX_PRICE_ANCHOR_GAP)
+    analyst_score = _anchor_gap_score(_relative_gap(analyst_target, fair_value), MAX_ANALYST_ANCHOR_GAP)
+    if price_score is not None:
+        scores.append((price_score, 0.60))
+    if analyst_score is not None:
+        scores.append((analyst_score, 0.40))
+    if not scores:
+        return 0.50
+    total_weight = sum(weight for _, weight in scores)
+    return sum(score * weight for score, weight in scores) / total_weight
+
+
 def _publication_decision(
     fair_value: Optional[float],
     confidence: Optional[float],
     model_count: int,
     data_score: float,
+    anchor_score: float,
 ) -> tuple[bool, str, str]:
     if fair_value is None or model_count == 0:
         return False, STATUS_UNPUBLISHABLE, "gecerli_model_yok"
@@ -754,6 +794,8 @@ def _publication_decision(
         return False, STATUS_REVIEW, "model_sayisi_yetersiz"
     if data_score < MIN_PUBLISHABLE_DATA_COMPLETENESS:
         return False, STATUS_REVIEW, "veri_tamligi_dusuk"
+    if anchor_score < MIN_PUBLISHABLE_ANCHOR_SCORE:
+        return False, STATUS_REVIEW, "piyasa_konsensus_uyumsuzlugu"
     if confidence is None or confidence < MIN_PUBLISHABLE_CONFIDENCE:
         return False, STATUS_REVIEW, "guven_dusuk"
     return True, STATUS_PUBLISHABLE, "yeterli_kanit"
@@ -775,11 +817,26 @@ def valuation_summary(values: dict[str, Optional[float]], inputs: HisseInputs, w
     model_score = min(1.0, model_count / MIN_PROFESSIONAL_MODELS)
     ratio_score = inputs.ratio_score if inputs.ratio_score is not None else 0.50
     dispersion_score = _confidence_from_dispersion(_model_dispersion(values, active_weights, raw_fair_value))
-    confidence = (model_score * 0.30) + (dispersion_score * 0.30) + (data_score * 0.25) + (ratio_score * 0.15)
+    anchor_score = _anchor_consistency_score(raw_fair_value, inputs.price, inputs.analyst_target)
+    confidence = (
+        (model_score * 0.25)
+        + (dispersion_score * 0.25)
+        + (data_score * 0.20)
+        + (ratio_score * 0.15)
+        + (anchor_score * 0.15)
+    )
     if model_count < 2:
         confidence *= 0.65
     normalized_confidence = max(0.0, min(1.0, confidence))
-    publishable, status, note = _publication_decision(raw_fair_value, normalized_confidence, model_count, data_score)
+    if anchor_score < MIN_PUBLISHABLE_ANCHOR_SCORE:
+        normalized_confidence = min(normalized_confidence, max(0.20, anchor_score))
+    publishable, status, note = _publication_decision(
+        raw_fair_value,
+        normalized_confidence,
+        model_count,
+        data_score,
+        anchor_score,
+    )
     published_fair_value = raw_fair_value if publishable else None
     return ValuationSummary(published_fair_value, normalized_confidence, model_count, publishable, status, note, data_score)
 
@@ -1104,7 +1161,7 @@ def build_notes_frame(run_metadata: Optional[dict[str, Any]] = None) -> pd.DataF
         {
             SECTION_COLUMN: "Metodoloji",
             TOPIC_COLUMN: HISSE_CONFIDENCE,
-            VALUE_COLUMN: "Güven; geçerli model sayısı, modeller arası sapma, veri tamlığı ve rasyo skorundan oluşur. Aşırı FK/FD-FAVÖK ve negatif büyüme ilgili model ağırlığını düşürür.",
+            VALUE_COLUMN: "Güven; geçerli model sayısı, modeller arası sapma, veri tamlığı, rasyo skoru ve mevcut fiyat/analist hedefiyle tutarlılıktan oluşur. Aşırı FK/FD-FAVÖK ve negatif büyüme ilgili model ağırlığını düşürür.",
         },
         {
             SECTION_COLUMN: "Metodoloji",

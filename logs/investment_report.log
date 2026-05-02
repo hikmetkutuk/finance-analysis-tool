@@ -22,3 +22,15 @@
 2026-05-02 22:47:17,006 INFO analysis_run: Asama: Sablon Rapor
 2026-05-02 22:47:17,085 INFO analysis_run: Kaydedildi -> investment_report.xlsx (1.4s)
 2026-05-02 22:47:17,085 INFO analysis_run: Kaydedildi -> investment_report.run.json
+2026-05-02 22:58:36,488 INFO analysis_run: Asama: Degerleme
+2026-05-02 23:00:33,710 INFO analysis_run: Asama: Financials + DCF
+2026-05-02 23:00:33,789 INFO analysis_run: Asama: Oranlar
+2026-05-02 23:02:04,195 INFO analysis_run: Asama: Sablon Rapor
+2026-05-02 23:02:04,519 INFO analysis_run: Kaydedildi -> investment_report.xlsx (208.0s)
+2026-05-02 23:02:04,519 INFO analysis_run: Kaydedildi -> investment_report.run.json
+2026-05-03 00:41:00,282 INFO analysis_run: Asama: Degerleme
+2026-05-03 01:04:13,338 INFO analysis_run: Asama: Financials + DCF
+2026-05-03 01:04:14,169 INFO analysis_run: Asama: Oranlar
+2026-05-03 01:23:51,820 INFO analysis_run: Asama: Sablon Rapor
+2026-05-03 01:23:55,641 INFO analysis_run: Kaydedildi -> investment_report.xlsx (2575.4s)
+2026-05-03 01:23:55,641 INFO analysis_run: Kaydedildi -> investment_report.run.json
