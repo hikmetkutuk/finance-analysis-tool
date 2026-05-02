@@ -59,6 +59,12 @@ HIGH_PE_WARNING = 50.0
 EXTREME_PE_WARNING = 100.0
 HIGH_EV_EBITDA_WARNING = 35.0
 EXTREME_EV_EBITDA_WARNING = 60.0
+MIN_BOND_ADJUSTMENT_FACTOR = 0.5
+MAX_BOND_ADJUSTMENT_FACTOR = 1.5
+BOND_REFERENCE_YIELDS = {
+    "tr": 0.20,
+    "us": 0.04,
+}
 
 PUAN_CODE = "1-Kod"
 PUAN_NAME = "2-İsim"
@@ -284,7 +290,7 @@ HISSE_HEADER_COMMENTS = {
     "D5": "Ozkaynaklar / HOS",
     "D6": "İleri HBK ve İleri FK varsa İleri HBK * İleri FK; yoksa HBK * (1 + Aktif Buyume / 100) * FK",
     "D7": "((FAVOK * S(FD/FAVOK)) - Net Borc) / HOS",
-    "D8": "(HBK * S(F/K)) / 2Y Tahvil",
+    "D8": "S(F/K) * HBK, 2Y tahvile gore normalize edilmis faiz rejimi ayarli carpan modeli",
     "D9": "(EFK * (1 + terminal_growth) / (AOSM - terminal_growth)) / HOS",
     "D10": "(NDK * (1 + terminal_growth) / (AOSM - terminal_growth)) / HOS",
     "D11": "DCF/INA profesyonel deger. Pozitif olmayan degerler bos birakilir.",
@@ -464,6 +470,21 @@ def _rate_percent_points(value: Any) -> Optional[float]:
     if rate is None:
         return None
     return rate * 100.0 if abs(rate) <= 1 else rate
+
+
+def _bond_adjusted_multiple_value(
+    base_value: Any,
+    two_year_bond: Optional[float],
+    market_key: str,
+) -> Optional[float]:
+    value = _safe_float(base_value)
+    rate = _rate_decimal(two_year_bond)
+    reference_rate = _rate_decimal(BOND_REFERENCE_YIELDS.get(market_key))
+    if value is None or value <= 0 or rate is None or rate <= 0 or reference_rate is None or reference_rate <= 0:
+        return None
+    adjustment_factor = reference_rate / rate
+    adjustment_factor = max(MIN_BOND_ADJUSTMENT_FACTOR, min(MAX_BOND_ADJUSTMENT_FACTOR, adjustment_factor))
+    return value * adjustment_factor
 
 
 def _sanity_checked_model_value(value: Any, price: Optional[float]) -> Optional[float]:
@@ -668,22 +689,6 @@ def _active_model_values(values: dict[str, Optional[float]], model_keys: Iterabl
     return active_values
 
 
-def _trimmed_model_keys(values: dict[str, Optional[float]], weights: dict[str, float]) -> set[str]:
-    active_by_model = _active_model_values(values, weights)
-    active_values = list(active_by_model.values())
-    if len(active_values) < 4:
-        return set(weights)
-    center = median(active_values)
-    if center <= 0:
-        return set(weights)
-    retained = {
-        model_key
-        for model_key, value in active_by_model.items()
-        if center * 0.35 <= value <= center * 2.50
-    }
-    return retained if len(retained) >= 2 else set(weights)
-
-
 def _weighted_average(values: dict[str, Optional[float]], weights: dict[str, float]) -> Optional[float]:
     weighted_sum = 0.0
     active_weight = 0.0
@@ -756,11 +761,10 @@ def _publication_decision(
 
 def valuation_summary(values: dict[str, Optional[float]], inputs: HisseInputs, weight_profile: str) -> ValuationSummary:
     adjusted_weights = _adjusted_model_weights(values, inputs, weight_profile)
-    retained_keys = _trimmed_model_keys(values, adjusted_weights)
     active_weights = {
         model_key: weight
         for model_key, weight in adjusted_weights.items()
-        if model_key in retained_keys
+        if weight > 0
     }
     raw_fair_value = _weighted_average(values, active_weights)
     model_count = len(active_weights)
@@ -1085,7 +1089,7 @@ def build_vars_frame() -> pd.DataFrame:
     return pd.DataFrame(rows, columns=_column_index(("Tür", TR_VALUE_COLUMN, US_VALUE_COLUMN)))
 
 
-def build_notes_frame() -> pd.DataFrame:
+def build_notes_frame(run_metadata: Optional[dict[str, Any]] = None) -> pd.DataFrame:
     rows: list[dict[str, Any]] = [
         {
             SECTION_COLUMN: "Metodoloji",
@@ -1105,12 +1109,17 @@ def build_notes_frame() -> pd.DataFrame:
         {
             SECTION_COLUMN: "Metodoloji",
             TOPIC_COLUMN: SHEET_KALITE,
-            VALUE_COLUMN: "Kalite sayfası her D modeli için ham değer, filtre sonrası değer, ağırlık profili, trim durumu ve dışlanma gerekçesini gösterir. Bu sayfa denetim izi olarak kullanılmalıdır.",
+            VALUE_COLUMN: "Kalite sayfası her D modeli için ham değer, filtre sonrası değer, ağırlık profili, kullanım durumu ve dışlanma gerekçesini gösterir. Bu sayfa denetim izi olarak kullanılmalıdır.",
         },
         {
             SECTION_COLUMN: "Metodoloji",
             TOPIC_COLUMN: WEIGHT_PROFILE_COLUMN,
             VALUE_COLUMN: "Ağırlık profili seçimleri repo kökündeki sector_profiles.json içindeki merkezi sektör→profil sözlüğü ve anahtar kelime fallback mantığıyla yapılır. Profil bazlı model ağırlıkları ve açıklamalar ise valuation_profiles.json dosyasından yüklenir.",
+        },
+        {
+            SECTION_COLUMN: "Metodoloji",
+            TOPIC_COLUMN: "Veri Sağlayıcı",
+            VALUE_COLUMN: "Canlı veri zinciri taze cache → Yahoo Finance → Alpha Vantage (ALPHAVANTAGE_API_KEY tanımlıysa) → stale cache sırasıyla çalışır. Eksik kalan alanlar bir sonraki sağlayıcıdan güvenli backfill ile tamamlanır.",
         },
     ]
     for model_key in D_FIELDS:
@@ -1139,6 +1148,18 @@ def build_notes_frame() -> pd.DataFrame:
                 VALUE_COLUMN: note,
             }
         )
+    if isinstance(run_metadata, dict):
+        for key in ("started_at", "input_path", "output_path", "tickers_total", "market_counts", "macro_config_as_of", "git_revision"):
+            value = run_metadata.get(key)
+            if value in (None, "", {}):
+                continue
+            rows.append(
+                {
+                    SECTION_COLUMN: "Çalıştırma",
+                    TOPIC_COLUMN: str(key),
+                    VALUE_COLUMN: str(value),
+                }
+            )
     return pd.DataFrame(rows, columns=_column_index((SECTION_COLUMN, TOPIC_COLUMN, VALUE_COLUMN, WEIGHT_COLUMN)))
 
 
@@ -1386,12 +1407,11 @@ def _quality_status(
     model_key: str,
     retained_keys: set[str],
 ) -> str:
+    del model_key, retained_keys
     if filtered_value is None:
         return QUALITY_STATUS_FILTERED
     if adjusted_weight <= 0:
         return QUALITY_STATUS_UNWEIGHTED
-    if model_key not in retained_keys:
-        return QUALITY_STATUS_TRIMMED
     return QUALITY_STATUS_USED
 
 
@@ -1651,7 +1671,7 @@ def _raw_valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[
         "D5": book_value_per_share,
         "D6": d6,
         "D7": _safe_divide(d7_numerator, inputs.paid_in_capital),
-        "D8": _safe_divide(d8_numerator, _rate_percent_points(macro_rates.two_year_bond)),
+        "D8": _bond_adjusted_multiple_value(d8_numerator, macro_rates.two_year_bond, inputs.market_key),
         "D9": _terminal_value_per_share(inputs.operating_income, inputs.paid_in_capital, discount_rate, macro_rates.terminal_growth),
         "D10": _terminal_value_per_share(inputs.net_income, inputs.paid_in_capital, discount_rate, macro_rates.terminal_growth),
         "D11": inputs.dcf_value,
@@ -1743,7 +1763,7 @@ def build_quality_frame(
         summary = valuation_summary(filtered_values, inputs, weight_profile)
         base_weights = resolve_valuation_weight_map(VALUATION_PROFILE_CONFIG, weight_profile, inputs.market_key)
         adjusted_weights = _adjusted_model_weights(filtered_values, inputs, weight_profile)
-        retained_keys = _trimmed_model_keys(filtered_values, adjusted_weights)
+        retained_keys = set(adjusted_weights)
         valuation_row = _lookup_row(valuation_lookup, inputs.code)
         signal_score = _safe_float(valuation_row.get(QUALITY_SIGNAL_SCORE))
         signal_label = str(valuation_row.get(QUALITY_SIGNAL_LABEL, "") or "")
@@ -1784,6 +1804,7 @@ def write_template_report(
     dcf_frame: pd.DataFrame,
     ratio_frame: pd.DataFrame,
     template_path: Path = DEFAULT_TEMPLATE_PATH,
+    run_metadata: Optional[dict[str, Any]] = None,
 ) -> None:
     workbook = _load_or_create_report_workbook(template_path)
 
@@ -1792,7 +1813,7 @@ def write_template_report(
     sektor_frame = build_sector_frame(endeks_frame, puan_frame)
     vars_frame = build_vars_frame()
     rasyo_frame = build_rasyo_frame(ratio_frame, endeks_frame)
-    notes_frame = build_notes_frame()
+    notes_frame = build_notes_frame(run_metadata)
     ina_frame = dcf_frame.copy()
     if not ina_frame.empty and INA_VALUE_COLUMN not in ina_frame.columns:
         ina_frame[INA_VALUE_COLUMN] = pd.NA

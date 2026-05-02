@@ -11,6 +11,11 @@ DEFAULT_TR_MULTIPLES_PATH = Path("sector_multiples_tr.csv")
 DEFAULT_US_MULTIPLES_PATH = Path("sector_multiples_us.csv")
 DEFAULT_OVERRIDES_PATH = Path("sector_overrides.json")
 METRIC_COLUMNS = ("pe", "pb", "ev_ebitda")
+METRIC_BOUNDS = {
+    "pe": (1.0, 80.0),
+    "pb": (0.2, 20.0),
+    "ev_ebitda": (1.0, 40.0),
+}
 
 
 def safe_float(value: Any) -> Optional[float]:
@@ -23,13 +28,34 @@ def safe_float(value: Any) -> Optional[float]:
     return number
 
 
+def sanitize_metric(metric_name: str, metric_value: Optional[float]) -> Optional[float]:
+    if metric_value is None:
+        return None
+    bounds = METRIC_BOUNDS.get(metric_name)
+    if bounds is None:
+        return metric_value
+    lower, upper = bounds
+    if not lower <= metric_value <= upper:
+        return None
+    return metric_value
+
+
+def sanitize_metrics(metrics: dict[str, float]) -> dict[str, float]:
+    sanitized: dict[str, float] = {}
+    for metric_name, metric_value in metrics.items():
+        sanitized_value = sanitize_metric(metric_name, metric_value)
+        if sanitized_value is not None:
+            sanitized[metric_name] = sanitized_value
+    return sanitized
+
+
 def extract_metrics(row: dict[str, Any]) -> dict[str, float]:
     metrics: dict[str, float] = {}
     for metric in METRIC_COLUMNS:
         metric_value = safe_float(row.get(metric))
         if metric_value is not None:
             metrics[metric] = metric_value
-    return metrics
+    return sanitize_metrics(metrics)
 
 
 def build_market_overrides(sector_csv: Path, sector_map: dict[str, list[str]]) -> dict[str, dict[str, float]]:

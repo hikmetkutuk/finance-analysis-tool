@@ -19,9 +19,9 @@ jobs:
           pip install -r requirements.txt
       - name: Compile check
         run: |
-          python -m py_compile valuation.py
-          python -m py_compile sector.py
-          python -m py_compile benchmark_report.py
-          python -m py_compile market_data_provider.py
+          python -m compileall data pipelines ratio_engine reporting tests main.py valuation.py
+      - name: Validate profile configs
+        run: |
+          python pipelines/validate_profile_configs.py
       - name: Run tests
         run: pytest -q

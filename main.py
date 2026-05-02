@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
+import json
+import logging
+from pathlib import Path
+import platform
+import subprocess
+import sys
 import time
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Optional
@@ -23,6 +30,9 @@ SECTOR_LABEL = "Sektör"
 CODE_COLUMN = "Kod"
 VALUATION_DCF_COLUMN = "DCF Değerlemesi"
 DCF_PROFESSIONAL_VALUE_COLUMN = "Profesyonel Değer"
+DEFAULT_LOG_DIR = Path("logs")
+RUN_LOGGER_NAME = "analysis_run"
+MACRO_CONFIG_PATH = Path("macro_config.json")
 
 
 def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
@@ -37,6 +47,8 @@ def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
     parser.add_argument("--signal-threshold-pct", type=float, default=10.0)
     parser.add_argument("--full-sector-universe", action="store_true")
     parser.add_argument("--financials-workers", type=int, default=4)
+    parser.add_argument("--log-file")
+    parser.add_argument("--run-metadata-output")
     return parser.parse_args(list(argv) if argv is not None else None)
 
 
@@ -136,29 +148,148 @@ def format_frame_for_tr_display(frame: pd.DataFrame) -> pd.DataFrame:
     return display_frame
 
 
+def _default_log_path(output_path: str) -> Path:
+    output_name = Path(output_path).stem or "analysis"
+    return DEFAULT_LOG_DIR / f"{output_name}.log"
+
+
+def _default_metadata_path(output_path: str) -> Path:
+    output_file = Path(output_path)
+    return output_file.with_suffix(".run.json")
+
+
+def _ensure_parent_dir(path: Path) -> None:
+    if path.parent and str(path.parent) != ".":
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def configure_logging(log_path: Path) -> logging.Logger:
+    _ensure_parent_dir(log_path)
+    logger = logging.getLogger(RUN_LOGGER_NAME)
+    logger.setLevel(logging.INFO)
+    logger.handlers.clear()
+    logger.propagate = False
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    return logger
+
+
+def _market_counts(tickers: list[str]) -> dict[str, int]:
+    return {
+        "tr": sum(1 for ticker in tickers if ticker.upper().endswith(".IS")),
+        "us": sum(1 for ticker in tickers if not ticker.upper().endswith(".IS")),
+    }
+
+
+def _macro_config_as_of() -> Optional[str]:
+    if not MACRO_CONFIG_PATH.exists():
+        return None
+    try:
+        raw = json.loads(MACRO_CONFIG_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(raw, dict):
+        return None
+    as_of = raw.get("as_of")
+    return str(as_of) if isinstance(as_of, str) and as_of.strip() else None
+
+
+def _git_revision() -> Optional[str]:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    revision = completed.stdout.strip()
+    return revision or None
+
+
+def build_run_metadata(
+    args: argparse.Namespace,
+    tickers: list[str],
+    output_path: str,
+    log_path: Path,
+    metadata_path: Path,
+    started_at: str,
+) -> dict[str, Any]:
+    return {
+        "started_at": started_at,
+        "input_path": str(args.input),
+        "output_path": str(output_path),
+        "log_path": str(log_path),
+        "metadata_path": str(metadata_path),
+        "tickers_total": len(tickers),
+        "market_counts": _market_counts(tickers),
+        "include_backtest": bool(args.include_backtest),
+        "financials_workers": int(args.financials_workers),
+        "macro_config_as_of": _macro_config_as_of(),
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "git_revision": _git_revision(),
+    }
+
+
+def finalize_run_metadata(
+    metadata: dict[str, Any],
+    elapsed_seconds: float,
+    valuation_frame: pd.DataFrame,
+    ratio_frame: pd.DataFrame,
+    financials_frame: pd.DataFrame,
+) -> dict[str, Any]:
+    finalized = dict(metadata)
+    finalized["finished_at"] = datetime.now(timezone.utc).isoformat()
+    finalized["elapsed_seconds"] = round(float(elapsed_seconds), 2)
+    finalized["valuation_rows"] = int(len(valuation_frame))
+    finalized["ratio_rows"] = int(len(ratio_frame))
+    finalized["financial_rows"] = int(len(financials_frame))
+    return finalized
+
+
+def write_run_metadata(metadata_path: Path, metadata: dict[str, Any]) -> None:
+    _ensure_parent_dir(metadata_path)
+    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+
+
 def main(argv: Optional[Iterable[str]] = None) -> int:
     args = parse_args(argv)
+    output_path = str(args.output)
+    log_path = Path(args.log_file) if args.log_file else _default_log_path(output_path)
+    metadata_path = Path(args.run_metadata_output) if args.run_metadata_output else _default_metadata_path(output_path)
+    logger = configure_logging(log_path)
+    started_at = datetime.now(timezone.utc).isoformat()
     if args.refresh_macro:
         update_macro_config_main()
 
     tickers = load_tickers(args.input)
+    run_metadata = build_run_metadata(args, tickers, output_path, log_path, metadata_path, started_at)
     start = time.time()
-    print("Aşama: Değerleme")
+    logger.info("Asama: Degerleme")
     valuation_rows = run_valuation(tickers)
     valuation_frame = pd.DataFrame(valuation_rows)
     if not valuation_frame.empty:
         valuation_frame = order_valuation_columns(valuation_frame)
 
-    print("Aşama: Financials + DCF")
+    logger.info("Asama: Financials + DCF")
     financials_frame, dcf_frame = build_financials_and_dcf_frames(
         tickers,
         parallel_workers=max(1, int(args.financials_workers)),
     )
     dcf_frame = attach_dcf_professional_value(dcf_frame, valuation_frame)
 
-    print("Aşama: Oranlar")
+    logger.info("Asama: Oranlar")
     ratio_frame, _ = build_ratio_frames(tickers)
-    print("Aşama: Şablon Rapor")
+    logger.info("Asama: Sablon Rapor")
 
     if args.include_backtest:
         snapshot_valuations(tickers)
@@ -168,16 +299,20 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         )
 
     write_template_report(
-        output_path=args.output,
+        output_path=output_path,
         tickers=tickers,
         valuation_frame=valuation_frame,
         financials_frame=financials_frame,
         dcf_frame=dcf_frame,
         ratio_frame=ratio_frame,
+        run_metadata=run_metadata,
     )
 
     elapsed = time.time() - start
-    print(f"Kaydedildi -> {args.output} ({elapsed:.1f}s)")
+    finalized_metadata = finalize_run_metadata(run_metadata, elapsed, valuation_frame, ratio_frame, financials_frame)
+    write_run_metadata(metadata_path, finalized_metadata)
+    logger.info("Kaydedildi -> %s (%.1fs)", output_path, elapsed)
+    logger.info("Kaydedildi -> %s", metadata_path)
     return 0
 
 

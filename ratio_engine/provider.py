@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import time
 from typing import Any
 
+from data.alpha_vantage_client import alpha_vantage_enabled, fetch_alpha_vantage_dataset
 from data.cache_store import load_fresh_cache, load_latest_cache, save_cache
 
 from .dependencies import NetworkRequestError, YFRateLimitError, pd, yf
@@ -158,6 +159,25 @@ class YahooProvider:
         )
 
 
+class AlphaVantageProvider:
+    def fetch(self, symbol: str) -> StockDataset:
+        if not alpha_vantage_enabled():
+            return StockDataset({}, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
+        try:
+            dataset = fetch_alpha_vantage_dataset(symbol)
+        except FETCH_ERRORS:
+            dataset = None
+        if dataset is None:
+            return StockDataset({}, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
+        return StockDataset(
+            info=dict(dataset.info),
+            quarterly_financials=YahooProvider.get_frame(dataset.quarterly_income).copy(),
+            quarterly_balance_sheet=YahooProvider.get_frame(dataset.quarterly_balance).copy(),
+            annual_financials=YahooProvider.get_frame(dataset.annual_income).copy(),
+            annual_balance_sheet=YahooProvider.get_frame(dataset.annual_balance).copy(),
+        )
+
+
 class FreshCacheDatasetProvider:
     def fetch(self, symbol: str) -> Any:
         return YahooProvider._load_cached_dataset(symbol, RATIO_DATASET_CACHE_MAX_AGE_SECONDS)
@@ -172,6 +192,7 @@ class DatasetProviderChain:
     def __init__(self) -> None:
         self.fresh_cache_provider = FreshCacheDatasetProvider()
         self.live_provider = YahooProvider()
+        self.secondary_provider = AlphaVantageProvider()
         self.stale_cache_provider = StaleCacheDatasetProvider()
 
     def fetch(self, symbol: str) -> StockDataset:
@@ -181,6 +202,8 @@ class DatasetProviderChain:
 
         stale_cached_dataset = self.stale_cache_provider.fetch(symbol)
         live_dataset = self.live_provider.fetch(symbol)
+        secondary_dataset = self.secondary_provider.fetch(symbol)
+        live_dataset = YahooProvider._merge_dataset_with_cache(live_dataset, secondary_dataset)
         merged_dataset = YahooProvider._merge_dataset_with_cache(live_dataset, stale_cached_dataset)
         if YahooProvider._dataset_has_substantive_data(merged_dataset):
             save_cache(RATIO_DATASET_CACHE_NAMESPACE, symbol, YahooProvider._serialize_dataset(merged_dataset))

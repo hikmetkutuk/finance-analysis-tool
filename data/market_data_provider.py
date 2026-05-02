@@ -8,6 +8,7 @@ import pandas as pd
 import yfinance as yf
 from yfinance.exceptions import YFRateLimitError
 
+from .alpha_vantage_client import alpha_vantage_enabled, fetch_alpha_vantage_dataset
 from .cache_store import load_fresh_cache, load_latest_cache, save_cache
 
 
@@ -107,44 +108,48 @@ def _load_cached_bundle(namespace: str, key: str, max_age_seconds: Optional[int]
     return _deserialize_bundle(cached.payload)
 
 
-def _merge_bundle_with_cache(bundle: TickerBundle, cached_bundle: Optional[TickerBundle]) -> TickerBundle:
-    if cached_bundle is None:
+def _merge_bundle_with_fallback(
+    bundle: TickerBundle,
+    fallback_bundle: Optional[TickerBundle],
+    warning_label: str,
+) -> TickerBundle:
+    if fallback_bundle is None:
         return bundle
 
-    used_cache = False
+    used_fallback = False
     info = bundle.info
-    if not info and cached_bundle.info:
-        info = dict(cached_bundle.info)
-        used_cache = True
+    if not info and fallback_bundle.info:
+        info = dict(fallback_bundle.info)
+        used_fallback = True
 
     fast_info = bundle.fast_info
-    if not fast_info and cached_bundle.fast_info:
-        fast_info = dict(cached_bundle.fast_info)
-        used_cache = True
+    if not fast_info and fallback_bundle.fast_info:
+        fast_info = dict(fallback_bundle.fast_info)
+        used_fallback = True
 
     financials = bundle.financials
-    if not _frame_has_rows(financials) and _frame_has_rows(cached_bundle.financials):
-        financials = cached_bundle.financials.copy()
-        used_cache = True
+    if not _frame_has_rows(financials) and _frame_has_rows(fallback_bundle.financials):
+        financials = fallback_bundle.financials.copy()
+        used_fallback = True
 
     balance_sheet = bundle.balance_sheet
-    if not _frame_has_rows(balance_sheet) and _frame_has_rows(cached_bundle.balance_sheet):
-        balance_sheet = cached_bundle.balance_sheet.copy()
-        used_cache = True
+    if not _frame_has_rows(balance_sheet) and _frame_has_rows(fallback_bundle.balance_sheet):
+        balance_sheet = fallback_bundle.balance_sheet.copy()
+        used_fallback = True
 
     cashflow = bundle.cashflow
-    if not _frame_has_rows(cashflow) and _frame_has_rows(cached_bundle.cashflow):
-        cashflow = cached_bundle.cashflow.copy()
-        used_cache = True
+    if not _frame_has_rows(cashflow) and _frame_has_rows(fallback_bundle.cashflow):
+        cashflow = fallback_bundle.cashflow.copy()
+        used_fallback = True
 
     last_close = bundle.last_close
-    if last_close is None and cached_bundle.last_close is not None:
-        last_close = cached_bundle.last_close
-        used_cache = True
+    if last_close is None and fallback_bundle.last_close is not None:
+        last_close = fallback_bundle.last_close
+        used_fallback = True
 
-    warnings = list(bundle.warnings)
-    if used_cache:
-        warnings.append("cache_backfill_used")
+    warnings = list(bundle.warnings) + list(fallback_bundle.warnings)
+    if used_fallback:
+        warnings.append(warning_label)
     return TickerBundle(
         ticker=bundle.ticker,
         info=info,
@@ -155,6 +160,10 @@ def _merge_bundle_with_cache(bundle: TickerBundle, cached_bundle: Optional[Ticke
         last_close=last_close,
         warnings=_dedupe_warnings(warnings),
     )
+
+
+def _merge_bundle_with_cache(bundle: TickerBundle, cached_bundle: Optional[TickerBundle]) -> TickerBundle:
+    return _merge_bundle_with_fallback(bundle, cached_bundle, "cache_backfill_used")
 
 
 def call_with_retries(loader):
@@ -277,6 +286,53 @@ class YahooLiveTickerBundleProvider:
         )
 
 
+class AlphaVantageTickerBundleProvider:
+    @staticmethod
+    def _fast_info_from_bundle(bundle: TickerBundle) -> Dict[str, Any]:
+        info = bundle.info
+        fast_info: Dict[str, Any] = {}
+        if info.get("marketCap") is not None:
+            fast_info["marketCap"] = info.get("marketCap")
+        if info.get("sharesOutstanding") is not None:
+            fast_info["shares"] = info.get("sharesOutstanding")
+        if info.get("priceToBook") is not None:
+            fast_info["priceToBook"] = info.get("priceToBook")
+        if bundle.last_close is not None:
+            fast_info["lastPrice"] = bundle.last_close
+        return fast_info
+
+    def fetch(self, ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
+        if not alpha_vantage_enabled():
+            return None
+        try:
+            dataset = fetch_alpha_vantage_dataset(ticker)
+        except FETCH_ERRORS:
+            return None
+        if dataset is None:
+            return None
+        last_close = dataset.last_close if include_last_close else None
+        bundle = TickerBundle(
+            ticker=ticker,
+            info=dict(dataset.info),
+            fast_info={},
+            financials=dataset.annual_income.copy(),
+            balance_sheet=dataset.annual_balance.copy(),
+            cashflow=dataset.annual_cashflow.copy(),
+            last_close=last_close,
+            warnings=list(dataset.warnings),
+        )
+        return TickerBundle(
+            ticker=bundle.ticker,
+            info=bundle.info,
+            fast_info=self._fast_info_from_bundle(bundle),
+            financials=bundle.financials,
+            balance_sheet=bundle.balance_sheet,
+            cashflow=bundle.cashflow,
+            last_close=bundle.last_close,
+            warnings=_dedupe_warnings(bundle.warnings),
+        )
+
+
 class StaleCacheTickerBundleProvider:
     def fetch(self, ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
         del include_last_close
@@ -287,6 +343,7 @@ class TickerBundleProviderChain:
     def __init__(self) -> None:
         self.fresh_cache_provider = FreshCacheTickerBundleProvider()
         self.live_provider = YahooLiveTickerBundleProvider()
+        self.secondary_live_provider = AlphaVantageTickerBundleProvider()
         self.stale_cache_provider = StaleCacheTickerBundleProvider()
 
     def fetch(self, ticker: str, include_last_close: bool = True) -> TickerBundle:
@@ -296,6 +353,8 @@ class TickerBundleProviderChain:
 
         stale_bundle = self.stale_cache_provider.fetch(ticker, include_last_close=include_last_close)
         live_bundle = self.live_provider.fetch(ticker, include_last_close=include_last_close)
+        secondary_live_bundle = self.secondary_live_provider.fetch(ticker, include_last_close=include_last_close)
+        live_bundle = _merge_bundle_with_fallback(live_bundle, secondary_live_bundle, "secondary_provider_backfill_used")
         merged_bundle = _merge_bundle_with_cache(live_bundle, stale_bundle)
         if _bundle_has_substantive_data(merged_bundle):
             save_cache(TICKER_BUNDLE_CACHE_NAMESPACE, ticker, _serialize_bundle(merged_bundle))

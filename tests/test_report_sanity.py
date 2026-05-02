@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 from openpyxl import load_workbook
 
@@ -10,6 +12,7 @@ from reporting.template_report import (
     CODE_COLUMN,
     HisseInputs,
     INA_VALUE_COLUMN,
+    MacroRates,
     RASYO_COVERAGE,
     RASYO_PROFILE,
     RASYO_SCORE,
@@ -23,6 +26,7 @@ from reporting.template_report import (
     build_rasyo_frame,
     _weight_profile_for_sector,
     _model_value_reason,
+    _raw_valuation_points,
     sanity_checked_valuation_points,
     valuation_summary,
     write_template_report,
@@ -299,6 +303,118 @@ def test_single_model_result_is_flagged_for_review() -> None:
     assert summary.publishable is False
     assert summary.status == "İnceleme Gerekli"
     assert summary.note == "model_sayisi_yetersiz"
+
+
+def test_d8_uses_bond_adjusted_multiple_instead_of_direct_bond_division() -> None:
+    inputs = HisseInputs(
+        code="TEST",
+        sector_name="Sanayi",
+        index_name="XUTUM",
+        market_key="tr",
+        price=100.0,
+        company_pe=10.0,
+        company_pb=1.0,
+        nis_sign="+",
+        ratio_score=0.70,
+        sector_pe=10.0,
+        sector_pb=1.0,
+        sector_ev_ebitda=8.0,
+        eps=10.0,
+        forward_eps=None,
+        forward_pe=None,
+        roe=0.15,
+        beta=1.0,
+        debt_ratio=0.20,
+        net_income_growth=0.10,
+        earnings_growth=0.10,
+        revenue_growth=0.10,
+        net_income=100.0,
+        operating_income=120.0,
+        equity=500.0,
+        paid_in_capital=10.0,
+        ebitda=150.0,
+        free_cash_flow=90.0,
+        operating_cash_flow=110.0,
+        net_debt=20.0,
+        asset_growth=10.0,
+        dcf_value=100.0,
+        analyst_target=110.0,
+        analyst_count=20.0,
+    )
+    macro_rates = MacroRates(
+        market_key="tr",
+        two_year_bond=0.40,
+        market_premium=0.08,
+        terminal_growth=0.03,
+        cost_of_debt=0.30,
+        tax_rate=0.25,
+        risk_free_rate=0.25,
+    )
+
+    values = _raw_valuation_points(inputs, macro_rates)
+
+    assert math.isclose(values["D1"], 100.0)
+    assert math.isclose(values["D8"], 50.0)
+
+
+def test_valuation_summary_keeps_high_but_valid_models_in_average() -> None:
+    inputs = HisseInputs(
+        code="ASELS",
+        sector_name="Savunma",
+        index_name="XUTUM",
+        market_key="tr",
+        price=420.25,
+        company_pe=64.06,
+        company_pb=7.65,
+        nis_sign="+",
+        ratio_score=0.5942,
+        sector_pe=55.66,
+        sector_pb=5.47,
+        sector_ev_ebitda=30.03,
+        eps=7.55,
+        forward_eps=11.66,
+        forward_pe=64.06,
+        roe=0.18,
+        beta=1.0,
+        debt_ratio=0.15,
+        net_income_growth=0.10,
+        earnings_growth=0.10,
+        revenue_growth=0.10,
+        net_income=100.0,
+        operating_income=120.0,
+        equity=549.19,
+        paid_in_capital=10.0,
+        ebitda=150.0,
+        free_cash_flow=90.0,
+        operating_cash_flow=110.0,
+        net_debt=28.13,
+        asset_growth=17.0,
+        dcf_value=97.24,
+        analyst_target=351.23,
+        analyst_count=10.0,
+    )
+
+    summary = valuation_summary(
+        {
+            "D1": 420.23,
+            "D2": 90.73,
+            "D3": 65.68,
+            "D4": 420.13,
+            "D5": 54.92,
+            "D6": 747.01,
+            "D7": 422.37,
+            "D8": 210.17,
+            "D9": 22.84,
+            "D10": None,
+            "D11": 97.24,
+            "D12": None,
+        },
+        inputs,
+        WEIGHT_PROFILE_ENERGY_EQUIPMENT,
+    )
+
+    assert summary.fair_value is not None
+    assert summary.fair_value > 250.0
 
 
 def test_us_market_profile_has_no_is_suffix() -> None:
