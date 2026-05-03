@@ -98,6 +98,10 @@ PUAN_EARNINGS_GROWTH = "24-Kâr Büyüme Bekl."
 PUAN_REVENUE_GROWTH = "25-Ciro Büyüme Bekl."
 PUAN_FREE_CASH_FLOW = "26-Serbest Nakit Akımı"
 PUAN_OPERATING_CASH_FLOW = "27-Operasyonel Nakit Akımı"
+PUAN_REVENUE = "28-Gelirler"
+PUAN_GROSS_MARGIN = "29-Brüt Kar Marjı (%)"
+PUAN_TOTAL_ASSETS = "30-Toplam Varlıklar"
+PUAN_TOTAL_DEBT = "31-Toplam Borç"
 
 RASYO_STOCK = "Hisse"
 RASYO_CURRENT_RATIO = "Cari Oran"
@@ -131,6 +135,7 @@ HISSE_ANALYST_TARGET = "Analist Hedef"
 HISSE_UPSIDE = "GP %"
 HISSE_ANALYST_UPSIDE = "Analist GP %"
 HISSE_CONFIDENCE = "Güven"
+HISSE_FUNDAMENTAL_QUALITY = "Temel Kalite Skoru"
 HISSE_MODEL_COUNT = "D. Ort Model Sayısı"
 HISSE_STATUS = "Sonuç Durumu"
 HISSE_STATUS_NOTE = "Yayın Notu"
@@ -152,6 +157,7 @@ QUALITY_SIGNAL_LABEL = "Sinyal Güven Seviyesi"
 QUALITY_WARNING_COUNT = "Model Kalite Uyarı Sayısı"
 QUALITY_MODEL_WARNINGS = "Model Kalite Uyarıları"
 QUALITY_DATA_COMPLETENESS = "Veri Tamlık Skoru"
+QUALITY_FUNDAMENTAL_SCORE = "Temel Kalite Skoru"
 QUALITY_MODEL_COUNT = "Geçerli Model Sayısı"
 QUALITY_INCLUDED_IN_FAIR_VALUE = "D. Ort Dahil"
 QUALITY_RESULT_STATUS = HISSE_STATUS
@@ -204,6 +210,10 @@ PUAN_COLUMNS = (
     PUAN_REVENUE_GROWTH,
     PUAN_FREE_CASH_FLOW,
     PUAN_OPERATING_CASH_FLOW,
+    PUAN_REVENUE,
+    PUAN_GROSS_MARGIN,
+    PUAN_TOTAL_ASSETS,
+    PUAN_TOTAL_DEBT,
 )
 
 RASYO_COLUMNS = (
@@ -256,6 +266,7 @@ HISSE_COLUMNS = (
     HISSE_ANALYST_TARGET,
     HISSE_ANALYST_UPSIDE,
     HISSE_CONFIDENCE,
+    HISSE_FUNDAMENTAL_QUALITY,
     HISSE_MODEL_COUNT,
     HISSE_STATUS,
     HISSE_STATUS_NOTE,
@@ -280,6 +291,7 @@ QUALITY_COLUMNS = (
     QUALITY_WARNING_COUNT,
     QUALITY_MODEL_WARNINGS,
     QUALITY_DATA_COMPLETENESS,
+    QUALITY_FUNDAMENTAL_SCORE,
     QUALITY_MODEL_COUNT,
     QUALITY_RESULT_STATUS,
     QUALITY_RESULT_NOTE,
@@ -384,6 +396,10 @@ class HisseInputs:
     dcf_value: Optional[float]
     analyst_target: Optional[float]
     analyst_count: Optional[float]
+    revenue: Optional[float] = None
+    gross_margin: Optional[float] = None
+    total_assets: Optional[float] = None
+    total_debt: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -741,8 +757,65 @@ def _data_completeness_score(inputs: HisseInputs) -> float:
         inputs.sector_ev_ebitda,
         inputs.dcf_value,
         inputs.analyst_target,
+        inputs.revenue,
+        inputs.gross_margin,
+        inputs.total_assets,
+        inputs.total_debt,
     )
     return sum(1 for value in fields if _safe_float(value) is not None) / len(fields)
+
+
+def _linear_min_score(value: Optional[float], soft_min: float, target_min: float) -> Optional[float]:
+    if value is None:
+        return None
+    if value <= soft_min:
+        return 0.10
+    if value >= target_min:
+        return 1.0
+    return max(0.10, min(1.0, 0.10 + ((value - soft_min) / (target_min - soft_min)) * 0.90))
+
+
+def _linear_max_score(value: Optional[float], target_max: float, soft_max: float) -> Optional[float]:
+    if value is None:
+        return None
+    if value <= target_max:
+        return 1.0
+    if value >= soft_max:
+        return 0.10
+    return max(0.10, min(1.0, 1.0 - ((value - target_max) / (soft_max - target_max)) * 0.90))
+
+
+def _fundamental_quality_score(inputs: HisseInputs) -> float:
+    scores: list[tuple[float, float]] = []
+    gross_margin_score = _linear_min_score(_safe_float(inputs.gross_margin), 10.0, 30.0)
+    if gross_margin_score is not None:
+        scores.append((gross_margin_score, 0.25))
+
+    debt_burden = _safe_divide(inputs.total_debt, inputs.total_assets)
+    debt_burden_score = _linear_max_score(debt_burden, 0.30, 0.80)
+    if debt_burden_score is not None:
+        scores.append((debt_burden_score, 0.20))
+
+    asset_productivity = _safe_divide(inputs.revenue, inputs.total_assets)
+    asset_productivity_score = _linear_min_score(asset_productivity, 0.20, 0.80)
+    if asset_productivity_score is not None:
+        scores.append((asset_productivity_score, 0.20))
+
+    if inputs.ratio_score is not None:
+        ratio_quality_score = 1.0 if inputs.ratio_score >= 0.60 else max(0.10, inputs.ratio_score / 0.60)
+        scores.append((ratio_quality_score, 0.20))
+
+    nis_quality_score = 0.50
+    if inputs.nis_sign == "+":
+        nis_quality_score = 1.0
+    elif inputs.nis_sign == "-":
+        nis_quality_score = 0.20
+    scores.append((nis_quality_score, 0.15))
+
+    if not scores:
+        return 0.50
+    total_weight = sum(weight for _, weight in scores)
+    return sum(score * weight for score, weight in scores) / total_weight
 
 
 def _relative_gap(reference_value: Optional[float], compared_value: Optional[float]) -> Optional[float]:
@@ -818,16 +891,21 @@ def valuation_summary(values: dict[str, Optional[float]], inputs: HisseInputs, w
     ratio_score = inputs.ratio_score if inputs.ratio_score is not None else 0.50
     dispersion_score = _confidence_from_dispersion(_model_dispersion(values, active_weights, raw_fair_value))
     anchor_score = _anchor_consistency_score(raw_fair_value, inputs.price, inputs.analyst_target)
+    fundamental_score = _fundamental_quality_score(inputs)
     confidence = (
-        (model_score * 0.25)
-        + (dispersion_score * 0.25)
-        + (data_score * 0.20)
-        + (ratio_score * 0.15)
-        + (anchor_score * 0.15)
+        (model_score * 0.22)
+        + (dispersion_score * 0.22)
+        + (data_score * 0.16)
+        + (ratio_score * 0.12)
+        + (anchor_score * 0.14)
+        + (fundamental_score * 0.14)
     )
     if model_count < 2:
         confidence *= 0.65
     normalized_confidence = max(0.0, min(1.0, confidence))
+    preferred_quality_gate = (inputs.ratio_score is None or inputs.ratio_score >= 0.60) and inputs.nis_sign == "+"
+    if not preferred_quality_gate:
+        normalized_confidence = min(normalized_confidence, 0.35 + (fundamental_score * 0.45))
     if anchor_score < MIN_PUBLISHABLE_ANCHOR_SCORE:
         normalized_confidence = min(normalized_confidence, max(0.20, anchor_score))
     publishable, status, note = _publication_decision(
@@ -974,14 +1052,14 @@ def _apply_hisse_number_formats(ws, columns: Sequence[str], header_row: int, row
     last_data_row = header_row + row_count
 
     value_columns = tuple(f"D{index}" for index in range(1, 13)) + (HISSE_AVERAGE, HISSE_ANALYST_TARGET)
-    percent_columns = (HISSE_UPSIDE, HISSE_ANALYST_UPSIDE, HISSE_CONFIDENCE, HISSE_RATIO)
+    percent_columns = (HISSE_UPSIDE, HISSE_ANALYST_UPSIDE, HISSE_CONFIDENCE, HISSE_FUNDAMENTAL_QUALITY, HISSE_RATIO)
     _apply_number_format_to_columns(ws, headers, value_columns, VALUE_NUMBER_FORMAT, first_data_row, last_data_row)
     _apply_number_format_to_columns(ws, headers, percent_columns, PERCENT_NUMBER_FORMAT, first_data_row, last_data_row)
     _apply_number_format_to_columns(ws, headers, (HISSE_MODEL_COUNT,), "0", first_data_row, last_data_row)
 
     affected_columns = _existing_column_indexes(
         headers,
-        ("D12", HISSE_AVERAGE, HISSE_RATIO, HISSE_UPSIDE, HISSE_ANALYST_UPSIDE, HISSE_CONFIDENCE),
+        ("D12", HISSE_AVERAGE, HISSE_RATIO, HISSE_UPSIDE, HISSE_ANALYST_UPSIDE, HISSE_CONFIDENCE, HISSE_FUNDAMENTAL_QUALITY),
     )
     _remove_conditional_formatting_for_columns(ws, affected_columns)
 
@@ -1000,6 +1078,7 @@ def _apply_signal_font_colors(ws, columns: Sequence[str], header_row: int, row_c
         (HISSE_UPSIDE, 0.0),
         (HISSE_ANALYST_UPSIDE, 0.0),
         (HISSE_CONFIDENCE, RASYO_PASS_THRESHOLD),
+        (HISSE_FUNDAMENTAL_QUALITY, RASYO_PASS_THRESHOLD),
     )
     for row_index in range(header_row + 1, header_row + row_count + 1):
         for column_name, threshold in signal_columns:
@@ -1161,7 +1240,7 @@ def build_notes_frame(run_metadata: Optional[dict[str, Any]] = None) -> pd.DataF
         {
             SECTION_COLUMN: "Metodoloji",
             TOPIC_COLUMN: HISSE_CONFIDENCE,
-            VALUE_COLUMN: "Güven; geçerli model sayısı, modeller arası sapma, veri tamlığı, rasyo skoru ve mevcut fiyat/analist hedefiyle tutarlılıktan oluşur. Aşırı FK/FD-FAVÖK ve negatif büyüme ilgili model ağırlığını düşürür.",
+            VALUE_COLUMN: "Güven; geçerli model sayısı, modeller arası sapma, veri tamlığı, rasyo skoru, NIS işareti, gelir-varlık-borç-brüt marj kalitesi ve mevcut fiyat/analist hedefiyle tutarlılıktan oluşur. Aşırı FK/FD-FAVÖK ve negatif büyüme ilgili model ağırlığını düşürür.",
         },
         {
             SECTION_COLUMN: "Metodoloji",
@@ -1254,6 +1333,10 @@ def build_puan_frame(financials_frame: pd.DataFrame) -> pd.DataFrame:
             "Revenue Growth": PUAN_REVENUE_GROWTH,
             "Free Cash Flow": PUAN_FREE_CASH_FLOW,
             "Operating Cash Flow": PUAN_OPERATING_CASH_FLOW,
+            "Total Revenue": PUAN_REVENUE,
+            "Gross Margin (%)": PUAN_GROSS_MARGIN,
+            "Total Assets": PUAN_TOTAL_ASSETS,
+            "Total Debt": PUAN_TOTAL_DEBT,
         }
     )
     return renamed.reindex(columns=_column_index(PUAN_COLUMNS))
@@ -1487,6 +1570,7 @@ def _quality_row(
     adjusted_weight = adjusted_weights.get(model_key, 0.0)
     included_in_fair_value = model_key in retained_keys and adjusted_weight > 0
     status = _quality_status(filtered_value, adjusted_weight, model_key, retained_keys)
+    fundamental_score = _fundamental_quality_score(inputs)
     return {
         QUALITY_CODE: inputs.code,
         QUALITY_MODEL: model_key,
@@ -1506,6 +1590,7 @@ def _quality_row(
         QUALITY_WARNING_COUNT: _round_or_none(quality_context.warning_count, 0),
         QUALITY_MODEL_WARNINGS: quality_context.model_warnings,
         QUALITY_DATA_COMPLETENESS: _round_or_none(quality_context.data_completeness, 4),
+        QUALITY_FUNDAMENTAL_SCORE: _round_or_none(fundamental_score, 4),
         QUALITY_MODEL_COUNT: len(adjusted_weights),
         QUALITY_RESULT_STATUS: quality_context.summary.status,
         QUALITY_RESULT_NOTE: quality_context.summary.note,
@@ -1669,6 +1754,10 @@ def _hisse_inputs(ticker: str, lookups: RowLookups) -> HisseInputs:
         dcf_value=_positive_or_none(ina_row.get(INA_VALUE_COLUMN)),
         analyst_target=_safe_float(puan_row.get(PUAN_ANALYST_TARGET_MEAN)) or _safe_float(puan_row.get(PUAN_ANALYST_TARGET_MEDIAN)),
         analyst_count=_safe_float(puan_row.get(PUAN_ANALYST_COUNT)),
+        revenue=_safe_float(puan_row.get(PUAN_REVENUE)),
+        gross_margin=_safe_float(puan_row.get(PUAN_GROSS_MARGIN)),
+        total_assets=_safe_float(puan_row.get(PUAN_TOTAL_ASSETS)),
+        total_debt=_safe_float(puan_row.get(PUAN_TOTAL_DEBT)),
     )
 
 
@@ -1749,6 +1838,7 @@ def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str,
 def _hisse_output_row(inputs: HisseInputs, values: dict[str, Optional[float]]) -> dict[str, Any]:
     weight_profile = _weight_profile_for_sector(inputs.sector_name)
     summary = valuation_summary(values, inputs, weight_profile)
+    fundamental_score = _fundamental_quality_score(inputs)
     avg_fair = summary.fair_value
     gp_pct = None
     if avg_fair is not None and inputs.price not in (None, 0):
@@ -1771,6 +1861,7 @@ def _hisse_output_row(inputs: HisseInputs, values: dict[str, Optional[float]]) -
         HISSE_UPSIDE: _round_or_none(gp_pct, 4),
         HISSE_ANALYST_UPSIDE: _round_or_none(analyst_gp_pct, 4),
         HISSE_CONFIDENCE: _round_or_none(summary.confidence, 4),
+        HISSE_FUNDAMENTAL_QUALITY: _round_or_none(fundamental_score, 4),
         HISSE_MODEL_COUNT: summary.model_count,
         HISSE_STATUS: summary.status,
         HISSE_STATUS_NOTE: summary.note,

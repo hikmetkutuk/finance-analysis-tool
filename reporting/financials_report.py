@@ -13,9 +13,15 @@ from data.market_data_provider import FETCH_ERRORS, TickerBundle, fetch_ticker_b
 ROW_OPERATING_INCOME = "Operating Income"
 ROW_NET_INCOME = "Net Income"
 ROW_OPERATING_CASH_FLOW = "Operating Cash Flow"
+ROW_TOTAL_REVENUE = "Total Revenue"
+ROW_GROSS_PROFIT = "Gross Profit"
 COL_OPERATING_INCOME = ROW_OPERATING_INCOME
 COL_NET_INCOME = ROW_NET_INCOME
 COL_OPERATING_CASH_FLOW = ROW_OPERATING_CASH_FLOW
+COL_REVENUE = ROW_TOTAL_REVENUE
+COL_TOTAL_ASSETS = "Total Assets"
+COL_TOTAL_DEBT = "Total Debt"
+COL_GROSS_MARGIN = "Gross Margin (%)"
 
 OPERATING_INCOME_FIELDS = [ROW_OPERATING_INCOME, "Total Operating Income"]
 TAX_FIELDS = ["Tax Provision", "Income Tax Expense"]
@@ -25,6 +31,8 @@ RECEIVABLE_FIELDS = ["Accounts Receivable", "Total Receivables"]
 INVENTORY_FIELDS = ["Inventory", "Inventories"]
 LIABILITY_FIELDS = ["Total Liabilities", "Total Liabilities Net Minority Interest"]
 NET_INCOME_FIELDS = [ROW_NET_INCOME, "Net Income Applicable to Common Shares"]
+REVENUE_FIELDS = [ROW_TOTAL_REVENUE, "Revenue"]
+GROSS_PROFIT_FIELDS = [ROW_GROSS_PROFIT]
 TOTAL_ASSET_FIELDS = ["Total Assets"]
 EQUITY_FIELDS = ["Common Stock Equity", "Stockholders Equity", "Total Equity Gross Minority Interest"]
 TOTAL_DEBT_FIELDS = ["Total Debt", "Current Debt", "Long Term Debt", "Long Term Debt And Capital Lease Obligation"]
@@ -67,6 +75,10 @@ FINANCIAL_COLUMNS = [
     "Revenue Growth",
     "Free Cash Flow",
     COL_OPERATING_CASH_FLOW,
+    COL_REVENUE,
+    COL_GROSS_MARGIN,
+    COL_TOTAL_ASSETS,
+    COL_TOTAL_DEBT,
     "P/B",
     "P/S",
     "Beta",
@@ -256,10 +268,14 @@ def _extract_growth_metrics(
 ) -> dict[str, Optional[float]]:
     total_assets = _latest_value(annual_balance, TOTAL_ASSET_FIELDS)
     prev_total_assets = _previous_value(annual_balance, TOTAL_ASSET_FIELDS)
+    revenue = _latest_value(annual_income, REVENUE_FIELDS)
     net_income = _latest_value(annual_income, NET_INCOME_FIELDS)
     prev_net_income = _previous_value(annual_income, NET_INCOME_FIELDS)
+    gross_profit = _latest_value(annual_income, GROSS_PROFIT_FIELDS)
     return {
         "total_assets": total_assets,
+        "revenue": revenue,
+        "gross_margin": _ratio_pct(gross_profit, revenue),
         "asset_growth": _pct_change(total_assets, prev_total_assets),
         "net_income": net_income,
         "net_income_growth": _pct_change(net_income, prev_net_income),
@@ -282,6 +298,7 @@ def _extract_balance_metrics(
     if cash_like is None:
         cash_like = info.get("totalCash")
     return {
+        "total_debt": total_debt,
         "shareholders_equity": shareholders_equity,
         "debt_to_assets_ratio": _ratio_pct(total_debt, total_assets),
         "paid_in_capital": paid_in_capital,
@@ -331,6 +348,10 @@ def _financials_row_from_bundle(ticker: str, bundle: TickerBundle) -> dict[str, 
         "Revenue Growth": _round_or_none(info.get("revenueGrowth")),
         "Free Cash Flow": _round_or_none(info.get("freeCashflow")),
         COL_OPERATING_CASH_FLOW: _round_or_none(info.get("operatingCashflow")),
+        COL_REVENUE: _round_or_none(growth_metrics["revenue"]),
+        COL_GROSS_MARGIN: _round_or_none(growth_metrics["gross_margin"]),
+        COL_TOTAL_ASSETS: _round_or_none(growth_metrics["total_assets"]),
+        COL_TOTAL_DEBT: _round_or_none(balance_metrics["total_debt"]),
         "P/B": _round_or_none(info.get("priceToBook")),
         "P/S": _round_or_none(_safe_float(bundle.info.get("priceToSalesTrailing12Months"))),
         "Beta": _round_or_none(info.get("beta"), 3),

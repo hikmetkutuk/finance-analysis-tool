@@ -18,6 +18,7 @@ BALANCE_ROW_LONG_TERM_DEBT = "Long Term Debt"
 
 INCOME_FIELD_MAP = {
     "totalRevenue": "Total Revenue",
+    "grossProfit": "Gross Profit",
     "operatingIncome": "Operating Income",
     "netIncome": "Net Income",
 }

@@ -3,7 +3,8 @@ import math
 import pandas as pd
 from openpyxl import load_workbook
 
-from reporting.financials_report import compute_share_count
+from data.market_data_provider import TickerBundle
+from reporting.financials_report import _financials_row_from_bundle, compute_share_count
 from data.ratio_profile_config import load_ratio_profile_config, resolve_ratio_profile
 from data.sector import US_PROFILE
 from data.sector_profile_config import load_sector_profile_config
@@ -19,11 +20,18 @@ from reporting.template_report import (
     RASYO_SCORE_100,
     RASYO_VALUATION_SCORE,
     SHEET_KALITE,
+    PUAN_GROSS_MARGIN,
+    PUAN_REVENUE,
+    PUAN_TOTAL_ASSETS,
+    PUAN_TOTAL_DEBT,
+    HISSE_FUNDAMENTAL_QUALITY,
     WEIGHT_PROFILE_DEFAULT,
     WEIGHT_PROFILE_FINANCIAL,
     WEIGHT_PROFILE_ENERGY_EQUIPMENT,
     WEIGHT_PROFILE_GROWTH,
+    build_puan_frame,
     build_rasyo_frame,
+    _hisse_output_row,
     _weight_profile_for_sector,
     _model_value_reason,
     _raw_valuation_points,
@@ -31,6 +39,75 @@ from reporting.template_report import (
     valuation_summary,
     write_template_report,
 )
+
+
+def test_financials_row_includes_assets_revenue_gross_margin_and_total_debt() -> None:
+    bundle = TickerBundle(
+        ticker="TEST.IS",
+        info={
+            "longName": "Test Sirket",
+            "sharesOutstanding": 10.0,
+            "trailingPE": 12.0,
+            "priceToBook": 1.5,
+            "beta": 1.0,
+        },
+        fast_info={},
+        financials=pd.DataFrame(
+            {
+                pd.Timestamp("2025-12-31"): {
+                    "Total Revenue": 1000.0,
+                    "Gross Profit": 400.0,
+                    "Net Income": 120.0,
+                    "Operating Income": 160.0,
+                }
+            }
+        ),
+        balance_sheet=pd.DataFrame(
+            {
+                pd.Timestamp("2025-12-31"): {
+                    "Total Assets": 2000.0,
+                    "Total Debt": 600.0,
+                    "Stockholders Equity": 900.0,
+                    "Current Assets": 700.0,
+                    "Current Liabilities": 300.0,
+                    "Cash And Cash Equivalents": 100.0,
+                    "Ordinary Shares Number": 10.0,
+                }
+            }
+        ),
+        cashflow=pd.DataFrame(),
+        last_close=None,
+        warnings=[],
+    )
+
+    row = _financials_row_from_bundle("TEST.IS", bundle)
+
+    assert math.isclose(row["Total Revenue"], 1000.0)
+    assert math.isclose(row["Total Assets"], 2000.0)
+    assert math.isclose(row["Total Debt"], 600.0)
+    assert math.isclose(row["Gross Margin (%)"], 40.0)
+
+
+def test_build_puan_frame_maps_new_financial_signal_columns() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "Symbol": "TEST",
+                "Total Revenue": 1000.0,
+                "Gross Margin (%)": 40.0,
+                "Total Assets": 2000.0,
+                "Total Debt": 600.0,
+            }
+        ]
+    )
+
+    result = build_puan_frame(frame)
+    row = result.iloc[0]
+
+    assert math.isclose(row[PUAN_REVENUE], 1000.0)
+    assert math.isclose(row[PUAN_TOTAL_ASSETS], 2000.0)
+    assert math.isclose(row[PUAN_TOTAL_DEBT], 600.0)
+    assert math.isclose(row[PUAN_GROSS_MARGIN], 40.0)
 
 
 def test_share_count_prefers_implied_shares_when_balance_stock_is_nominal() -> None:
@@ -510,6 +587,119 @@ def test_valuation_summary_stays_publishable_when_price_and_consensus_are_reason
 
     assert summary.publishable is True
     assert summary.fair_value is not None
+
+
+def test_quality_inputs_improve_confidence_when_ratio_and_nis_are_strong() -> None:
+    strong_inputs = HisseInputs(
+        code="TEST",
+        sector_name="Sanayi",
+        index_name="XUTUM",
+        market_key="tr",
+        price=100.0,
+        company_pe=10.0,
+        company_pb=1.0,
+        nis_sign="+",
+        ratio_score=0.70,
+        sector_pe=10.0,
+        sector_pb=1.0,
+        sector_ev_ebitda=8.0,
+        eps=10.0,
+        forward_eps=None,
+        forward_pe=None,
+        roe=0.15,
+        beta=1.0,
+        debt_ratio=0.20,
+        net_income_growth=0.10,
+        earnings_growth=0.10,
+        revenue_growth=0.10,
+        net_income=100.0,
+        operating_income=120.0,
+        equity=500.0,
+        paid_in_capital=10.0,
+        ebitda=150.0,
+        free_cash_flow=90.0,
+        operating_cash_flow=110.0,
+        net_debt=20.0,
+        asset_growth=10.0,
+        dcf_value=100.0,
+        analyst_target=110.0,
+        analyst_count=20.0,
+        revenue=1000.0,
+        gross_margin=40.0,
+        total_assets=2000.0,
+        total_debt=600.0,
+    )
+    weak_inputs = HisseInputs(
+        **{
+            **strong_inputs.__dict__,
+            "nis_sign": "-",
+            "ratio_score": 0.35,
+            "gross_margin": 12.0,
+            "total_debt": 1500.0,
+        }
+    )
+
+    strong_summary = valuation_summary(
+        {"D1": 100.0, "D7": 105.0, "D11": 98.0},
+        strong_inputs,
+        WEIGHT_PROFILE_DEFAULT,
+    )
+    weak_summary = valuation_summary(
+        {"D1": 100.0, "D7": 105.0, "D11": 98.0},
+        weak_inputs,
+        WEIGHT_PROFILE_DEFAULT,
+    )
+
+    assert strong_summary.confidence is not None
+    assert weak_summary.confidence is not None
+    assert strong_summary.confidence > weak_summary.confidence
+
+
+def test_hisse_output_row_includes_fundamental_quality_score() -> None:
+    inputs = HisseInputs(
+        code="TEST",
+        sector_name="Sanayi",
+        index_name="XUTUM",
+        market_key="tr",
+        price=100.0,
+        company_pe=10.0,
+        company_pb=1.0,
+        nis_sign="+",
+        ratio_score=0.70,
+        sector_pe=10.0,
+        sector_pb=1.0,
+        sector_ev_ebitda=8.0,
+        eps=10.0,
+        forward_eps=None,
+        forward_pe=None,
+        roe=0.15,
+        beta=1.0,
+        debt_ratio=0.20,
+        net_income_growth=0.10,
+        earnings_growth=0.10,
+        revenue_growth=0.10,
+        net_income=100.0,
+        operating_income=120.0,
+        equity=500.0,
+        paid_in_capital=10.0,
+        ebitda=150.0,
+        free_cash_flow=90.0,
+        operating_cash_flow=110.0,
+        net_debt=20.0,
+        asset_growth=10.0,
+        dcf_value=100.0,
+        analyst_target=110.0,
+        analyst_count=20.0,
+        revenue=1000.0,
+        gross_margin=40.0,
+        total_assets=2000.0,
+        total_debt=600.0,
+    )
+
+    row = _hisse_output_row(inputs, {"D1": 100.0, "D7": 105.0, "D11": 98.0})
+
+    assert row[HISSE_FUNDAMENTAL_QUALITY] is not None
+    assert row[HISSE_FUNDAMENTAL_QUALITY] > 0.60
 
 
 def test_us_market_profile_has_no_is_suffix() -> None:
