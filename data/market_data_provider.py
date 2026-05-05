@@ -52,6 +52,12 @@ def as_dataframe(value: Any) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def as_string_dict(value: Any) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): item for key, item in value.items()}
+
+
 def _frame_has_rows(frame: pd.DataFrame) -> bool:
     return isinstance(frame, pd.DataFrame) and not frame.empty
 
@@ -77,8 +83,8 @@ def _deserialize_bundle(payload: Any) -> Optional[TickerBundle]:
         return None
     return TickerBundle(
         ticker=ticker.strip(),
-        info=payload.get("info") if isinstance(payload.get("info"), dict) else {},
-        fast_info=payload.get("fast_info") if isinstance(payload.get("fast_info"), dict) else {},
+        info=as_string_dict(payload.get("info")),
+        fast_info=as_string_dict(payload.get("fast_info")),
         financials=as_dataframe(payload.get("financials")),
         balance_sheet=as_dataframe(payload.get("balance_sheet")),
         cashflow=as_dataframe(payload.get("cashflow")),
@@ -166,6 +172,21 @@ def _merge_bundle_with_cache(bundle: TickerBundle, cached_bundle: Optional[Ticke
     return _merge_bundle_with_fallback(bundle, cached_bundle, "cache_backfill_used")
 
 
+def _bundle_with_last_close_option(bundle: Optional[TickerBundle], include_last_close: bool) -> Optional[TickerBundle]:
+    if bundle is None or include_last_close:
+        return bundle
+    return TickerBundle(
+        ticker=bundle.ticker,
+        info=dict(bundle.info),
+        fast_info=dict(bundle.fast_info),
+        financials=bundle.financials.copy(),
+        balance_sheet=bundle.balance_sheet.copy(),
+        cashflow=bundle.cashflow.copy(),
+        last_close=None,
+        warnings=list(bundle.warnings),
+    )
+
+
 def call_with_retries(loader):
     last_error = None
     for attempt in range(1, MAX_FETCH_ATTEMPTS + 1):
@@ -225,17 +246,19 @@ def get_last_close(stock: yf.Ticker) -> Optional[float]:
 
 
 class FreshCacheTickerBundleProvider:
-    def fetch(self, ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
-        del include_last_close
-        return _load_cached_bundle(
+    @staticmethod
+    def fetch(ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
+        cached_bundle = _load_cached_bundle(
             TICKER_BUNDLE_CACHE_NAMESPACE,
             ticker,
             max_age_seconds=TICKER_BUNDLE_CACHE_MAX_AGE_SECONDS,
         )
+        return _bundle_with_last_close_option(cached_bundle, include_last_close)
 
 
 class YahooLiveTickerBundleProvider:
-    def fetch(self, ticker: str, include_last_close: bool = True) -> TickerBundle:
+    @staticmethod
+    def fetch(ticker: str, include_last_close: bool = True) -> TickerBundle:
         stock = yf.Ticker(ticker)
         warnings: list[str] = []
 
@@ -301,7 +324,8 @@ class AlphaVantageTickerBundleProvider:
             fast_info["lastPrice"] = bundle.last_close
         return fast_info
 
-    def fetch(self, ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
+    @staticmethod
+    def fetch(ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
         if not alpha_vantage_enabled():
             return None
         try:
@@ -313,7 +337,7 @@ class AlphaVantageTickerBundleProvider:
         last_close = dataset.last_close if include_last_close else None
         bundle = TickerBundle(
             ticker=ticker,
-            info=dict(dataset.info),
+            info=as_string_dict(dataset.info),
             fast_info={},
             financials=dataset.annual_income.copy(),
             balance_sheet=dataset.annual_balance.copy(),
@@ -324,7 +348,7 @@ class AlphaVantageTickerBundleProvider:
         return TickerBundle(
             ticker=bundle.ticker,
             info=bundle.info,
-            fast_info=self._fast_info_from_bundle(bundle),
+            fast_info=AlphaVantageTickerBundleProvider._fast_info_from_bundle(bundle),
             financials=bundle.financials,
             balance_sheet=bundle.balance_sheet,
             cashflow=bundle.cashflow,
@@ -334,9 +358,10 @@ class AlphaVantageTickerBundleProvider:
 
 
 class StaleCacheTickerBundleProvider:
-    def fetch(self, ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
-        del include_last_close
-        return _load_cached_bundle(TICKER_BUNDLE_CACHE_NAMESPACE, ticker)
+    @staticmethod
+    def fetch(ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
+        cached_bundle = _load_cached_bundle(TICKER_BUNDLE_CACHE_NAMESPACE, ticker)
+        return _bundle_with_last_close_option(cached_bundle, include_last_close)
 
 
 class TickerBundleProviderChain:

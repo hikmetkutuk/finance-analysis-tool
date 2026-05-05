@@ -4,6 +4,8 @@ import argparse
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -24,12 +26,17 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def read_backtest_report(path: Path) -> pd.DataFrame:
+    report = pd.read_csv(path)
+    if isinstance(report, pd.DataFrame):
+        return report
+    return report.read()
+
+
 def main() -> int:
     args = parse_args()
     if args.skip_refresh and BACKTEST_REPORT_PATH.exists():
-        import pandas as pd
-
-        report = pd.read_csv(BACKTEST_REPORT_PATH)
+        report = read_backtest_report(BACKTEST_REPORT_PATH)
     else:
         report = evaluate_backtest(
             horizon_days=args.horizon_days,

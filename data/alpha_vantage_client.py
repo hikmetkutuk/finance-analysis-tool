@@ -116,7 +116,7 @@ def _coerce_value(value: Any) -> Any:
     return value
 
 
-def _frame_from_reports(reports: Any, field_map: dict[str, str]) -> pd.DataFrame:
+def frame_from_reports(reports: Any, field_map: dict[str, str]) -> pd.DataFrame:
     if not isinstance(reports, list) or not reports:
         return pd.DataFrame()
     normalized_rows: list[dict[str, Any]] = []
@@ -193,12 +193,12 @@ def fetch_alpha_vantage_dataset(symbol: str) -> Optional[AlphaVantageDataset]:
     quote_payload = _fetch_json("GLOBAL_QUOTE", symbol, api_key)
     global_quote = quote_payload.get("Global Quote", {}) if isinstance(quote_payload.get("Global Quote"), dict) else {}
 
-    annual_income = _frame_from_reports(income_payload.get("annualReports"), INCOME_FIELD_MAP)
-    quarterly_income = _frame_from_reports(income_payload.get("quarterlyReports"), INCOME_FIELD_MAP)
-    annual_balance = _frame_from_reports(balance_payload.get("annualReports"), BALANCE_FIELD_MAP)
-    quarterly_balance = _frame_from_reports(balance_payload.get("quarterlyReports"), BALANCE_FIELD_MAP)
-    annual_cashflow = _frame_from_reports(cashflow_payload.get("annualReports"), CASHFLOW_FIELD_MAP)
-    quarterly_cashflow = _frame_from_reports(cashflow_payload.get("quarterlyReports"), CASHFLOW_FIELD_MAP)
+    annual_income = frame_from_reports(income_payload.get("annualReports"), INCOME_FIELD_MAP)
+    quarterly_income = frame_from_reports(income_payload.get("quarterlyReports"), INCOME_FIELD_MAP)
+    annual_balance = frame_from_reports(balance_payload.get("annualReports"), BALANCE_FIELD_MAP)
+    quarterly_balance = frame_from_reports(balance_payload.get("quarterlyReports"), BALANCE_FIELD_MAP)
+    annual_cashflow = frame_from_reports(cashflow_payload.get("annualReports"), CASHFLOW_FIELD_MAP)
+    quarterly_cashflow = frame_from_reports(cashflow_payload.get("quarterlyReports"), CASHFLOW_FIELD_MAP)
 
     info = _overview_to_info(overview, annual_balance, global_quote)
     warnings: list[str] = []

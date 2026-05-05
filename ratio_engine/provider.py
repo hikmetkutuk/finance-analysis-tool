@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import time
-from typing import Any
+from typing import Any, Optional
 
 from data.alpha_vantage_client import alpha_vantage_enabled, fetch_alpha_vantage_dataset
 from data.cache_store import load_fresh_cache, load_latest_cache, save_cache
@@ -69,7 +69,7 @@ class YahooProvider:
         return YahooProvider.get_frame(frame)
 
     @staticmethod
-    def _serialize_dataset(dataset: StockDataset) -> dict:
+    def serialize_dataset(dataset: StockDataset) -> dict:
         return {
             "info": dict(dataset.info),
             "quarterly_financials": YahooProvider.get_frame(dataset.quarterly_financials).copy(),
@@ -79,11 +79,12 @@ class YahooProvider:
         }
 
     @staticmethod
-    def _deserialize_dataset(payload: Any) -> Any:
+    def deserialize_dataset(payload: Any) -> Any:
         if not isinstance(payload, dict):
             return None
+        info_payload = payload.get("info")
         return StockDataset(
-            info=payload.get("info") if isinstance(payload.get("info"), dict) else {},
+            info=dict(info_payload) if isinstance(info_payload, dict) else {},
             quarterly_financials=YahooProvider.get_frame(payload.get("quarterly_financials")),
             quarterly_balance_sheet=YahooProvider.get_frame(payload.get("quarterly_balance_sheet")),
             annual_financials=YahooProvider.get_frame(payload.get("annual_financials")),
@@ -91,53 +92,53 @@ class YahooProvider:
         )
 
     @staticmethod
-    def _has_rows(frame: Any) -> bool:
+    def has_rows(frame: Any) -> bool:
         return isinstance(frame, pd.DataFrame) and not frame.empty
 
     @staticmethod
-    def _dataset_has_substantive_data(dataset: StockDataset) -> bool:
+    def dataset_has_substantive_data(dataset: StockDataset) -> bool:
         return bool(dataset.info) or any(
             (
-                YahooProvider._has_rows(dataset.quarterly_financials),
-                YahooProvider._has_rows(dataset.quarterly_balance_sheet),
-                YahooProvider._has_rows(dataset.annual_financials),
-                YahooProvider._has_rows(dataset.annual_balance_sheet),
+                YahooProvider.has_rows(dataset.quarterly_financials),
+                YahooProvider.has_rows(dataset.quarterly_balance_sheet),
+                YahooProvider.has_rows(dataset.annual_financials),
+                YahooProvider.has_rows(dataset.annual_balance_sheet),
             )
         )
 
     @staticmethod
-    def _load_cached_dataset(symbol: str, max_age_seconds: int | None = None) -> Any:
+    def load_cached_dataset(symbol: str, max_age_seconds: Optional[int] = None) -> Any:
         if max_age_seconds is None:
             cached = load_latest_cache(RATIO_DATASET_CACHE_NAMESPACE, symbol)
         else:
             cached = load_fresh_cache(RATIO_DATASET_CACHE_NAMESPACE, symbol, max_age_seconds)
         if cached is None:
             return None
-        return YahooProvider._deserialize_dataset(cached.payload)
+        return YahooProvider.deserialize_dataset(cached.payload)
 
     @staticmethod
-    def _merge_dataset_with_cache(dataset: StockDataset, cached_dataset: Any) -> StockDataset:
+    def merge_dataset_with_cache(dataset: StockDataset, cached_dataset: Any) -> StockDataset:
         if not isinstance(cached_dataset, StockDataset):
             return dataset
         info = dataset.info if dataset.info else dict(cached_dataset.info)
         quarterly_financials = (
             dataset.quarterly_financials
-            if YahooProvider._has_rows(dataset.quarterly_financials)
+            if YahooProvider.has_rows(dataset.quarterly_financials)
             else YahooProvider.get_frame(cached_dataset.quarterly_financials).copy()
         )
         quarterly_balance_sheet = (
             dataset.quarterly_balance_sheet
-            if YahooProvider._has_rows(dataset.quarterly_balance_sheet)
+            if YahooProvider.has_rows(dataset.quarterly_balance_sheet)
             else YahooProvider.get_frame(cached_dataset.quarterly_balance_sheet).copy()
         )
         annual_financials = (
             dataset.annual_financials
-            if YahooProvider._has_rows(dataset.annual_financials)
+            if YahooProvider.has_rows(dataset.annual_financials)
             else YahooProvider.get_frame(cached_dataset.annual_financials).copy()
         )
         annual_balance_sheet = (
             dataset.annual_balance_sheet
-            if YahooProvider._has_rows(dataset.annual_balance_sheet)
+            if YahooProvider.has_rows(dataset.annual_balance_sheet)
             else YahooProvider.get_frame(cached_dataset.annual_balance_sheet).copy()
         )
         return StockDataset(
@@ -148,19 +149,21 @@ class YahooProvider:
             annual_balance_sheet=annual_balance_sheet,
         )
 
-    def fetch(self, symbol: str) -> StockDataset:
+    @staticmethod
+    def fetch(symbol: str) -> StockDataset:
         stock = yf.Ticker(symbol)
         return StockDataset(
-            info=self.get_info(stock),
-            quarterly_financials=self.get_safe_frame(stock, "quarterly_financials"),
-            quarterly_balance_sheet=self.get_safe_frame(stock, "quarterly_balance_sheet"),
-            annual_financials=self.get_safe_frame(stock, "financials"),
-            annual_balance_sheet=self.get_safe_frame(stock, "balance_sheet"),
+            info=YahooProvider.get_info(stock),
+            quarterly_financials=YahooProvider.get_safe_frame(stock, "quarterly_financials"),
+            quarterly_balance_sheet=YahooProvider.get_safe_frame(stock, "quarterly_balance_sheet"),
+            annual_financials=YahooProvider.get_safe_frame(stock, "financials"),
+            annual_balance_sheet=YahooProvider.get_safe_frame(stock, "balance_sheet"),
         )
 
 
 class AlphaVantageProvider:
-    def fetch(self, symbol: str) -> StockDataset:
+    @staticmethod
+    def fetch(symbol: str) -> StockDataset:
         if not alpha_vantage_enabled():
             return StockDataset({}, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
         try:
@@ -179,13 +182,15 @@ class AlphaVantageProvider:
 
 
 class FreshCacheDatasetProvider:
-    def fetch(self, symbol: str) -> Any:
-        return YahooProvider._load_cached_dataset(symbol, RATIO_DATASET_CACHE_MAX_AGE_SECONDS)
+    @staticmethod
+    def fetch(symbol: str) -> Any:
+        return YahooProvider.load_cached_dataset(symbol, RATIO_DATASET_CACHE_MAX_AGE_SECONDS)
 
 
 class StaleCacheDatasetProvider:
-    def fetch(self, symbol: str) -> Any:
-        return YahooProvider._load_cached_dataset(symbol)
+    @staticmethod
+    def fetch(symbol: str) -> Any:
+        return YahooProvider.load_cached_dataset(symbol)
 
 
 class DatasetProviderChain:
@@ -203,10 +208,10 @@ class DatasetProviderChain:
         stale_cached_dataset = self.stale_cache_provider.fetch(symbol)
         live_dataset = self.live_provider.fetch(symbol)
         secondary_dataset = self.secondary_provider.fetch(symbol)
-        live_dataset = YahooProvider._merge_dataset_with_cache(live_dataset, secondary_dataset)
-        merged_dataset = YahooProvider._merge_dataset_with_cache(live_dataset, stale_cached_dataset)
-        if YahooProvider._dataset_has_substantive_data(merged_dataset):
-            save_cache(RATIO_DATASET_CACHE_NAMESPACE, symbol, YahooProvider._serialize_dataset(merged_dataset))
+        live_dataset = YahooProvider.merge_dataset_with_cache(live_dataset, secondary_dataset)
+        merged_dataset = YahooProvider.merge_dataset_with_cache(live_dataset, stale_cached_dataset)
+        if YahooProvider.dataset_has_substantive_data(merged_dataset):
+            save_cache(RATIO_DATASET_CACHE_NAMESPACE, symbol, YahooProvider.serialize_dataset(merged_dataset))
             return merged_dataset
         if isinstance(stale_cached_dataset, StockDataset):
             return stale_cached_dataset

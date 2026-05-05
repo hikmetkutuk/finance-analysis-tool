@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Protocol, Tuple
 
 from .constants import (
     COLUMN_ASSET_TURNOVER,
@@ -34,6 +34,11 @@ from .profiles import get_profile
 from .provider import DatasetProviderChain, StockDataset
 
 logger = logging.getLogger("ratio")
+
+
+class StockDatasetProvider(Protocol):
+    def fetch(self, symbol: str) -> StockDataset:
+        ...
 
 
 def build_stock_row(symbol: str, dataset: StockDataset, market: str) -> dict:
@@ -97,7 +102,7 @@ def build_stock_row(symbol: str, dataset: StockDataset, market: str) -> dict:
     return result_row
 
 
-def get_stock_data(symbol: str, market: str = MARKET_AUTO, provider: Optional[object] = None) -> dict:
+def get_stock_data(symbol: str, market: str = MARKET_AUTO, provider: Optional[StockDatasetProvider] = None) -> dict:
     active_provider = provider or DatasetProviderChain()
     dataset = active_provider.fetch(symbol)
     return build_stock_row(symbol, dataset, market)
@@ -106,7 +111,7 @@ def get_stock_data(symbol: str, market: str = MARKET_AUTO, provider: Optional[ob
 def analyze_symbols(
     symbols: Iterable[str],
     market: str = MARKET_AUTO,
-    provider: Optional[object] = None,
+    provider: Optional[StockDatasetProvider] = None,
 ) -> Tuple[List[dict], List[dict]]:
     active_provider = provider or DatasetProviderChain()
     rows: List[dict] = []

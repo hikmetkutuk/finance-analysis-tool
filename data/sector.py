@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, cast
 
 import pandas as pd
 import yfinance as yf
@@ -306,14 +306,20 @@ def seed_prepared_map(profile: MarketProfile, universe: set[str]) -> tuple[dict[
     return prepared, used
 
 
+def add_ticker_to_sector(prepared: dict[str, list[str]], sector_name: str, ticker: str) -> None:
+    prepared.setdefault(sector_name, []).append(ticker)
+
+
 def auto_classify_missing_tickers(profile: MarketProfile, universe: set[str], prepared: dict[str, list[str]], used: set[str]) -> None:
     missing = sorted(universe - used)
     for ticker in missing:
         info = fetch_info(ticker)
         inferred_sector = infer_sector_from_info(info, profile)
-        if inferred_sector and inferred_sector != profile.other_label:
-            prepared.setdefault(inferred_sector, []).append(ticker)
-            used.add(ticker)
+        if inferred_sector is None or inferred_sector == profile.other_label:
+            continue
+        inferred_sector_name = cast(str, inferred_sector)
+        add_ticker_to_sector(prepared, inferred_sector_name, ticker)
+        used.add(ticker)
 
 
 def append_remaining_bucket(profile: MarketProfile, universe: set[str], prepared: dict[str, list[str]], used: set[str]) -> None:
@@ -335,9 +341,12 @@ def apply_cached_assignments(
     valid_sectors = set(profile.base_sector_map) | {profile.other_label}
     for ticker in sorted(universe - used):
         sector_name = market_assignments.get(ticker)
-        if not sector_name or sector_name not in valid_sectors or sector_name == profile.other_label:
+        if sector_name is None or not sector_name:
             continue
-        prepared.setdefault(sector_name, []).append(ticker)
+        if sector_name not in valid_sectors or sector_name == profile.other_label:
+            continue
+        assigned_sector_name = cast(str, sector_name)
+        add_ticker_to_sector(prepared, assigned_sector_name, ticker)
         used.add(ticker)
 
 

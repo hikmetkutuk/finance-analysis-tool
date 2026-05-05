@@ -307,7 +307,7 @@ def _extract_balance_metrics(
     }
 
 
-def _financials_row_from_bundle(ticker: str, bundle: TickerBundle) -> dict[str, Any]:
+def financials_row_from_bundle(ticker: str, bundle: TickerBundle) -> dict[str, Any]:
     info = normalized_info(bundle)
 
     annual_income = bundle.financials
@@ -394,7 +394,7 @@ def _dcf_row_from_bundle(ticker: str, bundle: TickerBundle, years: list[int]) ->
 
 def _build_rows_for_ticker(ticker: str, years: list[int]) -> tuple[dict[str, Any], dict[str, Any]]:
     bundle = fetch_ticker_bundle(ticker, include_last_close=False)
-    return _financials_row_from_bundle(ticker, bundle), _dcf_row_from_bundle(ticker, bundle, years)
+    return financials_row_from_bundle(ticker, bundle), _dcf_row_from_bundle(ticker, bundle, years)
 
 
 def _empty_rows_for_ticker(ticker: str, years: list[int]) -> tuple[dict[str, Any], dict[str, Any]]:

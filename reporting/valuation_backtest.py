@@ -46,6 +46,12 @@ def parse_tr_formatted_number(value: Any) -> Optional[float]:
         return None
 
 
+def text_value(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
+
 def fetch_price_near(ticker: str, target_date: datetime) -> Optional[float]:
     start = (target_date - timedelta(days=5)).strftime("%Y-%m-%d")
     end = (target_date + timedelta(days=7)).strftime("%Y-%m-%d")
@@ -98,21 +104,20 @@ def build_snapshot_row(ticker: str, as_of: str) -> SnapshotRow:
         as_of=as_of,
         ticker=ticker,
         market=infer_market(ticker),
-        sector=result.get("Sektör", ""),
+        sector=text_value(result.get("Sektör")),
         fair_value=fair_value,
         current_price=current_price,
         upside_pct=upside_pct,
         confidence=parse_tr_formatted_number(result.get("Güven")),
         ratio_score=parse_tr_formatted_number(result.get("Rasyo")),
-        status=str(result.get("Sonuç Durumu", "") or ""),
-        warnings=result.get("Model Kalite Uyarıları", ""),
+        status=text_value(result.get("Sonuç Durumu")),
+        warnings=text_value(result.get("Model Kalite Uyarıları")),
     )
 
 
 def snapshot_valuations(tickers: list[str], as_of: Optional[str] = None) -> pd.DataFrame:
-    if as_of is None:
-        as_of = date.today().isoformat()
-    rows = [build_snapshot_row(ticker, as_of) for ticker in tickers]
+    resolved_as_of = as_of if as_of is not None else date.today().isoformat()
+    rows = [build_snapshot_row(ticker, resolved_as_of) for ticker in tickers]
     frame = pd.DataFrame([row.__dict__ for row in rows])
     if HISTORY_PATH.exists():
         history = pd.read_csv(HISTORY_PATH)

@@ -4,7 +4,7 @@ import math
 
 import pandas as pd
 
-from data.alpha_vantage_client import _frame_from_reports, alpha_vantage_enabled
+from data.alpha_vantage_client import alpha_vantage_enabled, frame_from_reports
 
 
 def test_alpha_vantage_disabled_without_api_key(monkeypatch) -> None:
@@ -25,7 +25,7 @@ def test_frame_from_reports_normalizes_financial_rows() -> None:
             "netIncome": "100",
         },
     ]
-    frame = _frame_from_reports(
+    frame = frame_from_reports(
         reports,
         {
             "totalRevenue": "Total Revenue",

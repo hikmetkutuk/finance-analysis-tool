@@ -4,7 +4,7 @@ import pandas as pd
 from openpyxl import load_workbook
 
 from data.market_data_provider import TickerBundle
-from reporting.financials_report import _financials_row_from_bundle, compute_share_count
+from reporting.financials_report import compute_share_count, financials_row_from_bundle
 from data.ratio_profile_config import load_ratio_profile_config, resolve_ratio_profile
 from data.sector import US_PROFILE
 from data.sector_profile_config import load_sector_profile_config
@@ -31,12 +31,12 @@ from reporting.template_report import (
     WEIGHT_PROFILE_GROWTH,
     build_puan_frame,
     build_rasyo_frame,
-    _hisse_output_row,
-    _weight_profile_for_sector,
-    _model_value_reason,
-    _raw_valuation_points,
+    hisse_output_row,
+    model_value_reason,
+    raw_valuation_points,
     sanity_checked_valuation_points,
     valuation_summary,
+    weight_profile_for_sector,
     write_template_report,
 )
 
@@ -80,7 +80,7 @@ def test_financials_row_includes_assets_revenue_gross_margin_and_total_debt() ->
         warnings=[],
     )
 
-    row = _financials_row_from_bundle("TEST.IS", bundle)
+    row = financials_row_from_bundle("TEST.IS", bundle)
 
     assert math.isclose(row["Total Revenue"], 1000.0)
     assert math.isclose(row["Total Assets"], 2000.0)
@@ -231,19 +231,19 @@ def test_write_template_report_creates_workbook_when_template_is_missing(tmp_pat
 
 
 def test_model_value_reason_marks_below_price_threshold() -> None:
-    reason = _model_value_reason(raw_value=9.0, filtered_value=None, price=300.0)
+    reason = model_value_reason(raw_value=9.0, filtered_value=None, price=300.0)
     assert reason == "fiyata_gore_cok_dusuk"
 
 
 def test_energy_equipment_sector_uses_dedicated_weight_profile() -> None:
-    assert _weight_profile_for_sector("Enerji Ekipman & Taahhüt") == WEIGHT_PROFILE_ENERGY_EQUIPMENT
+    assert weight_profile_for_sector("Enerji Ekipman & Taahhüt") == WEIGHT_PROFILE_ENERGY_EQUIPMENT
 
 
 def test_weight_profile_mapping_is_generalized_across_sector_families() -> None:
-    assert _weight_profile_for_sector("Banka") == WEIGHT_PROFILE_FINANCIAL
-    assert _weight_profile_for_sector("Teknoloji") == WEIGHT_PROFILE_GROWTH
-    assert _weight_profile_for_sector("Sanayi & Üretim") == WEIGHT_PROFILE_ENERGY_EQUIPMENT
-    assert _weight_profile_for_sector("Gıda") == WEIGHT_PROFILE_DEFAULT
+    assert weight_profile_for_sector("Banka") == WEIGHT_PROFILE_FINANCIAL
+    assert weight_profile_for_sector("Teknoloji") == WEIGHT_PROFILE_GROWTH
+    assert weight_profile_for_sector("Sanayi & Üretim") == WEIGHT_PROFILE_ENERGY_EQUIPMENT
+    assert weight_profile_for_sector("Gıda") == WEIGHT_PROFILE_DEFAULT
 
 
 def test_sector_profile_config_contains_energy_equipment_mapping() -> None:
@@ -428,10 +428,14 @@ def test_d8_uses_bond_adjusted_multiple_instead_of_direct_bond_division() -> Non
         risk_free_rate=0.25,
     )
 
-    values = _raw_valuation_points(inputs, macro_rates)
+    values = raw_valuation_points(inputs, macro_rates)
+    d1_value = values["D1"]
+    d8_value = values["D8"]
 
-    assert math.isclose(values["D1"], 100.0)
-    assert math.isclose(values["D8"], 50.0)
+    assert d1_value is not None
+    assert d8_value is not None
+    assert math.isclose(d1_value, 100.0)
+    assert math.isclose(d8_value, 50.0)
 
 
 def test_valuation_summary_keeps_high_but_valid_models_in_average() -> None:
@@ -696,7 +700,7 @@ def test_hisse_output_row_includes_fundamental_quality_score() -> None:
         total_debt=600.0,
     )
 
-    row = _hisse_output_row(inputs, {"D1": 100.0, "D7": 105.0, "D11": 98.0})
+    row = hisse_output_row(inputs, {"D1": 100.0, "D7": 105.0, "D11": 98.0})
 
     assert row[HISSE_FUNDAMENTAL_QUALITY] is not None
     assert row[HISSE_FUNDAMENTAL_QUALITY] > 0.60

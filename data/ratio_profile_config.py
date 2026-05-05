@@ -164,6 +164,14 @@ def _deep_update(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, An
     return merged
 
 
+def _dict_value(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _default_profiles() -> dict[str, Any]:
+    return deepcopy(_dict_value(DEFAULT_RATIO_PROFILE_CONFIG.get("profiles")))
+
+
 def load_ratio_profile_config(path: Path = RATIO_PROFILE_CONFIG_PATH) -> dict[str, Any]:
     if not path.exists():
         return deepcopy(DEFAULT_RATIO_PROFILE_CONFIG)
@@ -177,26 +185,19 @@ def load_ratio_profile_config(path: Path = RATIO_PROFILE_CONFIG_PATH) -> dict[st
 
 
 def build_ratio_profile_map(config: dict[str, Any]) -> dict[str, Any]:
-    raw_profiles = config.get("profiles", {})
-    if not isinstance(raw_profiles, dict):
-        return deepcopy(DEFAULT_RATIO_PROFILE_CONFIG["profiles"])
-    merged = _deep_update(DEFAULT_RATIO_PROFILE_CONFIG["profiles"], raw_profiles)
-    return merged if isinstance(merged, dict) else deepcopy(DEFAULT_RATIO_PROFILE_CONFIG["profiles"])
+    raw_profiles = _dict_value(config.get("profiles"))
+    default_profiles = _default_profiles()
+    return _deep_update(default_profiles, raw_profiles)
 
 
 def resolve_ratio_profile(config: dict[str, Any], profile_name: str, market_key: str) -> dict[str, Any]:
     base_profiles = build_ratio_profile_map(config)
-    base_profile = deepcopy(base_profiles.get(profile_name, base_profiles.get(PROFILE_DEFAULT, {})))
-    raw_market_overrides = config.get("market_overrides", {})
-    if not isinstance(raw_market_overrides, dict):
-        return base_profile
-    market_override = raw_market_overrides.get(market_key, {})
-    if not isinstance(market_override, dict):
-        return base_profile
-    raw_profile_overrides = market_override.get("profiles", {})
-    if not isinstance(raw_profile_overrides, dict):
-        return base_profile
-    profile_override = raw_profile_overrides.get(profile_name, {})
-    if not isinstance(profile_override, dict):
+    default_profile = _dict_value(base_profiles.get(PROFILE_DEFAULT))
+    base_profile = deepcopy(_dict_value(base_profiles.get(profile_name)) or default_profile)
+    raw_market_overrides = _dict_value(config.get("market_overrides"))
+    market_override = _dict_value(raw_market_overrides.get(market_key))
+    raw_profile_overrides = _dict_value(market_override.get("profiles"))
+    profile_override = _dict_value(raw_profile_overrides.get(profile_name))
+    if not profile_override:
         return base_profile
     return _deep_update(base_profile, profile_override)

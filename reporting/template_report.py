@@ -13,6 +13,7 @@ from openpyxl.comments import Comment
 from openpyxl.utils.cell import range_boundaries
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import TableColumn
+from openpyxl.worksheet.worksheet import Worksheet
 
 from data.macro_config import load_macro_config
 from data.ratio_profile_config import build_ratio_profile_map, load_ratio_profile_config, resolve_ratio_profile
@@ -499,7 +500,9 @@ def _bond_adjusted_multiple_value(
     value = _safe_float(base_value)
     rate = _rate_decimal(two_year_bond)
     reference_rate = _rate_decimal(BOND_REFERENCE_YIELDS.get(market_key))
-    if value is None or value <= 0 or rate is None or rate <= 0 or reference_rate is None or reference_rate <= 0:
+    if value is None or rate is None or reference_rate is None:
+        return None
+    if value <= 0 or rate <= 0 or reference_rate <= 0:
         return None
     adjustment_factor = reference_rate / rate
     adjustment_factor = max(MIN_BOND_ADJUSTMENT_FACTOR, min(MAX_BOND_ADJUSTMENT_FACTOR, adjustment_factor))
@@ -508,13 +511,14 @@ def _bond_adjusted_multiple_value(
 
 def _sanity_checked_model_value(value: Any, price: Optional[float]) -> Optional[float]:
     number = _safe_float(value)
+    price_number = _safe_float(price)
     if number is None or number <= 0:
         return None
-    if price is None or price <= 0:
+    if price_number is None or price_number <= 0:
         return number
-    if number < price * MIN_MODEL_PRICE_MULTIPLE:
+    if number < price_number * MIN_MODEL_PRICE_MULTIPLE:
         return None
-    if number > price * MAX_MODEL_PRICE_MULTIPLE:
+    if number > price_number * MAX_MODEL_PRICE_MULTIPLE:
         return None
     return number
 
@@ -523,20 +527,21 @@ def sanity_checked_valuation_points(values: dict[str, Optional[float]], price: O
     return {model_key: _sanity_checked_model_value(value, price) for model_key, value in values.items()}
 
 
-def _model_value_reason(raw_value: Any, filtered_value: Any, price: Optional[float]) -> str:
+def model_value_reason(raw_value: Any, filtered_value: Any, price: Optional[float]) -> str:
     raw_number = _safe_float(raw_value)
     filtered_number = _safe_float(filtered_value)
+    price_number = _safe_float(price)
     if filtered_number is not None:
         return "kullanilabilir"
     if raw_number is None:
         return "girdi_eksik"
     if raw_number <= 0:
         return "pozitif_degil"
-    if price is None or price <= 0:
+    if price_number is None or price_number <= 0:
         return "fiyat_eksik"
-    if raw_number < price * MIN_MODEL_PRICE_MULTIPLE:
+    if raw_number < price_number * MIN_MODEL_PRICE_MULTIPLE:
         return "fiyata_gore_cok_dusuk"
-    if raw_number > price * MAX_MODEL_PRICE_MULTIPLE:
+    if raw_number > price_number * MAX_MODEL_PRICE_MULTIPLE:
         return "fiyata_gore_cok_yuksek"
     return "filtre_disinda"
 
@@ -561,11 +566,15 @@ def _discount_rate(
 ) -> Optional[float]:
     if cost_of_debt is None or tax_rate is None or risk_free_rate is None or market_premium is None:
         return None
+    cost_of_debt_value = float(cost_of_debt)
+    tax_rate_value = float(tax_rate)
+    risk_free_rate_value = float(risk_free_rate)
+    market_premium_value = float(market_premium)
     normalized_debt_ratio = debt_ratio if debt_ratio is not None else 0.0
     equity_ratio = 1.0 - normalized_debt_ratio
     normalized_beta = beta if beta is not None else 1.0
-    cost_of_equity = risk_free_rate + (normalized_beta * market_premium)
-    after_tax_debt_cost = cost_of_debt * (1.0 - tax_rate)
+    cost_of_equity = risk_free_rate_value + (normalized_beta * market_premium_value)
+    after_tax_debt_cost = cost_of_debt_value * (1.0 - tax_rate_value)
     return (after_tax_debt_cost * normalized_debt_ratio) + (cost_of_equity * equity_ratio)
 
 
@@ -576,8 +585,10 @@ def _cost_of_equity(
 ) -> Optional[float]:
     if risk_free_rate is None or market_premium is None:
         return None
+    risk_free_rate_value = float(risk_free_rate)
+    market_premium_value = float(market_premium)
     normalized_beta = beta if beta is not None else 1.0
-    return risk_free_rate + (normalized_beta * market_premium)
+    return risk_free_rate_value + (normalized_beta * market_premium_value)
 
 
 def _roe_justified_pb_value(
@@ -586,18 +597,18 @@ def _roe_justified_pb_value(
     cost_of_equity: Optional[float],
     terminal_growth: Optional[float],
 ) -> Optional[float]:
-    if (
-        book_value_per_share is None
-        or roe is None
-        or cost_of_equity is None
-        or terminal_growth is None
-        or cost_of_equity <= terminal_growth
-    ):
+    if book_value_per_share is None or roe is None or cost_of_equity is None or terminal_growth is None:
         return None
-    justified_pb = (roe - terminal_growth) / (cost_of_equity - terminal_growth)
+    book_value_per_share_value = float(book_value_per_share)
+    roe_value = float(roe)
+    cost_of_equity_value = float(cost_of_equity)
+    terminal_growth_value = float(terminal_growth)
+    if cost_of_equity_value <= terminal_growth_value:
+        return None
+    justified_pb = (roe_value - terminal_growth_value) / (cost_of_equity_value - terminal_growth_value)
     if justified_pb <= 0:
         return None
-    return book_value_per_share * justified_pb
+    return book_value_per_share_value * justified_pb
 
 
 def _mean_nonempty(values: Iterable[Any]) -> Optional[float]:
@@ -607,7 +618,7 @@ def _mean_nonempty(values: Iterable[Any]) -> Optional[float]:
     return mean(numeric_values)
 
 
-def _weight_profile_for_sector(sector_name: str) -> str:
+def weight_profile_for_sector(sector_name: str) -> str:
     normalized = str(sector_name or "").strip()
     if not normalized:
         return WEIGHT_PROFILE_DEFAULT
@@ -723,23 +734,25 @@ def _weighted_average(values: dict[str, Optional[float]], weights: dict[str, flo
 
 
 def _model_dispersion(values: dict[str, Optional[float]], weights: dict[str, float], fair_value: Optional[float]) -> Optional[float]:
-    if fair_value is None or fair_value <= 0 or not weights:
+    fair_value_number = _safe_float(fair_value)
+    if fair_value_number is None or fair_value_number <= 0 or not weights:
         return None
     active_values = list(_active_model_values(values, weights).values())
     if len(active_values) < 2:
         return None
-    avg_abs_deviation = mean(abs(value - fair_value) for value in active_values)
-    return avg_abs_deviation / fair_value
+    avg_abs_deviation = mean(abs(value - fair_value_number) for value in active_values)
+    return avg_abs_deviation / fair_value_number
 
 
 def _confidence_from_dispersion(dispersion: Optional[float]) -> float:
-    if dispersion is None:
+    dispersion_value = _safe_float(dispersion)
+    if dispersion_value is None:
         return 0.55
-    if dispersion <= 0.25:
+    if dispersion_value <= 0.25:
         return 1.0
-    if dispersion >= 1.25:
+    if dispersion_value >= 1.25:
         return 0.10
-    return max(0.10, 1.0 - ((dispersion - 0.25) / 1.0) * 0.90)
+    return max(0.10, 1.0 - ((dispersion_value - 0.25) / 1.0) * 0.90)
 
 
 def _data_completeness_score(inputs: HisseInputs) -> float:
@@ -766,23 +779,25 @@ def _data_completeness_score(inputs: HisseInputs) -> float:
 
 
 def _linear_min_score(value: Optional[float], soft_min: float, target_min: float) -> Optional[float]:
-    if value is None:
+    number = _safe_float(value)
+    if number is None:
         return None
-    if value <= soft_min:
+    if number <= soft_min:
         return 0.10
-    if value >= target_min:
+    if number >= target_min:
         return 1.0
-    return max(0.10, min(1.0, 0.10 + ((value - soft_min) / (target_min - soft_min)) * 0.90))
+    return max(0.10, min(1.0, 0.10 + ((number - soft_min) / (target_min - soft_min)) * 0.90))
 
 
 def _linear_max_score(value: Optional[float], target_max: float, soft_max: float) -> Optional[float]:
-    if value is None:
+    number = _safe_float(value)
+    if number is None:
         return None
-    if value <= target_max:
+    if number <= target_max:
         return 1.0
-    if value >= soft_max:
+    if number >= soft_max:
         return 0.10
-    return max(0.10, min(1.0, 1.0 - ((value - target_max) / (soft_max - target_max)) * 0.90))
+    return max(0.10, min(1.0, 1.0 - ((number - target_max) / (soft_max - target_max)) * 0.90))
 
 
 def _fundamental_quality_score(inputs: HisseInputs) -> float:
@@ -821,19 +836,24 @@ def _fundamental_quality_score(inputs: HisseInputs) -> float:
 def _relative_gap(reference_value: Optional[float], compared_value: Optional[float]) -> Optional[float]:
     reference = _safe_float(reference_value)
     compared = _safe_float(compared_value)
-    if reference is None or compared is None or reference <= 0 or compared <= 0:
+    if reference is None:
+        return None
+    if compared is None:
+        return None
+    if reference <= 0 or compared <= 0:
         return None
     return abs(compared - reference) / reference
 
 
 def _anchor_gap_score(gap: Optional[float], max_gap: float) -> Optional[float]:
-    if gap is None:
+    gap_value = _safe_float(gap)
+    if gap_value is None:
         return None
-    if gap <= 0.15:
+    if gap_value <= 0.15:
         return 1.0
-    if gap >= max_gap:
+    if gap_value >= max_gap:
         return 0.10
-    return max(0.10, 1.0 - ((gap - 0.15) / (max_gap - 0.15)) * 0.90)
+    return max(0.10, 1.0 - ((gap_value - 0.15) / (max_gap - 0.15)) * 0.90)
 
 
 def _anchor_consistency_score(
@@ -844,10 +864,12 @@ def _anchor_consistency_score(
     scores: list[tuple[float, float]] = []
     price_score = _anchor_gap_score(_relative_gap(price, fair_value), MAX_PRICE_ANCHOR_GAP)
     analyst_score = _anchor_gap_score(_relative_gap(analyst_target, fair_value), MAX_ANALYST_ANCHOR_GAP)
-    if price_score is not None:
-        scores.append((price_score, 0.60))
-    if analyst_score is not None:
-        scores.append((analyst_score, 0.40))
+    price_score_number = _safe_float(price_score)
+    analyst_score_number = _safe_float(analyst_score)
+    if price_score_number is not None:
+        scores.append((price_score_number, 0.60))
+    if analyst_score_number is not None:
+        scores.append((analyst_score_number, 0.40))
     if not scores:
         return 0.50
     total_weight = sum(weight for _, weight in scores)
@@ -861,6 +883,7 @@ def _publication_decision(
     data_score: float,
     anchor_score: float,
 ) -> tuple[bool, str, str]:
+    confidence_number = _safe_float(confidence)
     if fair_value is None or model_count == 0:
         return False, STATUS_UNPUBLISHABLE, "gecerli_model_yok"
     if model_count < MIN_PUBLISHABLE_MODELS:
@@ -869,7 +892,7 @@ def _publication_decision(
         return False, STATUS_REVIEW, "veri_tamligi_dusuk"
     if anchor_score < MIN_PUBLISHABLE_ANCHOR_SCORE:
         return False, STATUS_REVIEW, "piyasa_konsensus_uyumsuzlugu"
-    if confidence is None or confidence < MIN_PUBLISHABLE_CONFIDENCE:
+    if confidence_number is None or confidence_number < MIN_PUBLISHABLE_CONFIDENCE:
         return False, STATUS_REVIEW, "guven_dusuk"
     return True, STATUS_PUBLISHABLE, "yeterli_kanit"
 
@@ -1089,15 +1112,21 @@ def _apply_signal_font_colors(ws, columns: Sequence[str], header_row: int, row_c
             _apply_threshold_font_color(cell, cell.value, threshold)
 
 
-def _ensure_sheet(workbook, sheet_name: str):
-    if sheet_name in workbook.sheetnames:
-        return workbook[sheet_name]
-    return workbook.create_sheet(sheet_name)
+def _ensure_sheet(workbook, sheet_name: str) -> Worksheet:
+    worksheet = _worksheet(workbook, sheet_name)
+    if worksheet is not None:
+        return worksheet
+    created_sheet = workbook.create_sheet(sheet_name)
+    if isinstance(created_sheet, Worksheet):
+        return created_sheet
+    raise TypeError(f"Unsupported worksheet type for {sheet_name}")
 
 
 def _build_empty_report_workbook():
     workbook = Workbook()
-    workbook.remove(workbook.active)
+    active_sheet = workbook.active
+    if active_sheet is not None:
+        workbook.remove(active_sheet)
     for sheet_name in OUTPUT_SHEETS:
         workbook.create_sheet(sheet_name)
     return workbook
@@ -1109,6 +1138,15 @@ def _load_or_create_report_workbook(template_path: Path):
     return _build_empty_report_workbook()
 
 
+def _worksheet(workbook, sheet_name: str) -> Optional[Worksheet]:
+    if sheet_name not in workbook.sheetnames:
+        return None
+    worksheet = workbook[sheet_name]
+    if isinstance(worksheet, Worksheet):
+        return worksheet
+    return None
+
+
 def _keep_only_sheets(workbook, sheet_names: Sequence[str]) -> None:
     keep = set(sheet_names)
     for sheet_name in tuple(workbook.sheetnames):
@@ -1116,14 +1154,20 @@ def _keep_only_sheets(workbook, sheet_names: Sequence[str]) -> None:
             del workbook[sheet_name]
     for target_index, sheet_name in enumerate(sheet_names):
         current_index = workbook.sheetnames.index(sheet_name)
-        workbook.move_sheet(workbook[sheet_name], offset=target_index - current_index)
+        worksheet = _worksheet(workbook, sheet_name)
+        if worksheet is None:
+            continue
+        workbook.move_sheet(worksheet, offset=target_index - current_index)
 
 
 def _load_template_index_map(template_path: Path) -> dict[str, str]:
     if not template_path.exists():
         return {}
     workbook = load_workbook(template_path, data_only=False)
-    ws = workbook[SHEET_ENDEKS]
+    ws = _worksheet(workbook, SHEET_ENDEKS)
+    if ws is None:
+        workbook.close()
+        return {}
     index_map: dict[str, str] = {}
     for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=3, values_only=True):
         code = row[0]
@@ -1361,35 +1405,43 @@ def _clamp_score(value: float) -> float:
 
 
 def _score_band(value: Optional[float], rule: dict[str, Any]) -> Optional[float]:
-    if value is None:
+    number = _safe_float(value)
+    if number is None:
         return None
     soft_min = _safe_float(rule.get("soft_min"))
     target_min = _safe_float(rule.get("target_min"))
     target_max = _safe_float(rule.get("target_max"))
     soft_max = _safe_float(rule.get("soft_max"))
-    if None in (soft_min, target_min, target_max, soft_max):
+    if soft_min is None or target_min is None or target_max is None or soft_max is None:
         return None
-    if value <= soft_min or value >= soft_max:
+    soft_min_value = float(soft_min)
+    target_min_value = float(target_min)
+    target_max_value = float(target_max)
+    soft_max_value = float(soft_max)
+    if number <= soft_min_value or number >= soft_max_value:
         return 0.0
-    if target_min <= value <= target_max:
+    if target_min_value <= number <= target_max_value:
         return 1.0
-    if value < target_min:
-        return _clamp_score((value - soft_min) / (target_min - soft_min))
-    return _clamp_score((soft_max - value) / (soft_max - target_max))
+    if number < target_min_value:
+        return _clamp_score((number - soft_min_value) / (target_min_value - soft_min_value))
+    return _clamp_score((soft_max_value - number) / (soft_max_value - target_max_value))
 
 
 def _score_min(value: Optional[float], rule: dict[str, Any]) -> Optional[float]:
-    if value is None:
+    number = _safe_float(value)
+    if number is None:
         return None
     soft_min = _safe_float(rule.get("soft_min"))
     target_min = _safe_float(rule.get("target_min"))
-    if None in (soft_min, target_min):
+    if soft_min is None or target_min is None:
         return None
-    if value <= soft_min:
+    soft_min_value = float(soft_min)
+    target_min_value = float(target_min)
+    if number <= soft_min_value:
         return 0.0
-    if value >= target_min:
+    if number >= target_min_value:
         return 1.0
-    return _clamp_score((value - soft_min) / (target_min - soft_min))
+    return _clamp_score((number - soft_min_value) / (target_min_value - soft_min_value))
 
 
 def _metric_score(value: Optional[float], rule: dict[str, Any]) -> Optional[float]:
@@ -1544,10 +1596,7 @@ def _market_key_from_symbol(symbol: str) -> str:
 def _quality_status(
     filtered_value: Optional[float],
     adjusted_weight: float,
-    model_key: str,
-    retained_keys: set[str],
 ) -> str:
-    del model_key, retained_keys
     if filtered_value is None:
         return QUALITY_STATUS_FILTERED
     if adjusted_weight <= 0:
@@ -1569,7 +1618,7 @@ def _quality_row(
     filtered_value = filtered_values.get(model_key)
     adjusted_weight = adjusted_weights.get(model_key, 0.0)
     included_in_fair_value = model_key in retained_keys and adjusted_weight > 0
-    status = _quality_status(filtered_value, adjusted_weight, model_key, retained_keys)
+    status = _quality_status(filtered_value, adjusted_weight)
     fundamental_score = _fundamental_quality_score(inputs)
     return {
         QUALITY_CODE: inputs.code,
@@ -1577,7 +1626,7 @@ def _quality_row(
         QUALITY_RAW_VALUE: _round_or_none(raw_values.get(model_key)),
         QUALITY_FILTERED_VALUE: _round_or_none(filtered_value),
         QUALITY_STATUS: status,
-        QUALITY_REASON: _model_value_reason(raw_values.get(model_key), filtered_value, inputs.price),
+        QUALITY_REASON: model_value_reason(raw_values.get(model_key), filtered_value, inputs.price),
         QUALITY_WEIGHT_PROFILE: weight_profile,
         QUALITY_BASE_WEIGHT: _round_or_none(base_weights.get(model_key, 0.0), 4),
         QUALITY_ADJUSTED_WEIGHT: _round_or_none(adjusted_weight, 4),
@@ -1620,7 +1669,7 @@ def build_rasyo_frame(ratio_frame: pd.DataFrame, endeks_frame: pd.DataFrame) -> 
         market_key = _market_key_from_symbol(raw_symbol)
         if not sector_name and bool(row.get("Finansal Sektor")):
             sector_name = "Banka"
-        profile_name = _weight_profile_for_sector(sector_name)
+        profile_name = weight_profile_for_sector(sector_name)
         summaries.append(_ratio_score_summary(row, profile_name, market_key))
 
     renamed[RASYO_PROFILE] = [summary.profile_name for summary in summaries]
@@ -1769,12 +1818,15 @@ def _terminal_value_per_share(
 ) -> Optional[float]:
     if discount_rate is None or terminal_growth is None:
         return None
-    numerator = base_value * (1 + terminal_growth) if base_value is not None else None
-    total_value = _safe_divide(numerator, discount_rate - terminal_growth)
+    discount_rate_value = float(discount_rate)
+    terminal_growth_value = float(terminal_growth)
+    base_value_number = _safe_float(base_value)
+    numerator = base_value_number * (1 + terminal_growth_value) if base_value_number is not None else None
+    total_value = _safe_divide(numerator, discount_rate_value - terminal_growth_value)
     return _safe_divide(total_value, paid_in_capital)
 
 
-def _raw_valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str, Optional[float]]:
+def raw_valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str, Optional[float]]:
     book_value_per_share = _safe_divide(inputs.equity, inputs.paid_in_capital)
     enterprise_value = None
     if inputs.ebitda is not None and inputs.sector_ev_ebitda is not None:
@@ -1831,21 +1883,24 @@ def _raw_valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[
 
 
 def _valuation_points(inputs: HisseInputs, macro_rates: MacroRates) -> dict[str, Optional[float]]:
-    raw_values = _raw_valuation_points(inputs, macro_rates)
+    raw_values = raw_valuation_points(inputs, macro_rates)
     return sanity_checked_valuation_points(raw_values, inputs.price)
 
 
-def _hisse_output_row(inputs: HisseInputs, values: dict[str, Optional[float]]) -> dict[str, Any]:
-    weight_profile = _weight_profile_for_sector(inputs.sector_name)
+def hisse_output_row(inputs: HisseInputs, values: dict[str, Optional[float]]) -> dict[str, Any]:
+    weight_profile = weight_profile_for_sector(inputs.sector_name)
     summary = valuation_summary(values, inputs, weight_profile)
     fundamental_score = _fundamental_quality_score(inputs)
     avg_fair = summary.fair_value
     gp_pct = None
-    if avg_fair is not None and inputs.price not in (None, 0):
-        gp_pct = (avg_fair - inputs.price) / inputs.price
+    price_value = _safe_float(inputs.price)
+    avg_fair_value = _safe_float(avg_fair)
+    if avg_fair_value is not None and price_value is not None and price_value != 0:
+        gp_pct = (avg_fair_value - price_value) / price_value
     analyst_gp_pct = None
-    if inputs.analyst_target is not None and inputs.price not in (None, 0):
-        analyst_gp_pct = (inputs.analyst_target - inputs.price) / inputs.price
+    analyst_target_value = _safe_float(inputs.analyst_target)
+    if analyst_target_value is not None and price_value is not None and price_value != 0:
+        analyst_gp_pct = (analyst_target_value - price_value) / price_value
     return {
         CODE_COLUMN: inputs.code,
         SECTOR_COLUMN: inputs.sector_name,
@@ -1884,7 +1939,7 @@ def build_hisse_frame(
         inputs = _hisse_inputs(ticker, lookups)
         macro_rates = macro_rate_book.for_ticker(ticker)
         values = _valuation_points(inputs, macro_rates)
-        rows.append(_hisse_output_row(inputs, values))
+        rows.append(hisse_output_row(inputs, values))
     return pd.DataFrame(rows, columns=_column_index(HISSE_COLUMNS))
 
 
@@ -1905,9 +1960,9 @@ def build_quality_frame(
     for ticker in tickers:
         inputs = _hisse_inputs(ticker, lookups)
         macro_rates = macro_rate_book.for_ticker(ticker)
-        raw_values = _raw_valuation_points(inputs, macro_rates)
+        raw_values = raw_valuation_points(inputs, macro_rates)
         filtered_values = sanity_checked_valuation_points(raw_values, inputs.price)
-        weight_profile = _weight_profile_for_sector(inputs.sector_name)
+        weight_profile = weight_profile_for_sector(inputs.sector_name)
         summary = valuation_summary(filtered_values, inputs, weight_profile)
         base_weights = resolve_valuation_weight_map(VALUATION_PROFILE_CONFIG, weight_profile, inputs.market_key)
         adjusted_weights = _adjusted_model_weights(filtered_values, inputs, weight_profile)
