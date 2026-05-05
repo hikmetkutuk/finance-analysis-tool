@@ -1004,17 +1004,36 @@ def _copy_cell_style(source, target) -> None:
     target.number_format = source.number_format
 
 
+def _set_font_color(cell, color: str) -> None:
+    font = copy(cell.font)
+    font.color = color
+    cell.font = font
+
+
 def _align_hisse_column_styles(ws, columns: Sequence[str], header_row: int, row_count: int) -> None:
     headers = {column_name: index for index, column_name in enumerate(columns, start=1)}
     first_data_row = header_row + 1
     last_data_row = header_row + row_count
     data_style_column = headers.get("D1", 1)
+    result_header_style_column = headers.get(HISSE_AVERAGE, data_style_column)
+    result_columns = (
+        HISSE_AVERAGE,
+        HISSE_UPSIDE,
+        HISSE_ANALYST_TARGET,
+        HISSE_ANALYST_UPSIDE,
+        HISSE_CONFIDENCE,
+        HISSE_FUNDAMENTAL_QUALITY,
+        HISSE_MODEL_COUNT,
+        HISSE_STATUS,
+        HISSE_STATUS_NOTE,
+    )
 
-    for column_name in (HISSE_RATIO, HISSE_ANALYST_TARGET, HISSE_UPSIDE, HISSE_ANALYST_UPSIDE, HISSE_CONFIDENCE, HISSE_MODEL_COUNT):
+    for column_name in (HISSE_RATIO,) + result_columns:
         column_index = headers.get(column_name)
         if column_index is None or column_index <= 1:
             continue
-        _copy_cell_style(ws.cell(row=header_row, column=column_index - 1), ws.cell(row=header_row, column=column_index))
+        header_style_column = result_header_style_column if column_name in result_columns else column_index - 1
+        _copy_cell_style(ws.cell(row=header_row, column=header_style_column), ws.cell(row=header_row, column=column_index))
         for row_index in range(first_data_row, last_data_row + 1):
             _copy_cell_style(ws.cell(row=row_index, column=data_style_column), ws.cell(row=row_index, column=column_index))
 
@@ -1080,18 +1099,63 @@ def _apply_hisse_number_formats(ws, columns: Sequence[str], header_row: int, row
     _apply_number_format_to_columns(ws, headers, percent_columns, PERCENT_NUMBER_FORMAT, first_data_row, last_data_row)
     _apply_number_format_to_columns(ws, headers, (HISSE_MODEL_COUNT,), "0", first_data_row, last_data_row)
 
-    affected_columns = _existing_column_indexes(
-        headers,
-        ("D12", HISSE_AVERAGE, HISSE_RATIO, HISSE_UPSIDE, HISSE_ANALYST_UPSIDE, HISSE_CONFIDENCE, HISSE_FUNDAMENTAL_QUALITY),
-    )
+    affected_columns = _existing_column_indexes(headers, columns)
     _remove_conditional_formatting_for_columns(ws, affected_columns)
 
 
 def _apply_threshold_font_color(cell, value: Any, threshold: float) -> None:
-    font = copy(cell.font)
     number = _safe_float(value)
-    font.color = GREEN_FONT_COLOR if number is not None and number > threshold else RED_FONT_COLOR
-    cell.font = font
+    _set_font_color(cell, GREEN_FONT_COLOR if number is not None and number > threshold else RED_FONT_COLOR)
+
+
+def _apply_relative_valuation_font_color(cell, value: Any, reference_value: Any) -> None:
+    number = _safe_float(value)
+    reference = _safe_float(reference_value)
+    is_below_sector = number is not None and reference is not None and number <= reference
+    _set_font_color(cell, GREEN_FONT_COLOR if is_below_sector else RED_FONT_COLOR)
+
+
+def _sector_metric_lookup(sektor_frame: pd.DataFrame, metric_name: str) -> dict[str, Optional[float]]:
+    if sektor_frame.empty or SECTOR_COLUMN not in sektor_frame.columns or metric_name not in sektor_frame.columns:
+        return {}
+    lookup: dict[str, Optional[float]] = {}
+    for _, row in sektor_frame.iterrows():
+        sector_name = str(row.get(SECTOR_COLUMN, "") or "").strip()
+        if not sector_name:
+            continue
+        lookup[sector_name] = _safe_float(row.get(metric_name))
+    return lookup
+
+
+def _apply_hisse_default_font_colors(ws, columns: Sequence[str], header_row: int, row_count: int) -> None:
+    for row_index in range(header_row + 1, header_row + row_count + 1):
+        for column_index in range(1, len(columns) + 1):
+            _set_font_color(ws.cell(row=row_index, column=column_index), DEFAULT_FONT_COLOR)
+
+
+def _apply_relative_valuation_font_colors(
+    ws,
+    columns: Sequence[str],
+    header_row: int,
+    row_count: int,
+    sektor_frame: pd.DataFrame,
+) -> None:
+    headers = {column_name: index for index, column_name in enumerate(columns, start=1)}
+    sector_column_index = headers.get(SECTOR_COLUMN)
+    pe_column_index = headers.get(HISSE_PE)
+    pb_column_index = headers.get(HISSE_PB)
+    if sector_column_index is None:
+        return
+    sector_pe_lookup = _sector_metric_lookup(sektor_frame, SECTOR_PE)
+    sector_pb_lookup = _sector_metric_lookup(sektor_frame, SECTOR_PB)
+    for row_index in range(header_row + 1, header_row + row_count + 1):
+        sector_name = str(ws.cell(row=row_index, column=sector_column_index).value or "").strip()
+        if pe_column_index is not None:
+            pe_cell = ws.cell(row=row_index, column=pe_column_index)
+            _apply_relative_valuation_font_color(pe_cell, pe_cell.value, sector_pe_lookup.get(sector_name))
+        if pb_column_index is not None:
+            pb_cell = ws.cell(row=row_index, column=pb_column_index)
+            _apply_relative_valuation_font_color(pb_cell, pb_cell.value, sector_pb_lookup.get(sector_name))
 
 
 def _apply_signal_font_colors(ws, columns: Sequence[str], header_row: int, row_count: int) -> None:
@@ -2068,6 +2132,8 @@ def write_template_report(
     _align_hisse_column_styles(ws_hisse, HISSE_COLUMNS, header_row=2, row_count=len(hisse_frame))
     _apply_header_comments(ws_hisse, HISSE_COLUMNS, HISSE_HEADER_COMMENTS, header_row=2)
     _apply_hisse_number_formats(ws_hisse, HISSE_COLUMNS, header_row=2, row_count=len(hisse_frame))
+    _apply_hisse_default_font_colors(ws_hisse, HISSE_COLUMNS, header_row=2, row_count=len(hisse_frame))
+    _apply_relative_valuation_font_colors(ws_hisse, HISSE_COLUMNS, header_row=2, row_count=len(hisse_frame), sektor_frame=sektor_frame)
     _apply_signal_font_colors(ws_hisse, HISSE_COLUMNS, header_row=2, row_count=len(hisse_frame))
 
     _keep_only_sheets(workbook, OUTPUT_SHEETS)

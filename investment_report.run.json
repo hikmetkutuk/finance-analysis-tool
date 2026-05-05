@@ -1,23 +1,23 @@
 {
-  "elapsed_seconds": 1.39,
-  "financial_rows": 8,
+  "elapsed_seconds": 16.6,
+  "financial_rows": 4,
   "financials_workers": 4,
-  "finished_at": "2026-05-03T19:11:50.813564+00:00",
-  "git_revision": "728276d626e14caaa6764b4ec2ec4c7f8966d84f",
+  "finished_at": "2026-05-05T07:44:32.879762+00:00",
+  "git_revision": "227329e5b4520e6a697d25327530b849b3c7dae3",
   "include_backtest": true,
   "input_path": "test.txt",
   "log_path": "logs/investment_report.log",
-  "macro_config_as_of": "2026-05-03",
+  "macro_config_as_of": "2026-05-05",
   "market_counts": {
-    "tr": 8,
+    "tr": 4,
     "us": 0
   },
   "metadata_path": "investment_report.run.json",
   "output_path": "investment_report.xlsx",
   "platform": "macOS-26.3.1-arm64-arm-64bit",
-  "python_version": "3.12.0",
-  "ratio_rows": 8,
-  "started_at": "2026-05-03T19:11:49.384672+00:00",
-  "tickers_total": 8,
-  "valuation_rows": 8
+  "python_version": "3.9.6",
+  "ratio_rows": 4,
+  "started_at": "2026-05-05T07:44:16.261166+00:00",
+  "tickers_total": 4,
+  "valuation_rows": 4
 }

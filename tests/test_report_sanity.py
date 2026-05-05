@@ -11,14 +11,19 @@ from data.sector_profile_config import load_sector_profile_config
 from data.valuation_profile_config import load_valuation_profile_config, resolve_valuation_weight_map
 from reporting.template_report import (
     CODE_COLUMN,
+    GREEN_FONT_COLOR,
+    HISSE_PE,
+    HISSE_PB,
     HisseInputs,
     INA_VALUE_COLUMN,
     MacroRates,
+    RED_FONT_COLOR,
     RASYO_COVERAGE,
     RASYO_PROFILE,
     RASYO_SCORE,
     RASYO_SCORE_100,
     RASYO_VALUATION_SCORE,
+    SHEET_HISSE,
     SHEET_KALITE,
     PUAN_GROSS_MARGIN,
     PUAN_REVENUE,
@@ -39,6 +44,20 @@ from reporting.template_report import (
     weight_profile_for_sector,
     write_template_report,
 )
+
+
+def _font_rgb(cell) -> str:
+    color = cell.font.color
+    return str(color.rgb) if color is not None and color.type == "rgb" else ""
+
+
+def _worksheet_headers(ws, header_row: int) -> dict[str, int]:
+    headers: dict[str, int] = {}
+    for column_index in range(1, ws.max_column + 1):
+        value = ws.cell(row=header_row, column=column_index).value
+        if isinstance(value, str):
+            headers[value] = column_index
+    return headers
 
 
 def test_financials_row_includes_assets_revenue_gross_margin_and_total_debt() -> None:
@@ -227,6 +246,45 @@ def test_write_template_report_creates_workbook_when_template_is_missing(tmp_pat
     assert output_path.exists()
     workbook = load_workbook(output_path, read_only=True)
     assert SHEET_KALITE in workbook.sheetnames
+    workbook.close()
+
+
+def test_hisse_pe_and_pb_colors_compare_against_sector_medians(tmp_path) -> None:
+    output_path = tmp_path / "report.xlsx"
+    missing_template = tmp_path / "missing_template.xlsx"
+    valuation_frame = pd.DataFrame(
+        [
+            {CODE_COLUMN: "LOW", "Sektör": "Teknoloji", "Güncel Fiyat": 100.0},
+            {CODE_COLUMN: "HIGH", "Sektör": "Teknoloji", "Güncel Fiyat": 100.0},
+        ]
+    )
+    financials_frame = pd.DataFrame(
+        [
+            {"Symbol": "LOW", "P/E": 8.0, "P/B": 1.0, "EPS": 10.0, "Shareholders' Equity": 100.0, "Paid-in Capital": 10.0},
+            {"Symbol": "HIGH", "P/E": 12.0, "P/B": 2.0, "EPS": 10.0, "Shareholders' Equity": 100.0, "Paid-in Capital": 10.0},
+        ]
+    )
+
+    write_template_report(
+        output_path=str(output_path),
+        tickers=["LOW", "HIGH"],
+        valuation_frame=valuation_frame,
+        financials_frame=financials_frame,
+        dcf_frame=pd.DataFrame(),
+        ratio_frame=pd.DataFrame(),
+        template_path=missing_template,
+    )
+
+    workbook = load_workbook(output_path)
+    ws = workbook[SHEET_HISSE]
+    headers = _worksheet_headers(ws, header_row=2)
+    pe_column = headers[HISSE_PE]
+    pb_column = headers[HISSE_PB]
+
+    assert _font_rgb(ws.cell(row=3, column=pe_column)) == GREEN_FONT_COLOR
+    assert _font_rgb(ws.cell(row=3, column=pb_column)) == GREEN_FONT_COLOR
+    assert _font_rgb(ws.cell(row=4, column=pe_column)) == RED_FONT_COLOR
+    assert _font_rgb(ws.cell(row=4, column=pb_column)) == RED_FONT_COLOR
     workbook.close()
 
 
