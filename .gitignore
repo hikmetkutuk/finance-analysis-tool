@@ -1,7 +1,37 @@
-*.xlsx
-*.csv
-.idea/
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
-.cache/
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
 .venv/
+venv/
+env/
+
+# ── Project data / cache ──────────────────────────────────────────────────────
+.cache/
+data/valuation_history.db
+logs/
+*.xlsx
+*.csv
+*.run.json
+
+# ── UI (React / Node) ─────────────────────────────────────────────────────────
+ui/node_modules/
+ui/dist/
+
+# ── IDE / OS ──────────────────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example

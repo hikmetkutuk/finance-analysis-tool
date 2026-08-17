@@ -1,4 +1,6 @@
 yfinance
 pandas
 openpyxl
+flask
+flask-cors
 pytest>=8.4.2
