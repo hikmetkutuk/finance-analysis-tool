@@ -229,5 +229,6 @@ def _startup() -> None:
 
 
 if __name__ == "__main__":
+    import os
     _startup()
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host=os.environ.get("FLASK_HOST", "127.0.0.1"), port=5000, debug=False)

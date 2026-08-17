@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5001:5000"
+    volumes:
+      - app-data:/app/data
+      - app-cache:/app/.cache
+      - app-logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_HOST=0.0.0.0
+
+volumes:
+  app-data:
+  app-cache:
+  app-logs:
