@@ -9,7 +9,6 @@ import platform
 import subprocess
 import sys
 import time
-from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Optional
 
 import pandas as pd
@@ -113,39 +112,6 @@ def attach_dcf_professional_value(dcf_frame: pd.DataFrame, valuation_frame: pd.D
         valuation_lookup.set_index(CODE_COLUMN)[VALUATION_DCF_COLUMN]
     )
     return enriched
-
-
-def format_tr_numeric(value: Any) -> Any:
-    if value is None or pd.isna(value):
-        return ""
-    try:
-        decimal_value = Decimal(str(value))
-    except (InvalidOperation, ValueError, TypeError):
-        return value
-
-    sign = "-" if decimal_value < 0 else ""
-    decimal_value = abs(decimal_value)
-    text = format(decimal_value, "f")
-    if "." in text:
-        text = text.rstrip("0").rstrip(".")
-    integer_part, dot, fractional_part = text.partition(".")
-    try:
-        grouped_integer = f"{int(integer_part):,}".replace(",", ".")
-    except ValueError:
-        grouped_integer = integer_part
-    if dot and fractional_part:
-        return f"{sign}{grouped_integer},{fractional_part}"
-    return f"{sign}{grouped_integer}"
-
-
-def format_frame_for_tr_display(frame: pd.DataFrame) -> pd.DataFrame:
-    display_frame = frame.copy()
-    for column_name in display_frame.columns:
-        series = display_frame[column_name]
-        if not pd.api.types.is_numeric_dtype(series):
-            continue
-        display_frame[column_name] = series.apply(format_tr_numeric)
-    return display_frame
 
 
 def _default_log_path(output_path: str) -> Path:

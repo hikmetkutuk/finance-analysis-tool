@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import time
-from decimal import Decimal, InvalidOperation
 from statistics import pstdev
 from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
-from openpyxl.utils import get_column_letter
 
 from data.macro_config import load_macro_config
 from data.market_data_provider import fetch_ticker_bundle, normalized_info, validate_bundle
@@ -556,62 +554,3 @@ def run_valuation(tickers: list[str]) -> list[Dict[str, Any]]:
         if TICKER_DELAY_SECONDS > 0:
             time.sleep(TICKER_DELAY_SECONDS)
     return results
-
-
-def save_results(results: list[Dict[str, Any]]) -> None:
-    if not results:
-        print("⚠️ sonuç yok")
-        return
-    result_frame = pd.DataFrame(results)
-    ordered_columns = [column for column in result_frame.columns if column != AVERAGE_FAIR_PRICE_LABEL]
-    ordered_columns.append(AVERAGE_FAIR_PRICE_LABEL)
-    result_frame = result_frame[ordered_columns]
-    display_frame = format_frame_for_tr_display(result_frame)
-    with pd.ExcelWriter("valuation.xlsx", engine="openpyxl") as writer:
-        display_frame.to_excel(writer, sheet_name="Valuation", index=False)
-        worksheet = writer.sheets["Valuation"]
-        for column_index, column_name in enumerate(display_frame.columns, start=1):
-            series = display_frame[column_name]
-            lengths = [len(str(column_name))]
-            lengths.extend(len(str(value)) for value in series.dropna().head(100))
-            worksheet.column_dimensions[get_column_letter(column_index)].width = min(40, max(12, max(lengths) + 2))
-    print("✅ yazıldı → valuation.xlsx")
-
-
-def format_tr_numeric(value: Any) -> Any:
-    if value is None or pd.isna(value):
-        return ""
-    try:
-        decimal_value = Decimal(str(value))
-    except (InvalidOperation, ValueError, TypeError):
-        return value
-    sign = "-" if decimal_value < 0 else ""
-    decimal_value = abs(decimal_value)
-    text = format(decimal_value, "f")
-    if "." in text:
-        text = text.rstrip("0").rstrip(".")
-    integer_part, dot, fractional_part = text.partition(".")
-    try:
-        grouped_integer = f"{int(integer_part):,}".replace(",", ".")
-    except ValueError:
-        grouped_integer = integer_part
-    if dot and fractional_part:
-        return f"{sign}{grouped_integer},{fractional_part}"
-    return f"{sign}{grouped_integer}"
-
-
-def format_frame_for_tr_display(frame: pd.DataFrame) -> pd.DataFrame:
-    display_frame = frame.copy()
-    for column_name in display_frame.columns:
-        series = display_frame[column_name]
-        if not pd.api.types.is_numeric_dtype(series):
-            continue
-        display_frame[column_name] = series.apply(format_tr_numeric)
-    return display_frame
-
-
-if __name__ == "__main__":
-    coverage_file = "coverage.txt"
-    ticker_list = load_tickers(coverage_file)
-    valuation_results = run_valuation(ticker_list)
-    save_results(valuation_results)
