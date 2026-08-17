@@ -117,7 +117,6 @@ export default function PortfolioTable({ stocks, selected, onSelect }: Readonly<
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-      {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800">
         <input
           type="text"
@@ -130,7 +129,6 @@ export default function PortfolioTable({ stocks, selected, onSelect }: Readonly<
         <span className="text-xs text-slate-500">{sorted.length} hisse</span>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>

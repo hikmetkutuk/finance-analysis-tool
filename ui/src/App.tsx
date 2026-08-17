@@ -48,12 +48,12 @@ export default function App() {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [fetchPortfolio, fetchStatus])
 
-  // Keep selected in sync if portfolio refreshes
+  const selectedKod = selected?.Kod
   useEffect(() => {
-    if (!selected) return
-    const updated = stocks.find(s => s.Kod === selected.Kod)
+    if (!selectedKod) return
+    const updated = stocks.find(s => s.Kod === selectedKod)
     if (updated) setSelected(updated)
-  }, [stocks]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stocks, selectedKod])
 
   const handleRefresh = async () => {
     try {
@@ -107,7 +107,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Header */}
       <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -141,7 +140,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Refresh progress bar */}
         {refreshState.running && (
           <div className="h-0.5 bg-slate-800 overflow-hidden">
             <div className="h-full bg-emerald-500 animate-[progress_2s_ease-in-out_infinite]"
@@ -150,7 +148,6 @@ export default function App() {
         )}
       </header>
 
-      {/* Body */}
       <main className="flex-1 max-w-screen-2xl mx-auto w-full px-4 py-4 flex flex-col gap-4">
         {mainContent()}
       </main>

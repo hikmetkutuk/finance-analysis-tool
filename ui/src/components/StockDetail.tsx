@@ -223,7 +223,6 @@ export default function StockDetail({ stock, onClose }: Readonly<Props>) {
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
         <div className="flex items-center gap-4">
           <div>
@@ -293,7 +292,6 @@ export default function StockDetail({ stock, onClose }: Readonly<Props>) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-5">
         {tab === 'chart' ? (
           <ChartTab loadingChart={loadingChart} chartData={chartData} fairValue={fairValue} />

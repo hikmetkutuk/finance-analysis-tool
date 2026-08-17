@@ -13,7 +13,6 @@ import yfinance as yf
 from flask import Flask, jsonify
 from flask_cors import CORS
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
 BACKEND_DIR = Path(__file__).parent
 PROJECT_ROOT = BACKEND_DIR.parent
 UI_DIST = PROJECT_ROOT / "ui" / "dist"
@@ -27,7 +26,6 @@ from valuation import load_tickers, run_valuation  # noqa: E402
 app = Flask(__name__, static_folder=str(UI_DIST), static_url_path="")  # NOSONAR
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
 
-# ── State ─────────────────────────────────────────────────────────────────────
 _lock = threading.Lock()
 _state: dict[str, Any] = {"running": False, "last_updated": None, "error": None}
 _portfolio: list[dict] = []
@@ -36,13 +34,9 @@ _price_cache: dict[str, dict] = {}
 PRICE_CACHE_TTL_SEC = 3600
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
-
-# ── Database ──────────────────────────────────────────────────────────────────
 
 def init_db() -> None:
     DB_PATH.parent.mkdir(exist_ok=True)
@@ -115,8 +109,6 @@ def _load_latest_from_db() -> tuple[list[dict], str | None]:
     return results, last_updated
 
 
-# ── Background refresh ────────────────────────────────────────────────────────
-
 def _do_refresh() -> None:
     global _portfolio
     try:
@@ -144,8 +136,6 @@ def start_refresh() -> bool:
     threading.Thread(target=_do_refresh, daemon=True).start()
     return True
 
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.route("/api/portfolio", methods=["GET"])
 def get_portfolio():
@@ -216,7 +206,6 @@ def get_macro():
     return jsonify(json.loads(MACRO_FILE.read_text(encoding="utf-8")))
 
 
-# Serve built React app in production
 @app.route("/", defaults={"path": ""}, methods=["GET"])
 @app.route("/<path:path>", methods=["GET"])
 def serve_react(path: str):
@@ -224,8 +213,6 @@ def serve_react(path: str):
         return app.send_static_file(path)
     return app.send_static_file("index.html")
 
-
-# ── Startup ───────────────────────────────────────────────────────────────────
 
 def _startup() -> None:
     global _portfolio
