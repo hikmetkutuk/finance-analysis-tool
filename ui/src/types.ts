@@ -48,3 +48,5 @@ export interface PricePoint {
 
 export type SortKey = keyof Stock
 export type SortDir = 'asc' | 'desc'
+export type Market = 'us' | 'bist'
+export type Lang = 'tr' | 'en'

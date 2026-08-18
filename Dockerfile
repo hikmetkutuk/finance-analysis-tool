@@ -24,6 +24,8 @@ COPY main.py        ./
 COPY ratio.py       ./
 
 COPY coverage.txt           ./
+COPY tickers.txt            ./
+COPY hisseler.txt           ./
 COPY macro_config.json      ./
 COPY ratio_profiles.json    ./
 COPY sector_profiles.json   ./

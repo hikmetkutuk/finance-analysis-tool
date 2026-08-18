@@ -29,7 +29,7 @@ DEPRECIATION_FIELDS = ["Depreciation And Amortization", "Depreciation"]
 CAPEX_FIELDS = ["Capital Expenditures"]
 RECEIVABLE_FIELDS = ["Accounts Receivable", "Total Receivables"]
 INVENTORY_FIELDS = ["Inventory", "Inventories"]
-LIABILITY_FIELDS = ["Total Liabilities", "Total Liabilities Net Minority Interest"]
+LIABILITY_FIELDS = ["Current Liabilities", "Total Current Liabilities"]
 NET_INCOME_FIELDS = ["Net Income", "Net Income Applicable to Common Shares"]
 
 TICKER_PROCESSING_ERRORS = (
@@ -387,18 +387,22 @@ def calculate_financial_fair_value(info: Dict[str, Optional[float]], params: Dic
     return sum(values) / len(values)
 
 
-def applicable_valuation_keys(is_financial: bool) -> list[str]:
+def applicable_valuation_keys(is_financial: bool, is_turkish: bool = True) -> list[str]:
+    tr_only = ["fv_efk", "fv_ndk", "fv_graham"]
     if is_financial:
-        return ["fv_fk", "fv_financial", "fv_ddm", "fv_efk", "fv_ndk", "fv_graham"]
-    return ["fv_dcf", "fv_fk", "fv_ev", "fv_ddm", "fv_efk", "fv_ndk", "fv_graham"]
+        base = ["fv_fk", "fv_financial", "fv_ddm"]
+    else:
+        base = ["fv_dcf", "fv_fk", "fv_ev", "fv_ddm"]
+    return base + tr_only if is_turkish else base
 
 
 def compute_signal_quality_score(
     valuations: Dict[str, Optional[float]],
     warnings: list[str],
     is_financial: bool,
+    is_turkish: bool = True,
 ) -> Tuple[int, str]:
-    keys = applicable_valuation_keys(is_financial)
+    keys = applicable_valuation_keys(is_financial, is_turkish)
     present_values = [valuations[key] for key in keys if valuations.get(key) is not None and valuations.get(key) > 0]
     expected_count = len(keys)
     coverage = (len(present_values) / expected_count) if expected_count else 0
@@ -479,6 +483,7 @@ def value_ticker(ticker: str) -> Dict[str, Any]:
 
     params = get_country_params(ticker)
     sector_name, is_financial = resolve_sector(ticker)
+    is_turkish = is_turkish_ticker(ticker)
     wacc = calculate_wacc(info, params)
 
     fcf_by_year = build_fcf_by_year(income_stmt, balance_sheet, cash_flow, params["tax_rate"])
@@ -490,6 +495,10 @@ def value_ticker(ticker: str) -> Dict[str, Any]:
     eps = info.get("trailingEps")
     ebitda = get_ebitda_safely(info, income_stmt, cash_flow)
     dividend = info.get("dividendRate")
+    current_price_raw = info.get("currentPrice")
+    if not is_turkish and dividend is not None and current_price_raw and current_price_raw > EPSILON:
+        if dividend / current_price_raw < 0.015:
+            dividend = None
     fair_value_efk, fair_value_ndk = calculate_paid_capital_valuations(income_stmt, shares)
     cost_of_equity = params["risk_free_rate"] + (info.get("beta") or 1.0) * params["market_premium"]
 
@@ -507,14 +516,15 @@ def value_ticker(ticker: str) -> Dict[str, Any]:
         "fv_financial": calculate_financial_fair_value(info, params, cost_of_equity) if is_financial else None,
         "fv_ev": None if is_financial else calculate_ev_ebitda_fair_value(ebitda, params["ev_ebitda"], debt, cash, shares),
         "fv_ddm": calculate_ddm_fair_value(dividend, wacc, params["ddm_growth"]),
-        "fv_efk": fair_value_efk,
-        "fv_ndk": fair_value_ndk,
-        "fv_graham": graham_valuation(eps, params["pe"], params["bond_yield_2"]),
+        "fv_efk": fair_value_efk if is_turkish else None,
+        "fv_ndk": fair_value_ndk if is_turkish else None,
+        "fv_graham": graham_valuation(eps, params["pe"], params["bond_yield_2"]) if is_turkish else None,
     }
     signal_quality_score, signal_quality_label = compute_signal_quality_score(
         valuations=valuations,
         warnings=warnings,
         is_financial=is_financial,
+        is_turkish=is_turkish,
     )
     return build_output(
         ticker=ticker,

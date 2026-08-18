@@ -11,11 +11,14 @@ import {
   YAxis,
 } from 'recharts'
 import { api } from '../api'
-import type { HistoryPoint, PricePoint, Stock } from '../types'
+import { translations } from '../i18n'
+import type { HistoryPoint, Lang, Market, PricePoint, Stock } from '../types'
 
 interface Props {
   readonly stock: Stock
   readonly onClose: () => void
+  readonly lang: Lang
+  readonly market: Market
 }
 
 interface ChartPoint {
@@ -38,13 +41,8 @@ function merge(prices: PricePoint[], history: HistoryPoint[]): ChartPoint[] {
   return [...map.values()].sort((a, b) => a.date.localeCompare(b.date))
 }
 
-function fmtDate(d: string) {
-  try { return new Date(d).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }) }
-  catch { return d }
-}
-
-function fmtPrice(v: number) {
-  return `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function fmtPrice(v: number, currency: string) {
+  return `${currency}${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function getUpsideColorCls(upside: number | null): string {
@@ -63,7 +61,7 @@ interface ModelRow {
   value: number | null
 }
 
-function ModelGrid({ stock }: Readonly<{ stock: Stock }>) {
+function ModelGrid({ stock, currency }: Readonly<{ stock: Stock; currency: string }>) {
   const models: ModelRow[] = [
     { label: 'DCF', value: stock['DCF Değerlemesi'] as number | null },
     { label: 'F/K (P/E)', value: stock['F/K Değerlemesi'] as number | null },
@@ -85,7 +83,7 @@ function ModelGrid({ stock }: Readonly<{ stock: Stock }>) {
         return (
           <div key={m.label} className="bg-slate-800/60 rounded-lg px-3 py-2.5 border border-slate-700/50">
             <div className="text-xs text-slate-500 mb-1">{m.label}</div>
-            <div className="text-sm font-mono text-slate-200">{fmtPrice(m.value)}</div>
+            <div className="text-sm font-mono text-slate-200">{fmtPrice(m.value, currency)}</div>
             {up !== null && (
               <div className={`text-xs tabular-nums mt-0.5 ${color}`}>
                 {up >= 0 ? '+' : ''}{up.toFixed(1)}%
@@ -102,9 +100,18 @@ interface ChartTabProps {
   readonly loadingChart: boolean
   readonly chartData: ChartPoint[]
   readonly fairValue: number | null
+  readonly currency: string
+  readonly lang: Lang
 }
 
-function ChartTab({ loadingChart, chartData, fairValue }: ChartTabProps) {
+function ChartTab({ loadingChart, chartData, fairValue, currency, lang }: ChartTabProps) {
+  const tr = translations[lang]
+
+  function fmtDate(d: string) {
+    try { return new Date(d).toLocaleDateString(tr.dateLocale, { day: '2-digit', month: 'short' }) }
+    catch { return d }
+  }
+
   if (loadingChart) {
     return (
       <div className="h-64 flex items-center justify-center">
@@ -115,7 +122,7 @@ function ChartTab({ loadingChart, chartData, fairValue }: ChartTabProps) {
   if (chartData.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center text-slate-500 text-sm">
-        Fiyat verisi bulunamadı
+        {tr.noPriceData}
       </div>
     )
   }
@@ -142,7 +149,7 @@ function ChartTab({ loadingChart, chartData, fairValue }: ChartTabProps) {
             tick={{ fill: '#64748b', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={v => `$${v}`}
+            tickFormatter={v => `${currency}${v}`}
             width={60}
             domain={['auto', 'auto']}
           />
@@ -156,8 +163,8 @@ function ChartTab({ loadingChart, chartData, fairValue }: ChartTabProps) {
             }}
             labelFormatter={fmtDate}
             formatter={(value: number, name: string) => [
-              `$${value.toFixed(2)}`,
-              name === 'price' ? 'Fiyat' : 'Adil Fiyat',
+              fmtPrice(value, currency),
+              name === 'price' ? tr.chartPriceLabel : tr.chartFairValueLabel,
             ]}
           />
           {fairValue !== null && (
@@ -166,7 +173,7 @@ function ChartTab({ loadingChart, chartData, fairValue }: ChartTabProps) {
               stroke="#f59e0b"
               strokeDasharray="6 3"
               strokeWidth={1.5}
-              label={{ value: `Adil: $${fairValue.toFixed(0)}`, fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
+              label={{ value: tr.chartFairValueRef(fairValue, currency), fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
             />
           )}
           <Area
@@ -188,18 +195,17 @@ function ChartTab({ loadingChart, chartData, fairValue }: ChartTabProps) {
           />
         </ComposedChart>
       </ResponsiveContainer>
-      <p className="text-xs text-slate-600 text-center mt-1">
-        Gri alan: gerçek fiyat · Sarı çizgi: mevcut adil fiyat · Sarı noktalar: geçmiş adil fiyat anlık görüntüleri
-      </p>
+      <p className="text-xs text-slate-600 text-center mt-1">{tr.chartLegend}</p>
     </div>
   )
 }
 
-export default function StockDetail({ stock, onClose }: Readonly<Props>) {
+export default function StockDetail({ stock, onClose, lang, market }: Readonly<Props>) {
   const [tab, setTab] = useState<'chart' | 'models'>('chart')
   const [prices, setPrices] = useState<PricePoint[]>([])
   const [history, setHistory] = useState<HistoryPoint[]>([])
   const [loadingChart, setLoadingChart] = useState(true)
+  const tr = translations[lang]
 
   useEffect(() => {
     setLoadingChart(true)
@@ -207,13 +213,14 @@ export default function StockDetail({ stock, onClose }: Readonly<Props>) {
     setHistory([])
     Promise.all([
       api.priceHistory(stock.Kod).catch(() => ({ prices: [] as PricePoint[] })),
-      api.history(stock.Kod).catch(() => ({ history: [] as HistoryPoint[] })),
+      api.history(stock.Kod, market).catch(() => ({ history: [] as HistoryPoint[] })),
     ]).then(([ph, h]) => {
       setPrices(ph.prices)
       setHistory(h.history)
     }).finally(() => setLoadingChart(false))
-  }, [stock.Kod])
+  }, [stock.Kod, market])
 
+  const currency = (stock['Para Birimi'] as string) || '$'
   const chartData = merge(prices, history)
   const fairValue = stock['Ortalama Adil Fiyat'] as number | null
   const upside = stock['Beklenen Getiri (%)'] as number | null
@@ -233,33 +240,34 @@ export default function StockDetail({ stock, onClose }: Readonly<Props>) {
           </div>
           <div className="flex items-center gap-5 text-sm">
             <div>
-              <div className="text-xs text-slate-500 mb-0.5">Fiyat</div>
+              <div className="text-xs text-slate-500 mb-0.5">{tr.price}</div>
               <div className="font-mono text-slate-200 tabular-nums">
-                {stock['Güncel Fiyat'] !== null ? fmtPrice(stock['Güncel Fiyat'] as number) : '—'}
+                {stock['Güncel Fiyat'] !== null ? fmtPrice(stock['Güncel Fiyat'] as number, currency) : '—'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-slate-500 mb-0.5">Adil Fiyat</div>
+              <div className="text-xs text-slate-500 mb-0.5">{tr.fairValue}</div>
               <div className="font-mono text-slate-200 tabular-nums">
-                {fairValue !== null ? fmtPrice(fairValue) : '—'}
+                {fairValue !== null ? fmtPrice(fairValue, currency) : '—'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-slate-500 mb-0.5">Potansiyel</div>
+              <div className="text-xs text-slate-500 mb-0.5">{tr.upside}</div>
               <div className={`font-mono font-semibold tabular-nums ${upsideColorCls}`}>
                 {upside !== null ? `${upsideSign}${upside.toFixed(1)}%` : '—'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-slate-500 mb-0.5">WACC</div>
+              <div className="text-xs text-slate-500 mb-0.5">{tr.wacc}</div>
               <div className="font-mono text-slate-400 tabular-nums">
                 {stock.WACC !== null ? `${(stock.WACC as number).toFixed(1)}%` : '—'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-slate-500 mb-0.5">Sinyal</div>
+              <div className="text-xs text-slate-500 mb-0.5">{tr.signal}</div>
               <div className={`text-xs font-medium ${signalColorCls}`}>
-                {stock['Sinyal Güven Seviyesi'] || '—'} {stock['Sinyal Kalite Skoru'] !== null ? `(${stock['Sinyal Kalite Skoru']})` : ''}
+                {tr.signalLabel(stock['Sinyal Güven Seviyesi'] as string | null)}{' '}
+                {stock['Sinyal Kalite Skoru'] !== null ? `(${stock['Sinyal Kalite Skoru']})` : ''}
               </div>
             </div>
           </div>
@@ -278,7 +286,7 @@ export default function StockDetail({ stock, onClose }: Readonly<Props>) {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                 }`}
               >
-                {t === 'chart' ? 'Grafik' : 'Modeller'}
+                {t === 'chart' ? tr.chart : tr.models}
               </button>
             ))}
           </div>
@@ -294,13 +302,19 @@ export default function StockDetail({ stock, onClose }: Readonly<Props>) {
 
       <div className="p-5">
         {tab === 'chart' ? (
-          <ChartTab loadingChart={loadingChart} chartData={chartData} fairValue={fairValue} />
+          <ChartTab
+            loadingChart={loadingChart}
+            chartData={chartData}
+            fairValue={fairValue}
+            currency={currency}
+            lang={lang}
+          />
         ) : (
           <div className="space-y-4">
-            <ModelGrid stock={stock} />
+            <ModelGrid stock={stock} currency={currency} />
             {stock['Model Kalite Uyarıları'] && (
               <div className="text-xs text-amber-400/70 bg-amber-950/20 border border-amber-900/30 rounded-lg px-3 py-2">
-                Uyarılar: {stock['Model Kalite Uyarıları']}
+                {tr.warnings} {stock['Model Kalite Uyarıları']}
               </div>
             )}
           </div>
