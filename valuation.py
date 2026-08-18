@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import time
-from statistics import pstdev
+from statistics import median, pstdev
 from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
 from data.macro_config import load_macro_config
 from data.market_data_provider import fetch_ticker_bundle, normalized_info, validate_bundle
+from data.peer_multiples import fetch_live_sector_multiples
 from data.sector import TR_PROFILE, US_PROFILE, build_sector_maps
 from data.sector_override_builder import load_sector_overrides
 
@@ -26,10 +27,10 @@ AVERAGE_FAIR_PRICE_LABEL = "Ortalama Adil Fiyat"
 OPERATING_INCOME_FIELDS = ["Operating Income", "Total Operating Income"]
 TAX_FIELDS = ["Tax Provision", "Income Tax Expense"]
 DEPRECIATION_FIELDS = ["Depreciation And Amortization", "Depreciation"]
-CAPEX_FIELDS = ["Capital Expenditures"]
-RECEIVABLE_FIELDS = ["Accounts Receivable", "Total Receivables"]
-INVENTORY_FIELDS = ["Inventory", "Inventories"]
-LIABILITY_FIELDS = ["Current Liabilities", "Total Current Liabilities"]
+CAPEX_FIELDS = ["Capital Expenditure", "Capital Expenditures"]
+DELTA_NWC_FIELDS = ["Change In Working Capital", "Changes In Working Capital"]
+PRETAX_INCOME_FIELDS = ["Pretax Income", "Income Before Tax"]
+SBC_FIELDS = ["Stock Based Compensation", "Share Based Compensation"]
 NET_INCOME_FIELDS = ["Net Income", "Net Income Applicable to Common Shares"]
 
 TICKER_PROCESSING_ERRORS = (
@@ -243,58 +244,50 @@ def get_ebitda_safely(info: Dict[str, Optional[float]], income_stmt: pd.DataFram
 
 def calculate_fcf(
     operating_income: Optional[float],
+    pretax_income: Optional[float],
     tax: Optional[float],
     depreciation: Optional[float],
     capex: Optional[float],
-    receivable: Optional[float],
-    inventory: Optional[float],
-    liability: Optional[float],
-    prev_receivable: Optional[float],
-    prev_inventory: Optional[float],
-    prev_liability: Optional[float],
+    delta_nwc: Optional[float],
+    sbc: Optional[float],
     tax_rate_fallback: float,
 ) -> Optional[float]:
     operating_income_value = safe_float(operating_income)
-    tax_value = safe_float(tax)
-    depreciation_value = safe_float(depreciation)
-    capex_value = safe_float(capex)
-    receivable_value = safe_float(receivable)
-    inventory_value = safe_float(inventory)
-    liability_value = safe_float(liability)
-    prev_receivable_value = safe_float(prev_receivable)
-    prev_inventory_value = safe_float(prev_inventory)
-    prev_liability_value = safe_float(prev_liability)
-
     if operating_income_value is None or is_near_zero(operating_income_value):
         return None
+    tax_value = safe_float(tax)
+    # Use pretax income as tax base (correct denominator); fall back to operating income if unavailable
+    pretax_value = safe_float(pretax_income)
+    tax_base = pretax_value if has_nonzero_value(pretax_value) else operating_income_value
     effective_tax = (
-        abs(tax_value / operating_income_value)
-        if tax_value is not None and has_nonzero_value(operating_income_value)
+        max(0.0, min(abs(tax_value / tax_base), 0.50))
+        if tax_value is not None and has_nonzero_value(tax_base)
         else tax_rate_fallback
     )
     nopat = operating_income_value * (1 - effective_tax)
-    delta_working_capital = (
-        (receivable_value or 0) + (inventory_value or 0) - (liability_value or 0)
-    ) - (
-        (prev_receivable_value or 0) + (prev_inventory_value or 0) - (prev_liability_value or 0)
+    # capex from yfinance cashflow is negative (outflow), so adding it subtracts correctly
+    # delta_nwc from "Change In Working Capital" is sign-adjusted: negative = WC increase (uses cash)
+    # sbc from yfinance cashflow is positive (non-cash add-back); subtract for cash FCF
+    return (
+        nopat
+        + (safe_float(depreciation) or 0)
+        + (safe_float(capex) or 0)
+        + (safe_float(delta_nwc) or 0)
+        - (safe_float(sbc) or 0)
     )
-    return nopat + (depreciation_value or 0) - (capex_value or 0) - delta_working_capital
 
 
-def build_fcf_by_year(income_stmt: pd.DataFrame, balance_sheet: pd.DataFrame, cash_flow: pd.DataFrame, tax_rate: float) -> Dict[int, Optional[float]]:
+def build_fcf_by_year(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame, tax_rate: float) -> Dict[int, Optional[float]]:
     fcf_by_year: Dict[int, Optional[float]] = {}
     for year in range(2021, 2026):
         fcf_by_year[year] = calculate_fcf(
             _annual_value_for_year(income_stmt, OPERATING_INCOME_FIELDS, year),
+            _annual_value_for_year(income_stmt, PRETAX_INCOME_FIELDS, year),
             _annual_value_for_year(income_stmt, TAX_FIELDS, year),
             _annual_value_for_year(cash_flow, DEPRECIATION_FIELDS, year),
             _annual_value_for_year(cash_flow, CAPEX_FIELDS, year),
-            _annual_value_for_year(balance_sheet, RECEIVABLE_FIELDS, year),
-            _annual_value_for_year(balance_sheet, INVENTORY_FIELDS, year),
-            _annual_value_for_year(balance_sheet, LIABILITY_FIELDS, year),
-            _annual_value_for_year(balance_sheet, RECEIVABLE_FIELDS, year - 1),
-            _annual_value_for_year(balance_sheet, INVENTORY_FIELDS, year - 1),
-            _annual_value_for_year(balance_sheet, LIABILITY_FIELDS, year - 1),
+            _annual_value_for_year(cash_flow, DELTA_NWC_FIELDS, year),
+            _annual_value_for_year(cash_flow, SBC_FIELDS, year),
             tax_rate_fallback=tax_rate,
         )
     return fcf_by_year
@@ -319,7 +312,8 @@ def calculate_dcf_fair_value(
     past_fcfs = [value for value in fcf_by_year.values() if value is not None]
     if not past_fcfs:
         return None
-    last_fcf = past_fcfs[-1]
+    # 3-year median as base to absorb anomaly years (e.g. large single-year ΔWC swings)
+    last_fcf = median(past_fcfs[-3:])
     projected_fcfs = [last_fcf * ((1 + avg_growth) ** year) for year in range(1, YEARS_PROJECTION + 1)]
     discounted_fcfs = [fcf / ((1 + wacc) ** (year + 1)) for year, fcf in enumerate(projected_fcfs)]
 
@@ -473,7 +467,38 @@ def build_output(
     return output
 
 
-def value_ticker(ticker: str) -> Dict[str, Any]:
+def _apply_live_multiples(params: Dict[str, float], sector_name: str, live_multiples: Dict[str, Dict[str, float]] | None) -> None:
+    if not live_multiples:
+        return
+    live = live_multiples.get(sector_name)
+    if live is None:
+        return
+    if "pe" in live:
+        params["pe"] = live["pe"]
+    if "ev_ebitda" in live:
+        params["ev_ebitda"] = live["ev_ebitda"]
+
+
+def _blend_analyst_growth(is_turkish: bool, info: Dict[str, Any], hist_growth: float) -> float:
+    if is_turkish:
+        return hist_growth
+    analyst_growth = info.get("earningsGrowth") or info.get("revenueGrowth")
+    if analyst_growth is None:
+        return hist_growth
+    analyst_clamped = max(min(float(analyst_growth), MAX_GROWTH_CAP), MIN_GROWTH_CAP)
+    return 0.5 * hist_growth + 0.5 * analyst_clamped
+
+
+def _filter_dividend(is_turkish: bool, dividend: Optional[float], current_price: Optional[float]) -> Optional[float]:
+    if is_turkish or dividend is None or not current_price or current_price <= EPSILON:
+        return dividend
+    return dividend if dividend / current_price >= 0.015 else None
+
+
+def value_ticker(
+    ticker: str,
+    live_multiples: Dict[str, Dict[str, float]] | None = None,
+) -> Dict[str, Any]:
     bundle = fetch_ticker_bundle(ticker)
     info = normalized_info(bundle)
     warnings = validate_bundle(bundle, info)
@@ -483,22 +508,21 @@ def value_ticker(ticker: str) -> Dict[str, Any]:
 
     params = get_country_params(ticker)
     sector_name, is_financial = resolve_sector(ticker)
+    _apply_live_multiples(params, sector_name, live_multiples)
+
     is_turkish = is_turkish_ticker(ticker)
     wacc = calculate_wacc(info, params)
 
-    fcf_by_year = build_fcf_by_year(income_stmt, balance_sheet, cash_flow, params["tax_rate"])
-    avg_growth = clamp_growth(compute_avg_growth(list(fcf_by_year.values())), wacc)
+    fcf_by_year = build_fcf_by_year(income_stmt, cash_flow, params["tax_rate"])
+    hist_growth = compute_avg_growth(list(fcf_by_year.values()))
+    avg_growth = clamp_growth(_blend_analyst_growth(is_turkish, info, hist_growth), wacc)
 
     shares = info.get("sharesOutstanding") or info.get("floatShares") or 1
     debt = info.get("totalDebt") or 0
     cash = info.get("totalCash") or 0
     eps = info.get("trailingEps")
     ebitda = get_ebitda_safely(info, income_stmt, cash_flow)
-    dividend = info.get("dividendRate")
-    current_price_raw = info.get("currentPrice")
-    if not is_turkish and dividend is not None and current_price_raw and current_price_raw > EPSILON:
-        if dividend / current_price_raw < 0.015:
-            dividend = None
+    dividend = _filter_dividend(is_turkish, info.get("dividendRate"), info.get("currentPrice"))
     fair_value_efk, fair_value_ndk = calculate_paid_capital_valuations(income_stmt, shares)
     cost_of_equity = params["risk_free_rate"] + (info.get("beta") or 1.0) * params["market_premium"]
 
@@ -552,11 +576,22 @@ def load_tickers(path: str) -> list[str]:
 
 
 def run_valuation(tickers: list[str]) -> list[Dict[str, Any]]:
+    # Fetch live peer multiples once for US runs to replace static sector defaults
+    has_us = any(not is_turkish_ticker(t) for t in tickers)
+    live_multiples: Dict[str, Dict[str, float]] = {}
+    if has_us:
+        print("[peer_multiples] Canlı sektör katları çekiliyor…")
+        try:
+            live_multiples = fetch_live_sector_multiples()
+            print(f"[peer_multiples] {len(live_multiples)} sektör verisi alındı.")
+        except Exception as exc:
+            print(f"[peer_multiples] Hata — statik değerlere dönülüyor: {exc}")
+
     results: list[Dict[str, Any]] = []
     for ticker_code in tickers:
         print("→", ticker_code, "analiz")
         try:
-            result_row = value_ticker(ticker_code)
+            result_row = value_ticker(ticker_code, live_multiples=live_multiples)
             if result_row:
                 results.append(result_row)
         except TICKER_PROCESSING_ERRORS as error:
