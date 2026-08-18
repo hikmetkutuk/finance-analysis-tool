@@ -39,6 +39,8 @@ export interface Translations {
   chartFairValueRef: (v: number, currency: string) => string
   signalLabel: (v: string | null) => string
   dateLocale: string
+  refreshTicker: string
+  refreshingTicker: string
 }
 
 export const translations: Record<Lang, Translations> = {
@@ -86,6 +88,8 @@ export const translations: Record<Lang, Translations> = {
       return v ?? '—'
     },
     dateLocale: 'tr-TR',
+    refreshTicker: 'Hisseyi Yenile',
+    refreshingTicker: 'Hesaplanıyor…',
   },
   en: {
     stockCount: (n) => `${n} stocks`,
@@ -126,5 +130,7 @@ export const translations: Record<Lang, Translations> = {
     chartFairValueRef: (v, currency) => `Fair: ${currency}${v.toFixed(0)}`,
     signalLabel: (v) => v ?? '—',
     dateLocale: 'en-US',
+    refreshTicker: 'Refresh Stock',
+    refreshingTicker: 'Calculating…',
   },
 }

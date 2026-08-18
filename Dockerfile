@@ -36,7 +36,7 @@ COPY valuation_profiles.json ./
 COPY --from=ui-builder /build/ui/dist ui/dist/
 
 RUN useradd --no-create-home --shell /bin/false appuser \
-    && mkdir -p data logs .cache \
+    && mkdir -p db data logs .cache \
     && chown -R appuser:appuser /app
 
 USER appuser

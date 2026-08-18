@@ -10,7 +10,7 @@ import pandas as pd
 
 from data.macro_config import load_macro_config
 from data.market_data_provider import fetch_ticker_bundle, normalized_info, validate_bundle
-from data.peer_multiples import fetch_live_sector_multiples
+from data.peer_multiples import get_live_sector_multiples
 from data.sector import TR_PROFILE, US_PROFILE, build_sector_maps
 from data.sector_override_builder import load_sector_overrides
 
@@ -503,7 +503,6 @@ def value_ticker(
     info = normalized_info(bundle)
     warnings = validate_bundle(bundle, info)
     income_stmt = bundle.financials
-    balance_sheet = bundle.balance_sheet
     cash_flow = bundle.cashflow
 
     params = get_country_params(ticker)
@@ -582,7 +581,7 @@ def run_valuation(tickers: list[str]) -> list[Dict[str, Any]]:
     if has_us:
         print("[peer_multiples] Canlı sektör katları çekiliyor…")
         try:
-            live_multiples = fetch_live_sector_multiples()
+            live_multiples = get_live_sector_multiples()
             print(f"[peer_multiples] {len(live_multiples)} sektör verisi alındı.")
         except Exception as exc:
             print(f"[peer_multiples] Hata — statik değerlere dönülüyor: {exc}")

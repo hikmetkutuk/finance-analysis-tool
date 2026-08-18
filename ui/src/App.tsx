@@ -74,6 +74,11 @@ export default function App() {
     } catch { /* already running or error */ }
   }
 
+  const handleRefreshTicker = useCallback(async (ticker: string): Promise<void> => {
+    const updated = await api.refreshTicker(ticker, market)
+    setStocks(prev => prev.map(s => s.Kod === ticker ? updated : s))
+  }, [market])
+
   function mainContent() {
     if (loading) {
       return (
@@ -112,6 +117,7 @@ export default function App() {
           <StockDetail
             stock={selected}
             onClose={() => setSelected(null)}
+            onRefreshTicker={handleRefreshTicker}
             lang={lang}
             market={market}
           />

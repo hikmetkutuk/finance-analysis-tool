@@ -33,4 +33,14 @@ export const api = {
     if (!res.ok && res.status !== 409) throw new Error(`${res.status} ${res.statusText}`)
     return res.json()
   },
+
+  refreshTicker: async (ticker: string, market: Market): Promise<Stock> => {
+    const res = await fetch(`${BASE}/refresh/${ticker}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ market }),
+    })
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+    return res.json() as Promise<Stock>
+  },
 }

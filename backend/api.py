@@ -16,7 +16,7 @@ from flask_cors import CORS
 BACKEND_DIR = Path(__file__).parent
 PROJECT_ROOT = BACKEND_DIR.parent
 UI_DIST = PROJECT_ROOT / "ui" / "dist"
-DB_PATH = PROJECT_ROOT / "data" / "valuation_history.db"
+DB_PATH = PROJECT_ROOT / "db" / "valuation_history.db"
 MACRO_FILE = PROJECT_ROOT / "macro_config.json"
 
 MARKET_FILES = {
@@ -27,7 +27,8 @@ VALID_MARKETS = frozenset(MARKET_FILES)
 _INVALID_MARKET = "invalid market"
 
 sys.path.insert(0, str(PROJECT_ROOT))
-from valuation import load_tickers, run_valuation  # noqa: E402
+from valuation import load_tickers, run_valuation, value_ticker  # noqa: E402
+from data.peer_multiples import get_live_sector_multiples  # noqa: E402
 
 app = Flask(__name__, static_folder=str(UI_DIST), static_url_path="")  # NOSONAR
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
@@ -209,6 +210,31 @@ def get_price_history(ticker: str):
         ]
         _price_cache[upper] = {"data": data, "fetched_at": _now()}
         return jsonify({"ticker": upper, "prices": data})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/refresh/<ticker>", methods=["POST"])
+def refresh_single_ticker(ticker: str):
+    body = request.get_json(silent=True) or {}
+    market = body.get("market", "us")
+    if market not in VALID_MARKETS:
+        return jsonify({"error": _INVALID_MARKET}), 400
+    upper = ticker.upper()
+    try:
+        live_multiples = get_live_sector_multiples() if market == "us" else {}
+        result = value_ticker(upper, live_multiples=live_multiples)
+        if not result:
+            return jsonify({"error": "no data"}), 404
+        with _lock:
+            existing = _portfolio[market]
+            updated = [result if r.get("Kod") == upper else r for r in existing]
+            if not any(r.get("Kod") == upper for r in existing):
+                updated.append(result)
+            _portfolio[market] = updated
+            _state[market]["last_updated"] = _now().isoformat()
+        _save_snapshots([result], market)
+        return jsonify(result)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 

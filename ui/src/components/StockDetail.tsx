@@ -17,6 +17,7 @@ import type { HistoryPoint, Lang, Market, PricePoint, Stock } from '../types'
 interface Props {
   readonly stock: Stock
   readonly onClose: () => void
+  readonly onRefreshTicker: (ticker: string) => Promise<void>
   readonly lang: Lang
   readonly market: Market
 }
@@ -200,12 +201,19 @@ function ChartTab({ loadingChart, chartData, fairValue, currency, lang }: ChartT
   )
 }
 
-export default function StockDetail({ stock, onClose, lang, market }: Readonly<Props>) {
+export default function StockDetail({ stock, onClose, onRefreshTicker, lang, market }: Readonly<Props>) {
   const [tab, setTab] = useState<'chart' | 'models'>('chart')
   const [prices, setPrices] = useState<PricePoint[]>([])
   const [history, setHistory] = useState<HistoryPoint[]>([])
   const [loadingChart, setLoadingChart] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const tr = translations[lang]
+
+  const handleRefreshTicker = async () => {
+    setRefreshing(true)
+    try { await onRefreshTicker(stock.Kod) }
+    finally { setRefreshing(false) }
+  }
 
   useEffect(() => {
     setLoadingChart(true)
@@ -290,6 +298,17 @@ export default function StockDetail({ stock, onClose, lang, market }: Readonly<P
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={handleRefreshTicker}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+              bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600
+              disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+          >
+            <span className={refreshing ? 'animate-spin inline-block' : ''}>↻</span>
+            {refreshing ? tr.refreshingTicker : tr.refreshTicker}
+          </button>
           <button
             type="button"
             onClick={onClose}

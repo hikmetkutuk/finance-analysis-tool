@@ -4,7 +4,7 @@ services:
     ports:
       - "5001:5000"
     volumes:
-      - app-data:/app/data
+      - app-db:/app/db
       - app-cache:/app/.cache
       - app-logs:/app/logs
     environment:
@@ -12,6 +12,6 @@ services:
       - FLASK_HOST=0.0.0.0
 
 volumes:
-  app-data:
+  app-db:
   app-cache:
   app-logs:

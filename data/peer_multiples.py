@@ -71,6 +71,21 @@ def _extract_ev_ebitda(info: dict) -> Optional[float]:
     return None
 
 
+_CACHE_TTL_SECONDS = 4 * 3600
+_multiples_cache: dict = {"data": None, "fetched_at": 0.0}
+
+
+def get_live_sector_multiples() -> Dict[str, Dict[str, float]]:
+    """Cached wrapper — re-fetches at most once every 4 hours."""
+    now = time.time()
+    if _multiples_cache["data"] is not None and now - _multiples_cache["fetched_at"] < _CACHE_TTL_SECONDS:
+        return _multiples_cache["data"]
+    result = fetch_live_sector_multiples()
+    _multiples_cache["data"] = result
+    _multiples_cache["fetched_at"] = now
+    return result
+
+
 def _collect_sector_vals(tickers: list[str], delay: float) -> tuple[list[float], list[float]]:
     pe_vals: list[float] = []
     ev_vals: list[float] = []
