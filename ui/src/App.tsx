@@ -114,13 +114,31 @@ export default function App() {
           lang={lang}
         />
         {selected && (
-          <StockDetail
-            stock={selected}
-            onClose={() => setSelected(null)}
-            onRefreshTicker={handleRefreshTicker}
-            lang={lang}
-            market={market}
-          />
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(2,6,23,0.75)', backdropFilter: 'blur(4px)' }}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 cursor-default"
+              aria-label="Kapat"
+              onClick={() => setSelected(null)}
+            />
+            <dialog
+              open
+              aria-label={selected.Kod}
+              className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto m-0 p-0 border-0"
+              style={{ background: 'transparent' }}
+            >
+              <StockDetail
+                stock={selected}
+                onClose={() => setSelected(null)}
+                onRefreshTicker={handleRefreshTicker}
+                lang={lang}
+                market={market}
+              />
+            </dialog>
+          </div>
         )}
       </>
     )

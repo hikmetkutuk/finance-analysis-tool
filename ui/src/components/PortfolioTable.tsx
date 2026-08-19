@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { translations } from '../i18n'
 import type { Lang, SortDir, SortKey, Stock } from '../types'
 
@@ -85,22 +85,21 @@ export default function PortfolioTable({ stocks, selected, onSelect, lang }: Rea
   const [search, setSearch] = useState('')
   const tr = translations[lang]
 
+  const fmtSignal = useCallback((v: number | string | null, row: Stock) => (
+    <SignalColCell
+      label={v as string | null}
+      score={row['Sinyal Kalite Skoru'] as number | null}
+      displayLabel={tr.signalLabel(v as string | null)}
+    />
+  ), [tr.signalLabel])
+
   const COLUMNS: Col[] = [
     { key: 'Kod', label: tr.colTicker, align: 'left' },
     { key: 'Sektör', label: tr.colSector, align: 'left' },
     { key: 'Güncel Fiyat', label: tr.colPrice, align: 'right', fmt: (v, row) => price(v as number | null, (row['Para Birimi'] as string) || '$') },
     { key: 'Ortalama Adil Fiyat', label: tr.colFairValue, align: 'right', fmt: (v, row) => price(v as number | null, (row['Para Birimi'] as string) || '$') },
     { key: 'Beklenen Getiri (%)', label: tr.colUpside, align: 'right', fmt: (v) => pct(v as number | null) },
-    {
-      key: 'Sinyal Güven Seviyesi', label: tr.colSignal, align: 'left',
-      fmt: (v, row) => (
-        <SignalColCell
-          label={v as string | null}
-          score={row['Sinyal Kalite Skoru'] as number | null}
-          displayLabel={tr.signalLabel(v as string | null)}
-        />
-      )
-    },
+    { key: 'Sinyal Güven Seviyesi', label: tr.colSignal, align: 'left', fmt: fmtSignal },
     { key: 'WACC', label: tr.colWacc, align: 'right', fmt: (v) => num(v as number | null) },
     { key: 'DCF Değerlemesi', label: tr.colDcf, align: 'right', fmt: (v, row) => price(v as number | null, (row['Para Birimi'] as string) || '$') },
     { key: 'F/K Değerlemesi', label: tr.colPE, align: 'right', fmt: (v, row) => price(v as number | null, (row['Para Birimi'] as string) || '$') },
@@ -116,8 +115,8 @@ export default function PortfolioTable({ stocks, selected, onSelect, lang }: Rea
       )
     }
     return [...filtered].sort((a, b) => {
-      const av = a[sortKey]
-      const bv = b[sortKey]
+      const av = sortKey === 'Sinyal Güven Seviyesi' ? a['Sinyal Kalite Skoru'] : a[sortKey]
+      const bv = sortKey === 'Sinyal Güven Seviyesi' ? b['Sinyal Kalite Skoru'] : b[sortKey]
       if (av === null || av === undefined) return 1
       if (bv === null || bv === undefined) return -1
       if (typeof av === 'string') {
