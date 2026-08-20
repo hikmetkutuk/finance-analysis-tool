@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
+from data.live_params import fetch_bist_rf, fetch_us_erp
 from data.macro_config import load_macro_config
 from data.market_data_provider import fetch_ticker_bundle, normalized_info, validate_bundle
 from data.peer_multiples import get_live_sector_multiples
@@ -32,6 +33,8 @@ DELTA_NWC_FIELDS = ["Change In Working Capital", "Changes In Working Capital"]
 PRETAX_INCOME_FIELDS = ["Pretax Income", "Income Before Tax"]
 SBC_FIELDS = ["Stock Based Compensation", "Share Based Compensation"]
 NET_INCOME_FIELDS = ["Net Income", "Net Income Applicable to Common Shares"]
+REVENUE_FIELDS = ["Total Revenue", "Revenue"]
+
 
 TICKER_PROCESSING_ERRORS = (
     ValueError,
@@ -165,15 +168,43 @@ def compute_avg_growth(series: list[Optional[float]]) -> float:
     return sum(growths) / len(growths) if growths else 0.05
 
 
+_LIVE_RF_CACHE: Dict[str, float] = {}
+
+
+def _fetch_live_us_rf() -> float:
+    """Skill metodolojisi: ^TNX'ten live 10Y UST yield çeker, başarısız olursa config fallback."""
+    if "us" in _LIVE_RF_CACHE:
+        return _LIVE_RF_CACHE["us"]
+    try:
+        import yfinance as yf
+        tnx = yf.Ticker("^TNX")
+        price = tnx.info.get("regularMarketPrice") or tnx.info.get("currentPrice")
+        if price and price > 0:
+            rf = float(price) / 100.0
+            _LIVE_RF_CACHE["us"] = rf
+            return rf
+    except Exception:
+        pass
+    fallback = float(MACRO_CONFIG["us"]["risk_free_rate"])
+    _LIVE_RF_CACHE["us"] = fallback
+    return fallback
+
+
 def get_country_params(ticker: str) -> Dict[str, float]:
     market_key = "tr" if is_turkish_ticker(ticker) else "us"
     market_config = MACRO_CONFIG[market_key]
     defaults = market_config["defaults"]
     override = SECTOR_OVERRIDES.get(ticker, {})
+    if market_key == "us":
+        rf = _fetch_live_us_rf()
+        erp = fetch_us_erp(fallback=float(market_config["market_premium"]))
+    else:
+        rf = fetch_bist_rf(fallback=float(market_config["risk_free_rate"]))
+        erp = float(market_config["market_premium"])
     return {
         "market_key": market_key,
-        "risk_free_rate": float(market_config["risk_free_rate"]),
-        "market_premium": float(market_config["market_premium"]),
+        "risk_free_rate": rf,
+        "market_premium": erp,
         "cost_of_debt": float(market_config["cost_of_debt"]),
         "tax_rate": float(market_config["tax_rate"]),
         "terminal_growth": float(market_config["terminal_growth"]),
@@ -182,19 +213,92 @@ def get_country_params(ticker: str) -> Dict[str, float]:
         "pe": float(override.get("pe", defaults["pe"])),
         "pb": float(override.get("pb", defaults["pb"])),
         "ev_ebitda": float(override.get("ev_ebitda", defaults["ev_ebitda"])),
+        "ev_rev": 0.0,
     }
 
 
-def calculate_wacc(info: Dict[str, Optional[float]], params: Dict[str, float]) -> float:
+def _bs_field(balance_sheet: "pd.DataFrame", fields: list[str]) -> Optional[float]:
+    for field in fields:
+        if field in balance_sheet.index:
+            return safe_float(balance_sheet.loc[field].iloc[0])
+    return None
+
+
+def _current_fin_debt(curr_debt_total: Optional[float], curr_lease: Optional[float]) -> float:
+    if curr_debt_total is not None and curr_lease is not None:
+        return max(0.0, curr_debt_total - curr_lease)
+    return curr_debt_total if curr_debt_total is not None else 0.0
+
+
+def _get_financial_debt(balance_sheet: "pd.DataFrame | None", info_total_debt: float) -> float:
+    """Balance sheet'ten finansal borcu çeker (işletme kiraları hariç)."""
+    if not _is_dataframe(balance_sheet):
+        return info_total_debt
+    lt_debt = _bs_field(balance_sheet, ["Long Term Debt", "LongTermDebt"])
+    curr_debt_total = _bs_field(balance_sheet, ["Current Debt And Capital Lease Obligation", "Current Debt"])
+    curr_lease = _bs_field(balance_sheet, ["Current Capital Lease Obligation", "Current Portion Of Capital Lease"])
+    curr_fin_debt = _current_fin_debt(curr_debt_total, curr_lease)
+    if lt_debt is not None and lt_debt > 0:
+        return lt_debt + curr_fin_debt
+    return info_total_debt
+
+
+def _compute_effective_kd(income_stmt: pd.DataFrame, total_debt: float) -> float:
+    """Skill: kd = interest_expense / total_debt, fallback 5.5%."""
+    interest_fields = ["Interest Expense", "Interest Expense Non Operating"]
+    for year in range(2024, 2021, -1):
+        for field in interest_fields:
+            val = _annual_value_for_year(income_stmt, [field], year)
+            if val is not None and abs(val) > 0:
+                kd = abs(val) / total_debt
+                return max(0.02, min(kd, 0.15))
+    return 0.055
+
+
+def _compute_effective_tax_rate(income_stmt: pd.DataFrame) -> float:
+    """Skill: 3-yr median effective tax rate, floored 15%, capped 30%."""
+    rates = []
+    for year in range(2022, 2025):
+        tax = _annual_value_for_year(income_stmt, TAX_FIELDS, year)
+        pretax = _annual_value_for_year(income_stmt, PRETAX_INCOME_FIELDS, year)
+        if tax is not None and pretax is not None and pretax > 0:
+            rate = abs(tax) / pretax
+            if 0.05 <= rate <= 0.50:
+                rates.append(max(0.15, min(rate, 0.30)))
+    return median(rates) if rates else 0.21
+
+
+def calculate_wacc(
+    info: Dict[str, Optional[float]],
+    params: Dict[str, float],
+    income_stmt: "pd.DataFrame | None" = None,
+    balance_sheet: "pd.DataFrame | None" = None,
+) -> Tuple[float, float, float]:
+    """Skill metodolojisi: (wacc, effective_tax_rate, effective_kd) döndürür."""
     beta = info.get("beta") or 1.0
     equity = info.get("marketCap") or 0.0
-    debt = info.get("totalDebt") or 0.0
-    total_capital = equity + debt if (equity + debt) > 0 else 1
+    info_debt = info.get("totalDebt") or 0.0
+    # Skill: finansal borcu kullan (işletme kiraları hariç — E/V ve kd için)
+    fin_debt = _get_financial_debt(balance_sheet, info_debt)
+    total_capital = equity + fin_debt if (equity + fin_debt) > 0 else 1
 
+    # ke = rf + beta * ERP (ERP = 5.5% skill hardcoded)
     cost_of_equity = params["risk_free_rate"] + beta * params["market_premium"]
-    cost_of_debt = info.get("interestRate") or params["cost_of_debt"]
-    tax_rate = params["tax_rate"]
-    return (equity / total_capital) * cost_of_equity + (debt / total_capital) * cost_of_debt * (1 - tax_rate)
+
+    # Effective kd from financials (skill: interest_expense / financial_debt)
+    if _is_dataframe(income_stmt) and fin_debt > 0:
+        cost_of_debt = _compute_effective_kd(income_stmt, fin_debt)
+    else:
+        cost_of_debt = params["cost_of_debt"]
+
+    # Effective tax rate from financials (skill: 3-yr median, floor 15%, cap 30%)
+    if _is_dataframe(income_stmt):
+        tax_rate = _compute_effective_tax_rate(income_stmt)
+    else:
+        tax_rate = params["tax_rate"]
+
+    wacc = (equity / total_capital) * cost_of_equity + (fin_debt / total_capital) * cost_of_debt * (1 - tax_rate)
+    return wacc, tax_rate, cost_of_debt
 
 
 def _is_dataframe(frame: Any) -> bool:
@@ -278,6 +382,7 @@ def calculate_fcf(
 
 
 def build_fcf_by_year(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame, tax_rate: float) -> Dict[int, Optional[float]]:
+    """Görüntüleme ve büyüme hesabı için geçmiş FCF verilerini döndürür."""
     fcf_by_year: Dict[int, Optional[float]] = {}
     for year in range(2021, 2026):
         fcf_by_year[year] = calculate_fcf(
@@ -293,6 +398,75 @@ def build_fcf_by_year(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame, tax_ra
     return fcf_by_year
 
 
+def _get_latest_revenue(income_stmt: pd.DataFrame) -> Optional[float]:
+    """En güncel yıllık geliri döndürür."""
+    for year in range(2025, 2020, -1):
+        rev = _annual_value_for_year(income_stmt, REVENUE_FIELDS, year)
+        if rev and rev > 0:
+            return rev
+    return None
+
+
+def _collect_year_margin_ratios(
+    income_stmt: pd.DataFrame,
+    cash_flow: pd.DataFrame,
+    year: int,
+    revenue: float,
+) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
+    ebit = _annual_value_for_year(income_stmt, OPERATING_INCOME_FIELDS, year)
+    da = _annual_value_for_year(cash_flow, DEPRECIATION_FIELDS, year)
+    capex = _annual_value_for_year(cash_flow, CAPEX_FIELDS, year)
+    nwc = _annual_value_for_year(cash_flow, DELTA_NWC_FIELDS, year)
+    return (
+        ebit / revenue if ebit is not None else None,
+        da / revenue if (da is not None and da >= 0) else None,
+        abs(capex) / revenue if capex is not None else None,
+        abs(nwc) / revenue if nwc is not None else None,
+    )
+
+
+def _append_optional(lst: list, val: Optional[float]) -> None:
+    if val is not None:
+        lst.append(val)
+
+
+def compute_margin_profile(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame) -> Dict[str, float]:
+    """Skill: son 3 yılın medyan EBIT%, D&A%, CapEx%, NWC% değerlerini hesaplar."""
+    ebit_margins: list[float] = []
+    da_pcts: list[float] = []
+    capex_pcts: list[float] = []
+    nwc_pcts: list[float] = []
+    for year in range(2023, 2026):
+        revenue = _annual_value_for_year(income_stmt, REVENUE_FIELDS, year)
+        if not revenue or revenue <= 0:
+            continue
+        em, dp, cp, np_ = _collect_year_margin_ratios(income_stmt, cash_flow, year, revenue)
+        _append_optional(ebit_margins, em)
+        _append_optional(da_pcts, dp)
+        _append_optional(capex_pcts, cp)
+        _append_optional(nwc_pcts, np_)
+    return {
+        "ebit_margin": median(ebit_margins) if ebit_margins else 0.15,
+        "da_pct": median(da_pcts) if da_pcts else 0.05,
+        "capex_pct": median(capex_pcts) if capex_pcts else 0.05,
+        "nwc_pct": median(nwc_pcts) if nwc_pcts else 0.01,
+    }
+
+
+def compute_revenue_cagr(income_stmt: pd.DataFrame) -> Optional[float]:
+    """Gelir büyümesini FCF yerine doğrudan gelirden hesaplar (daha istikrarlı)."""
+    revenues: list[float] = []
+    for year in range(2021, 2026):
+        rev = _annual_value_for_year(income_stmt, REVENUE_FIELDS, year)
+        if rev and rev > 0:
+            revenues.append(rev)
+    if len(revenues) < 2:
+        return None
+    n = len(revenues) - 1
+    cagr = (revenues[-1] / revenues[0]) ** (1 / n) - 1
+    return max(min(cagr, MAX_GROWTH_CAP), MIN_GROWTH_CAP)
+
+
 def clamp_growth(avg_growth: float, wacc: float) -> float:
     if avg_growth < wacc:
         return avg_growth
@@ -301,29 +475,56 @@ def clamp_growth(avg_growth: float, wacc: float) -> float:
 
 
 def calculate_dcf_fair_value(
-    fcf_by_year: Dict[int, Optional[float]],
-    avg_growth: float,
+    latest_revenue: Optional[float],
+    margin_profile: Dict[str, float],
+    initial_growth: float,
     wacc: float,
     debt: float,
     cash: float,
     shares: float,
     terminal_growth: float,
+    tax_rate: float,
+    ev_ebitda_multiple: float = 15.0,
 ) -> Optional[float]:
-    past_fcfs = [value for value in fcf_by_year.values() if value is not None]
-    if not past_fcfs:
+    """
+    Skill metodolojisi: gelir × marj oranlarından FCFF üretir (SBC çıkartılmaz).
+    Büyüme oranı y1'den (terminal+1%)'ye doğrusal azalır.
+    Terminal value: %50 Gordon + %50 EV/EBITDA çıkış (skill ile aynı).
+    """
+    if not latest_revenue or latest_revenue <= 0:
         return None
-    # 3-year median as base to absorb anomaly years (e.g. large single-year ΔWC swings)
-    last_fcf = median(past_fcfs[-3:])
-    projected_fcfs = [last_fcf * ((1 + avg_growth) ** year) for year in range(1, YEARS_PROJECTION + 1)]
-    discounted_fcfs = [fcf / ((1 + wacc) ** (year + 1)) for year, fcf in enumerate(projected_fcfs)]
+    if wacc <= terminal_growth:
+        return None
 
-    present_terminal_value = 0.0
-    if projected_fcfs and wacc > terminal_growth:
-        present_terminal_value = (
-            projected_fcfs[-1] * (1 + terminal_growth) / (wacc - terminal_growth)
-        ) / ((1 + wacc) ** YEARS_PROJECTION)
+    ebit_margin = margin_profile.get("ebit_margin", 0.15)
+    da_pct = margin_profile.get("da_pct", 0.05)
+    capex_pct = margin_profile.get("capex_pct", 0.05)
+    nwc_pct = margin_profile.get("nwc_pct", 0.01)
 
-    enterprise_value = sum(discounted_fcfs) + present_terminal_value
+    # Skill: y1 → (terminal+1%) arası doğrusal büyüme yolu
+    end_growth = terminal_growth + 0.01
+    n = YEARS_PROJECTION
+    step = (end_growth - initial_growth) / (n - 1) if n > 1 else 0.0
+    growth_path = [initial_growth + step * i for i in range(n)]
+
+    revenue = latest_revenue
+    fcffs: list[float] = []
+    for g in growth_path:
+        revenue = revenue * (1 + g)
+        nopat = revenue * ebit_margin * (1 - tax_rate)
+        fcff = nopat + revenue * da_pct - revenue * capex_pct - revenue * nwc_pct
+        fcffs.append(fcff)
+
+    discounted = [f / (1 + wacc) ** (i + 1) for i, f in enumerate(fcffs)]
+
+    # Terminal value: %50 Gordon + %50 EV/EBITDA çıkış (skill metodolojisi)
+    tv_gordon = fcffs[-1] * (1 + terminal_growth) / (wacc - terminal_growth)
+    ebitda_year5 = revenue * (ebit_margin + da_pct)
+    tv_exit = ebitda_year5 * ev_ebitda_multiple
+    tv_blended = 0.5 * tv_gordon + 0.5 * tv_exit
+
+    pv_tv = tv_blended / (1 + wacc) ** YEARS_PROJECTION
+    enterprise_value = sum(discounted) + pv_tv
     return safe_div(enterprise_value - debt + cash, shares)
 
 
@@ -386,7 +587,7 @@ def applicable_valuation_keys(is_financial: bool, is_turkish: bool = True) -> li
     if is_financial:
         base = ["fv_fk", "fv_financial", "fv_ddm"]
     else:
-        base = ["fv_dcf", "fv_fk", "fv_ev", "fv_ddm"]
+        base = ["fv_dcf", "fv_relative", "fv_ddm"]
     return base + tr_only if is_turkish else base
 
 
@@ -422,6 +623,50 @@ def compute_signal_quality_score(
     return score, quality
 
 
+def _blend_fair_values(valuations: Dict[str, Optional[float]]) -> Optional[float]:
+    fv_dcf = valuations.get("fv_dcf")
+    fv_relative = valuations.get("fv_relative")
+    if fv_dcf and fv_relative and fv_dcf > 0 and fv_relative > 0:
+        return 0.5 * fv_dcf + 0.5 * fv_relative
+    if fv_dcf and fv_dcf > 0:
+        return fv_dcf
+    if fv_relative and fv_relative > 0:
+        return fv_relative
+    excluded = ("fv_efk", "fv_ndk", "fv_graham", "fv_ddm", "fv_relative")
+    fair_values = [v for k, v in valuations.items() if v is not None and v > 0 and k not in excluded]
+    return sum(fair_values) / len(fair_values) if fair_values else None
+
+
+def _build_detail_fields(extra: Dict[str, Any]) -> Dict[str, Any]:
+    def _pct(key: str) -> Optional[float]:
+        v = extra.get(key)
+        return v * 100 if v is not None else None
+
+    return {
+        "Trailing P/E": round_or_none(extra.get("trailing_pe")),
+        "Forward P/E": round_or_none(extra.get("forward_pe")),
+        "Market Cap": round_or_none(extra.get("market_cap")),
+        "Enterprise Value": round_or_none(extra.get("enterprise_value")),
+        "TTM Revenue": round_or_none(extra.get("ttm_revenue")),
+        "EBIT Margin": round_or_none(_pct("ebit_margin")),
+        "TTM EBITDA": round_or_none(extra.get("ttm_ebitda")),
+        "Net Debt": round_or_none(extra.get("net_debt")),
+        "Revenue Growth": round_or_none(_pct("revenue_growth")),
+        "WACC rf": round_or_none(_pct("wacc_rf")),
+        "WACC beta": round_or_none(extra.get("wacc_beta"), 3),
+        "WACC ke": round_or_none(_pct("wacc_ke")),
+        "WACC kd": round_or_none(_pct("wacc_kd")),
+        "WACC tax": round_or_none(_pct("wacc_tax")),
+        "WACC E/V": round_or_none(_pct("wacc_ev_ratio")),
+        "Peer P/E": round_or_none(extra.get("peer_pe"), 1),
+        "Peer EV/Rev": round_or_none(extra.get("peer_ev_rev"), 1),
+        "Peer EV/EBITDA": round_or_none(extra.get("peer_ev_ebitda"), 1),
+        "Impl Price P/E": round_or_none(extra.get("impl_price_pe")),
+        "Impl Price EV/Rev": round_or_none(extra.get("impl_price_ev_rev")),
+        "Impl Price EV/EBITDA": round_or_none(extra.get("impl_price_ev_ebitda")),
+    }
+
+
 def build_output(
     ticker: str,
     sector_name: str,
@@ -433,9 +678,9 @@ def build_output(
     current_price: Optional[float],
     valuations: Dict[str, Optional[float]],
     fcf_by_year: Dict[int, Optional[float]],
+    extra: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    fair_values = [value for value in valuations.values() if value is not None and value > 0]
-    average_fair_value = sum(fair_values) / len(fair_values) if fair_values else None
+    average_fair_value = _blend_fair_values(valuations)
     expected_return = None
     if average_fair_value is not None and current_price is not None and current_price > EPSILON:
         expected_return = average_fair_value / current_price - 1
@@ -454,6 +699,7 @@ def build_output(
         "F/K Değerlemesi": round_or_none(valuations["fv_fk"]),
         "PD/DD Finansal Model": round_or_none(valuations["fv_financial"]),
         "EV/EBITDA Değerlemesi": round_or_none(valuations["fv_ev"]),
+        "Rölatif Değerleme": round_or_none(valuations["fv_relative"]),
         "DDM Değerlemesi": round_or_none(valuations["fv_ddm"]),
         "EFK Değerlemesi": round_or_none(valuations["fv_efk"]),
         "NDK Değerlemesi": round_or_none(valuations["fv_ndk"]),
@@ -462,21 +708,35 @@ def build_output(
         "Model Kalite Uyarı Sayısı": len(sorted(set(warnings))),
         "Model Kalite Uyarıları": ",".join(sorted(set(warnings))),
     }
+    if extra:
+        output.update({k: v for k, v in _build_detail_fields(extra).items() if v is not None})
     for year in sorted(fcf_by_year.keys()):
         output[f"FCF {year}"] = round_or_none(fcf_by_year[year])
     return output
 
 
-def _apply_live_multiples(params: Dict[str, float], sector_name: str, live_multiples: Dict[str, Dict[str, float]] | None) -> None:
-    if not live_multiples:
+def _apply_live_multiples(
+    params: Dict[str, float],
+    sector_name: str,
+    live_multiples: Dict[str, Dict[str, float]] | None,
+    ticker: str = "",
+) -> None:
+    from data.peer_multiples import get_ticker_multiples
+    ticker_live = get_ticker_multiples(ticker) if ticker else None
+    if ticker_live:
+        live = ticker_live
+    elif live_multiples:
+        live = live_multiples.get(sector_name)
+    else:
         return
-    live = live_multiples.get(sector_name)
     if live is None:
         return
     if "pe" in live:
         params["pe"] = live["pe"]
     if "ev_ebitda" in live:
         params["ev_ebitda"] = live["ev_ebitda"]
+    if "ev_rev" in live:
+        params["ev_rev"] = live["ev_rev"]
 
 
 def _blend_analyst_growth(is_turkish: bool, info: Dict[str, Any], hist_growth: float) -> float:
@@ -495,6 +755,137 @@ def _filter_dividend(is_turkish: bool, dividend: Optional[float], current_price:
     return dividend if dividend / current_price >= 0.015 else None
 
 
+def _fetch_consensus_y1(ticker: str) -> Optional[float]:
+    try:
+        import yfinance as yf
+        rev_est = yf.Ticker(ticker).revenue_estimate
+        if rev_est is not None and not rev_est.empty and "+1y" in rev_est.index:
+            growth_val = rev_est.loc["+1y", "growth"]
+            if growth_val is not None and not pd.isna(growth_val):
+                return float(growth_val)
+    except Exception:
+        pass
+    return None
+
+
+def _compute_dcf_initial_growth(
+    is_turkish: bool,
+    consensus_y1: Optional[float],
+    rev_cagr: Optional[float],
+    avg_growth: float,
+) -> float:
+    if not is_turkish and consensus_y1 is not None:
+        return max(min(consensus_y1, MAX_GROWTH_CAP), MIN_GROWTH_CAP)
+    return rev_cagr if (not is_turkish and rev_cagr is not None) else avg_growth
+
+
+def _compute_fv_ev_rev(
+    is_financial: bool,
+    params: Dict[str, float],
+    latest_revenue: Optional[float],
+    net_debt: float,
+    shares: float,
+) -> Optional[float]:
+    if is_financial:
+        return None
+    ev_rev_multiple = params.get("ev_rev", 0.0)
+    if not ev_rev_multiple or ev_rev_multiple <= 0:
+        return None
+    if not latest_revenue or latest_revenue <= 0 or shares <= 0:
+        return None
+    implied = (ev_rev_multiple * latest_revenue - net_debt) / shares
+    return implied if implied > 0 else None
+
+
+def _build_extra_dict(
+    info: Dict[str, Any],
+    params: Dict[str, float],
+    margin_profile: Dict[str, float],
+    is_turkish: bool,
+    balance_sheet: "pd.DataFrame | None",
+    ebitda: Optional[float],
+    net_debt: float,
+    rev_cagr: Optional[float],
+    latest_revenue: Optional[float],
+    wacc_components: Dict[str, float],
+    implied_prices: Dict[str, Optional[float]],
+) -> Dict[str, Any]:
+    _equity = info.get("marketCap") or 0.0
+    _info_debt = info.get("totalDebt") or 0.0
+    _fin_debt = _get_financial_debt(balance_sheet, _info_debt) if not is_turkish else _info_debt
+    _total_cap = _equity + _fin_debt
+    _ev_ratio = _equity / _total_cap if _total_cap > 0 else None
+    return {
+        "trailing_pe": info.get("trailingPE"),
+        "forward_pe": info.get("forwardPE"),
+        "market_cap": info.get("marketCap"),
+        "enterprise_value": info.get("enterpriseValue"),
+        "ttm_revenue": latest_revenue,
+        "ebit_margin": margin_profile.get("ebit_margin"),
+        "ttm_ebitda": ebitda,
+        "net_debt": net_debt if not is_turkish else None,
+        "revenue_growth": rev_cagr,
+        "wacc_rf": params.get("risk_free_rate"),
+        "wacc_beta": info.get("beta") or 1.0,
+        "wacc_ke": wacc_components["ke"],
+        "wacc_kd": wacc_components["kd"],
+        "wacc_tax": wacc_components["tax"],
+        "wacc_ev_ratio": _ev_ratio,
+        "peer_pe": params.get("pe"),
+        "peer_ev_rev": params.get("ev_rev"),
+        "peer_ev_ebitda": params.get("ev_ebitda"),
+        "impl_price_pe": implied_prices["pe"],
+        "impl_price_ev_rev": implied_prices["ev_rev"],
+        "impl_price_ev_ebitda": implied_prices["ev"],
+    }
+
+
+def _resolve_avg_growth(
+    is_turkish: bool,
+    rev_cagr: Optional[float],
+    fcf_by_year: Dict[int, Optional[float]],
+    info: Dict[str, Any],
+    wacc: float,
+) -> float:
+    if not is_turkish and rev_cagr is not None:
+        return clamp_growth(rev_cagr, wacc)
+    hist_growth = rev_cagr if rev_cagr is not None else compute_avg_growth(list(fcf_by_year.values()))
+    return clamp_growth(_blend_analyst_growth(is_turkish, info, hist_growth), wacc)
+
+
+def _build_valuations(
+    is_financial: bool,
+    is_turkish: bool,
+    params: Dict[str, float],
+    info: Dict[str, Any],
+    cost_of_equity: float,
+    dcf_inputs: Dict[str, Any],
+    precomputed: Dict[str, Any],
+) -> Dict[str, Optional[float]]:
+    fv_dcf = None if is_financial else calculate_dcf_fair_value(
+        latest_revenue=dcf_inputs["latest_revenue"],
+        margin_profile=dcf_inputs["margin_profile"],
+        initial_growth=dcf_inputs["initial_growth"],
+        wacc=dcf_inputs["wacc"],
+        debt=dcf_inputs["debt"],
+        cash=dcf_inputs["cash"],
+        shares=dcf_inputs["shares"],
+        terminal_growth=params["terminal_growth"],
+        tax_rate=dcf_inputs["tax_rate"],
+    )
+    return {
+        "fv_dcf": fv_dcf,
+        "fv_fk": precomputed["fv_fk"],
+        "fv_financial": calculate_financial_fair_value(info, params, cost_of_equity) if is_financial else None,
+        "fv_ev": precomputed["fv_ev"],
+        "fv_relative": round_or_none(precomputed["fv_relative"]),
+        "fv_ddm": calculate_ddm_fair_value(precomputed["dividend"], dcf_inputs["wacc"], params["ddm_growth"]),
+        "fv_efk": precomputed["fv_efk"] if is_turkish else None,
+        "fv_ndk": precomputed["fv_ndk"] if is_turkish else None,
+        "fv_graham": graham_valuation(precomputed["eps"], params["pe"], params["bond_yield_2"]) if is_turkish else None,
+    }
+
+
 def value_ticker(
     ticker: str,
     live_multiples: Dict[str, Dict[str, float]] | None = None,
@@ -504,17 +895,24 @@ def value_ticker(
     warnings = validate_bundle(bundle, info)
     income_stmt = bundle.financials
     cash_flow = bundle.cashflow
+    balance_sheet = bundle.balance_sheet
 
     params = get_country_params(ticker)
     sector_name, is_financial = resolve_sector(ticker)
-    _apply_live_multiples(params, sector_name, live_multiples)
+    _apply_live_multiples(params, sector_name, live_multiples, ticker=ticker)
 
     is_turkish = is_turkish_ticker(ticker)
-    wacc = calculate_wacc(info, params)
+    wacc, effective_tax_rate, effective_kd = calculate_wacc(
+        info, params,
+        income_stmt=income_stmt if not is_turkish else None,
+        balance_sheet=balance_sheet if not is_turkish else None,
+    )
 
-    fcf_by_year = build_fcf_by_year(income_stmt, cash_flow, params["tax_rate"])
-    hist_growth = compute_avg_growth(list(fcf_by_year.values()))
-    avg_growth = clamp_growth(_blend_analyst_growth(is_turkish, info, hist_growth), wacc)
+    fcf_by_year = build_fcf_by_year(income_stmt, cash_flow, effective_tax_rate)
+    latest_revenue = _get_latest_revenue(income_stmt)
+    margin_profile = compute_margin_profile(income_stmt, cash_flow)
+    rev_cagr = compute_revenue_cagr(income_stmt)
+    avg_growth = _resolve_avg_growth(is_turkish, rev_cagr, fcf_by_year, info, wacc)
 
     shares = info.get("sharesOutstanding") or info.get("floatShares") or 1
     debt = info.get("totalDebt") or 0
@@ -525,29 +923,57 @@ def value_ticker(
     fair_value_efk, fair_value_ndk = calculate_paid_capital_valuations(income_stmt, shares)
     cost_of_equity = params["risk_free_rate"] + (info.get("beta") or 1.0) * params["market_premium"]
 
-    valuations = {
-        "fv_dcf": None if is_financial else calculate_dcf_fair_value(
-            fcf_by_year=fcf_by_year,
-            avg_growth=avg_growth,
-            wacc=wacc,
-            debt=debt,
-            cash=cash,
-            shares=shares,
-            terminal_growth=params["terminal_growth"],
-        ),
-        "fv_fk": calculate_fk_fair_value(eps, params["pe"]),
-        "fv_financial": calculate_financial_fair_value(info, params, cost_of_equity) if is_financial else None,
-        "fv_ev": None if is_financial else calculate_ev_ebitda_fair_value(ebitda, params["ev_ebitda"], debt, cash, shares),
-        "fv_ddm": calculate_ddm_fair_value(dividend, wacc, params["ddm_growth"]),
-        "fv_efk": fair_value_efk if is_turkish else None,
-        "fv_ndk": fair_value_ndk if is_turkish else None,
-        "fv_graham": graham_valuation(eps, params["pe"], params["bond_yield_2"]) if is_turkish else None,
-    }
+    consensus_y1 = _fetch_consensus_y1(ticker) if not is_turkish else None
+    dcf_initial_growth = _compute_dcf_initial_growth(is_turkish, consensus_y1, rev_cagr, avg_growth)
+
+    import numpy as _np
+    net_debt = debt - cash
+    fv_fk_val = calculate_fk_fair_value(eps, params["pe"])
+    fv_ev_val = None if is_financial else calculate_ev_ebitda_fair_value(ebitda, params["ev_ebitda"], debt, cash, shares)
+    fv_ev_rev_val = _compute_fv_ev_rev(is_financial, params, latest_revenue, net_debt, shares)
+
+    rel_candidates = [v for v in [fv_fk_val, fv_ev_rev_val, fv_ev_val] if v is not None and v > 0]
+    fv_relative_val = float(_np.nanmedian(rel_candidates)) if rel_candidates else None
+
+    valuations = _build_valuations(
+        is_financial=is_financial,
+        is_turkish=is_turkish,
+        params=params,
+        info=info,
+        cost_of_equity=cost_of_equity,
+        dcf_inputs={
+            "latest_revenue": latest_revenue,
+            "margin_profile": margin_profile,
+            "initial_growth": dcf_initial_growth,
+            "wacc": wacc,
+            "debt": debt,
+            "cash": cash,
+            "shares": shares,
+            "tax_rate": effective_tax_rate,
+        },
+        precomputed={
+            "fv_fk": fv_fk_val,
+            "fv_ev": fv_ev_val,
+            "fv_relative": fv_relative_val,
+            "dividend": dividend,
+            "fv_efk": fair_value_efk,
+            "fv_ndk": fair_value_ndk,
+            "eps": eps,
+        },
+    )
     signal_quality_score, signal_quality_label = compute_signal_quality_score(
         valuations=valuations,
         warnings=warnings,
         is_financial=is_financial,
         is_turkish=is_turkish,
+    )
+    extra = _build_extra_dict(
+        info=info, params=params, margin_profile=margin_profile,
+        is_turkish=is_turkish, balance_sheet=balance_sheet,
+        ebitda=ebitda, net_debt=net_debt, rev_cagr=rev_cagr,
+        latest_revenue=latest_revenue,
+        wacc_components={"ke": cost_of_equity, "kd": effective_kd, "tax": effective_tax_rate},
+        implied_prices={"pe": fv_fk_val, "ev_rev": fv_ev_rev_val, "ev": fv_ev_val},
     )
     return build_output(
         ticker=ticker,
@@ -560,6 +986,7 @@ def value_ticker(
         current_price=info.get("currentPrice"),
         valuations=valuations,
         fcf_by_year=fcf_by_year,
+        extra=extra,
     )
 
 

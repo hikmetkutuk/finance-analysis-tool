@@ -1,8 +1,8 @@
 {
-  "as_of": "2026-05-12",
+  "as_of": "2026-08-19",
   "tr": {
-    "bond_yield_2": 0.3999,
-    "cost_of_debt": 0.4399,
+    "bond_yield_2": 0.3875,
+    "cost_of_debt": 0.42,
     "ddm_growth": 0.025,
     "defaults": {
       "ev_ebitda": 7.0,
@@ -10,24 +10,24 @@
       "pe": 10.0
     },
     "market_premium": 0.08,
-    "risk_free_rate": 0.37,
-    "source": "manual_override_tcmb_2026_04_22_hmb_2026_03_17",
+    "risk_free_rate": 0.3875,
+    "source": "fred_INTDSRTRM193N_2026-06-01_fallback",
     "tax_rate": 0.25,
     "terminal_growth": 0.03
   },
   "us": {
     "bond_yield_2": 0.0384,
-    "cost_of_debt": 0.0584,
+    "cost_of_debt": 0.055,
     "ddm_growth": 0.025,
     "defaults": {
       "ev_ebitda": 11.0,
       "pb": 3.0,
-      "pe": 22.0
+      "pe": 23.0
     },
-    "market_premium": 0.05,
-    "risk_free_rate": 0.0434,
-    "source": "manual_override_us_treasury_2026_04_23",
+    "market_premium": 0.0423,
+    "risk_free_rate": 0.0464,
+    "source": "damodaran_erp_2026-08_fred_TNX_fallback",
     "tax_rate": 0.21,
-    "terminal_growth": 0.03
+    "terminal_growth": 0.025
   }
 }

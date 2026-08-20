@@ -42,8 +42,27 @@ function merge(prices: PricePoint[], history: HistoryPoint[]): ChartPoint[] {
   return [...map.values()].sort((a, b) => a.date.localeCompare(b.date))
 }
 
-function fmtPrice(v: number, currency: string) {
+function fmtPrice(v: number | null | undefined, currency: string): string {
+  if (v === null || v === undefined) return '—'
   return `${currency}${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function fmtMult(v: number | null | undefined): string {
+  if (v === null || v === undefined) return '—'
+  return `${v.toFixed(1)}×`
+}
+
+function fmtPct(v: number | null | undefined): string {
+  if (v === null || v === undefined) return '—'
+  return `${v.toFixed(2)}%`
+}
+
+function fmtBigNum(v: number | null | undefined, currency: string): string {
+  if (v === null || v === undefined) return '—'
+  if (Math.abs(v) >= 1e12) return `${currency}${(v / 1e12).toFixed(2)}T`
+  if (Math.abs(v) >= 1e9) return `${currency}${(v / 1e9).toFixed(2)}B`
+  if (Math.abs(v) >= 1e6) return `${currency}${(v / 1e6).toFixed(2)}M`
+  return `${currency}${v.toFixed(2)}`
 }
 
 function getUpsideColorCls(upside: number | null): string {
@@ -52,47 +71,214 @@ function getUpsideColorCls(upside: number | null): string {
 }
 
 function getSignalColorCls(signal: string | null | undefined): string {
-  if (signal === 'High')   return 'text-emerald-400'
+  if (signal === 'High') return 'text-emerald-400'
   if (signal === 'Medium') return 'text-amber-400'
   return 'text-rose-400'
 }
 
-interface ModelRow {
-  label: string
-  value: number | null
+function SectionLabel({ children }: { readonly children: React.ReactNode }) {
+  return (
+    <div className="text-xs font-semibold tracking-widest uppercase text-slate-500 mb-2 mt-5 first:mt-0 border-b border-slate-800 pb-1">
+      {children}
+    </div>
+  )
 }
 
-function ModelGrid({ stock, currency }: Readonly<{ stock: Stock; currency: string }>) {
-  const models: ModelRow[] = [
-    { label: 'DCF', value: stock['DCF Değerlemesi'] as number | null },
-    { label: 'F/K (P/E)', value: stock['F/K Değerlemesi'] as number | null },
-    { label: 'EV/EBITDA', value: stock['EV/EBITDA Değerlemesi'] as number | null },
-    { label: 'PD/DD (P/B)', value: stock['PD/DD Finansal Model'] as number | null },
-    { label: 'DDM', value: stock['DDM Değerlemesi'] as number | null },
-    { label: 'EFK', value: stock['EFK Değerlemesi'] as number | null },
-    { label: 'NDK', value: stock['NDK Değerlemesi'] as number | null },
-    { label: 'Graham', value: stock['Graham Değerlemesi'] as number | null },
-  ]
-  const current = stock['Güncel Fiyat'] as number | null
+function Row({ label, value, highlight }: { readonly label: string; readonly value: string; readonly highlight?: boolean }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {models.map(m => {
-        if (m.value === null) return null
-        const up = current ? ((m.value / current) - 1) * 100 : null
-        let color = ''
-        if (up !== null) color = up >= 0 ? 'text-emerald-400' : 'text-rose-400'
-        return (
-          <div key={m.label} className="bg-slate-800/60 rounded-lg px-3 py-2.5 border border-slate-700/50">
-            <div className="text-xs text-slate-500 mb-1">{m.label}</div>
-            <div className="text-sm font-mono text-slate-200">{fmtPrice(m.value, currency)}</div>
-            {up !== null && (
-              <div className={`text-xs tabular-nums mt-0.5 ${color}`}>
-                {up >= 0 ? '+' : ''}{up.toFixed(1)}%
+    <div className="flex justify-between items-baseline py-1 border-b border-slate-800/60 last:border-0">
+      <span className="text-xs text-slate-500">{label}</span>
+      <span className={`text-xs font-mono tabular-nums ${highlight ? 'text-emerald-400 font-semibold' : 'text-slate-200'}`}>{value}</span>
+    </div>
+  )
+}
+
+interface AnalysisTabProps {
+  readonly stock: Stock
+  readonly currency: string
+}
+
+function AnalysisTab({ stock, currency }: AnalysisTabProps) {
+  const dcf = (stock['DCF Değerlemesi'] ?? null) as number | null
+  const rel = (stock['Rölatif Değerleme'] ?? null) as number | null
+  const blended = (stock['Ortalama Adil Fiyat'] ?? null) as number | null
+  const price = (stock['Güncel Fiyat'] ?? null) as number | null
+
+  const wacc = (stock.WACC ?? null) as number | null
+  const waccRf = (stock['WACC rf'] ?? null) as number | null
+  const waccBeta = (stock['WACC beta'] ?? null) as number | null
+  const waccKe = (stock['WACC ke'] ?? null) as number | null
+  const waccKd = (stock['WACC kd'] ?? null) as number | null
+  const waccTax = (stock['WACC tax'] ?? null) as number | null
+  const waccEV = (stock['WACC E/V'] ?? null) as number | null
+
+  const trailingPE = (stock['Trailing P/E'] ?? null) as number | null
+  const forwardPE = (stock['Forward P/E'] ?? null) as number | null
+  const marketCap = (stock['Market Cap'] ?? null) as number | null
+  const enterpriseValue = (stock['Enterprise Value'] ?? null) as number | null
+  const ttmRevenue = (stock['TTM Revenue'] ?? null) as number | null
+  const ebitMargin = (stock['EBIT Margin'] ?? null) as number | null
+  const ttmEbitda = (stock['TTM EBITDA'] ?? null) as number | null
+  const netDebt = (stock['Net Debt'] ?? null) as number | null
+  const revGrowth = (stock['Revenue Growth'] ?? null) as number | null
+
+  const peerPE = (stock['Peer P/E'] ?? null) as number | null
+  const peerEvRev = (stock['Peer EV/Rev'] ?? null) as number | null
+  const peerEvEbitda = (stock['Peer EV/EBITDA'] ?? null) as number | null
+  const implPE = (stock['Impl Price P/E'] ?? null) as number | null
+  const implEvRev = (stock['Impl Price EV/Rev'] ?? null) as number | null
+  const implEvEbitda = (stock['Impl Price EV/EBITDA'] ?? null) as number | null
+
+  function upside(target: number | null): string {
+    if (target === null || price === null) return '—'
+    const pct = ((target / price) - 1) * 100
+    return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
+  }
+
+  function upsideColor(target: number | null): string {
+    if (target === null || price === null) return 'text-slate-400'
+    return ((target / price) - 1) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+  }
+
+  const hasMethodData = dcf !== null || rel !== null
+  const hasWacc = wacc !== null
+  const hasSnapshot = trailingPE !== null || marketCap !== null || ttmRevenue !== null
+  const hasRelative = peerPE !== null || peerEvRev !== null || peerEvEbitda !== null
+
+  if (!hasMethodData && !hasWacc && !hasSnapshot) {
+    return (
+      <div className="h-48 flex items-center justify-center text-slate-500 text-sm">
+        Detay verisi henüz yüklenmedi — Yenile butonunu kullanın.
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1">
+      {/* Method Summary */}
+      {hasMethodData && (
+        <>
+          <SectionLabel>Değerleme Özeti</SectionLabel>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {[
+              { label: 'DCF (50%)', value: dcf },
+              { label: 'Rölatif (50%)', value: rel },
+              { label: 'Blended', value: blended, bold: true },
+            ].map(({ label, value, bold }) => (
+              <div key={label} className={`rounded-lg px-3 py-2.5 border ${bold ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-800/60 border-slate-700/50'}`}>
+                <div className="text-xs text-slate-500 mb-1">{label}</div>
+                <div className={`text-sm font-mono tabular-nums ${bold ? 'text-amber-400 font-bold' : 'text-slate-200'}`}>
+                  {fmtPrice(value, currency)}
+                </div>
+                <div className={`text-xs tabular-nums mt-0.5 ${upsideColor(value)}`}>
+                  {upside(value)}
+                </div>
               </div>
-            )}
+            ))}
           </div>
-        )
-      })}
+        </>
+      )}
+
+      {/* WACC Breakdown */}
+      {hasWacc && (
+        <>
+          <SectionLabel>WACC Detayı</SectionLabel>
+          <div className="bg-slate-800/40 rounded-lg px-3 py-2 space-y-0">
+            <Row label="WACC" value={wacc !== null ? `${wacc.toFixed(2)}%` : '—'} highlight />
+            <Row label="Risk-Free Rate (rf)" value={fmtPct(waccRf)} />
+            <Row label="Beta" value={waccBeta !== null ? waccBeta.toFixed(3) : '—'} />
+            <Row label="Cost of Equity (ke)" value={fmtPct(waccKe)} />
+            <Row label="Cost of Debt (kd)" value={fmtPct(waccKd)} />
+            <Row label="Vergi Oranı (efektif)" value={fmtPct(waccTax)} />
+            <Row label="E/V (Özsermaye Ağırlığı)" value={waccEV !== null ? `${waccEV.toFixed(1)}%` : '—'} />
+          </div>
+        </>
+      )}
+
+      {/* Market Snapshot */}
+      {hasSnapshot && (
+        <>
+          <SectionLabel>Piyasa Verileri</SectionLabel>
+          <div className="bg-slate-800/40 rounded-lg px-3 py-2 space-y-0">
+            <Row label="Güncel Fiyat" value={fmtPrice(price, currency)} />
+            <Row label="F/K (Trailing P/E)" value={fmtMult(trailingPE)} />
+            <Row label="Forward P/E" value={fmtMult(forwardPE)} />
+            <Row label="Piyasa Değeri" value={fmtBigNum(marketCap, currency)} />
+            <Row label="Enterprise Value (EV)" value={fmtBigNum(enterpriseValue, currency)} />
+            <Row label="TTM Gelir" value={fmtBigNum(ttmRevenue, currency)} />
+            <Row label="EBIT Marjı" value={ebitMargin !== null ? `${ebitMargin.toFixed(1)}%` : '—'} />
+            <Row label="TTM EBITDA" value={fmtBigNum(ttmEbitda, currency)} />
+            <Row label="Net Borç" value={fmtBigNum(netDebt, currency)} />
+            <Row label="Gelir Büyümesi" value={revGrowth !== null ? `${revGrowth.toFixed(1)}%` : '—'} />
+          </div>
+        </>
+      )}
+
+      {/* Relative Valuation */}
+      {hasRelative && (
+        <>
+          <SectionLabel>Rölatif Değerleme Detayı</SectionLabel>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-slate-500 border-b border-slate-800">
+                  <th className="text-left py-1.5 font-medium">Yöntem</th>
+                  <th className="text-right py-1.5 font-medium">Peer Medyan</th>
+                  <th className="text-right py-1.5 font-medium">Zımni Fiyat</th>
+                  <th className="text-right py-1.5 font-medium">Upside</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono tabular-nums">
+                {[
+                  { label: 'P/E', peer: peerPE !== null ? fmtMult(peerPE) : '—', impl: implPE },
+                  { label: 'EV/Revenue', peer: peerEvRev !== null ? `${peerEvRev.toFixed(1)}×` : '—', impl: implEvRev },
+                  { label: 'EV/EBITDA', peer: peerEvEbitda !== null ? `${peerEvEbitda.toFixed(1)}×` : '—', impl: implEvEbitda },
+                ].map(({ label, peer, impl }) => (
+                  <tr key={label} className="border-b border-slate-800/60 last:border-0">
+                    <td className="py-1.5 text-slate-400">{label}</td>
+                    <td className="py-1.5 text-right text-slate-300">{peer}</td>
+                    <td className="py-1.5 text-right text-slate-200">{fmtPrice(impl, currency)}</td>
+                    <td className={`py-1.5 text-right ${upsideColor(impl)}`}>{upside(impl)}</td>
+                  </tr>
+                ))}
+                <tr className="border-t border-slate-700 bg-slate-800/30">
+                  <td className="py-1.5 text-slate-300 font-semibold" colSpan={2}>Medyan (Rölatif)</td>
+                  <td className="py-1.5 text-right text-amber-400 font-semibold">{fmtPrice(rel, currency)}</td>
+                  <td className={`py-1.5 text-right font-semibold ${upsideColor(rel)}`}>{upside(rel)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* Other models */}
+      <SectionLabel>Diğer Modeller</SectionLabel>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {([
+          { label: 'PD/DD', key: 'PD/DD Finansal Model' },
+          { label: 'DDM', key: 'DDM Değerlemesi' },
+          { label: 'EFK', key: 'EFK Değerlemesi' },
+          { label: 'NDK', key: 'NDK Değerlemesi' },
+          { label: 'Graham', key: 'Graham Değerlemesi' },
+        ] as const).map(({ label, key }) => {
+          const val = (stock[key] ?? null) as number | null
+          if (val === null) return null
+          return (
+            <div key={label} className="bg-slate-800/60 rounded-lg px-3 py-2.5 border border-slate-700/50">
+              <div className="text-xs text-slate-500 mb-1">{label}</div>
+              <div className="text-sm font-mono text-slate-200">{fmtPrice(val, currency)}</div>
+              <div className={`text-xs tabular-nums mt-0.5 ${upsideColor(val)}`}>{upside(val)}</div>
+            </div>
+          )
+        })}
+      </div>
+
+      {stock['Model Kalite Uyarıları'] && (
+        <div className="text-xs text-amber-400/70 bg-amber-950/20 border border-amber-900/30 rounded-lg px-3 py-2 mt-2">
+          ⚠ {stock['Model Kalite Uyarıları']}
+        </div>
+      )}
     </div>
   )
 }
@@ -202,7 +388,7 @@ function ChartTab({ loadingChart, chartData, fairValue, currency, lang }: ChartT
 }
 
 export default function StockDetail({ stock, onClose, onRefreshTicker, lang, market }: Readonly<Props>) {
-  const [tab, setTab] = useState<'chart' | 'models'>('chart')
+  const [tab, setTab] = useState<'chart' | 'analysis'>('analysis')
   const [prices, setPrices] = useState<PricePoint[]>([])
   const [history, setHistory] = useState<HistoryPoint[]>([])
   const [loadingChart, setLoadingChart] = useState(true)
@@ -235,18 +421,20 @@ export default function StockDetail({ stock, onClose, onRefreshTicker, lang, mar
   const upsideSign = upside !== null && upside >= 0 ? '+' : ''
   const upsideColorCls = getUpsideColorCls(upside)
   const signalColorCls = getSignalColorCls(stock['Sinyal Güven Seviyesi'] as string | null)
+  const trailingPE = stock['Trailing P/E'] as number | null
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-        <div className="flex items-center gap-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-800">
+        <div className="flex flex-wrap items-center gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="font-mono font-bold text-xl text-slate-100">{stock.Kod}</span>
               <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded">{stock.Sektör}</span>
             </div>
           </div>
-          <div className="flex items-center gap-5 text-sm">
+          <div className="flex flex-wrap items-center gap-5 text-sm">
             <div>
               <div className="text-xs text-slate-500 mb-0.5">{tr.price}</div>
               <div className="font-mono text-slate-200 tabular-nums">
@@ -266,9 +454,15 @@ export default function StockDetail({ stock, onClose, onRefreshTicker, lang, mar
               </div>
             </div>
             <div>
+              <div className="text-xs text-slate-500 mb-0.5">F/K (P/E)</div>
+              <div className="font-mono text-slate-400 tabular-nums">
+                {trailingPE !== null ? `${trailingPE.toFixed(1)}×` : '—'}
+              </div>
+            </div>
+            <div>
               <div className="text-xs text-slate-500 mb-0.5">{tr.wacc}</div>
               <div className="font-mono text-slate-400 tabular-nums">
-                {stock.WACC !== null ? `${(stock.WACC as number).toFixed(1)}%` : '—'}
+                {stock.WACC !== null ? `${(stock.WACC as number).toFixed(2)}%` : '—'}
               </div>
             </div>
             <div>
@@ -283,18 +477,17 @@ export default function StockDetail({ stock, onClose, onRefreshTicker, lang, mar
 
         <div className="flex items-center gap-3">
           <div className="flex rounded-lg overflow-hidden border border-slate-700">
-            {(['chart', 'models'] as const).map(t => (
+            {(['analysis', 'chart'] as const).map(t => (
               <button
                 type="button"
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  tab === t
-                    ? 'bg-slate-700 text-slate-100'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }`}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${tab === t
+                  ? 'bg-slate-700 text-slate-100'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
               >
-                {t === 'chart' ? tr.chart : tr.models}
+                {t === 'chart' ? tr.chart : 'Analiz'}
               </button>
             ))}
           </div>
@@ -329,14 +522,7 @@ export default function StockDetail({ stock, onClose, onRefreshTicker, lang, mar
             lang={lang}
           />
         ) : (
-          <div className="space-y-4">
-            <ModelGrid stock={stock} currency={currency} />
-            {stock['Model Kalite Uyarıları'] && (
-              <div className="text-xs text-amber-400/70 bg-amber-950/20 border border-amber-900/30 rounded-lg px-3 py-2">
-                {tr.warnings} {stock['Model Kalite Uyarıları']}
-              </div>
-            )}
-          </div>
+          <AnalysisTab stock={stock} currency={currency} />
         )}
       </div>
     </div>
