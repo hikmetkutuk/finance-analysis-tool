@@ -1,14 +1,18 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
-from data.market_data_provider import FETCH_ERRORS, TickerBundle, fetch_ticker_bundle, normalized_info
-
+from data.market_data_provider import (
+    FETCH_ERRORS,
+    TickerBundle,
+    fetch_ticker_bundle,
+    normalized_info,
+)
 
 ROW_OPERATING_INCOME = "Operating Income"
 ROW_NET_INCOME = "Net Income"
@@ -94,7 +98,7 @@ FINANCIAL_COLUMNS = [
 ]
 
 
-def _safe_float(value: Any) -> Optional[float]:
+def _safe_float(value: Any) -> float | None:
     try:
         number = float(value)
     except (TypeError, ValueError):
@@ -104,13 +108,13 @@ def _safe_float(value: Any) -> Optional[float]:
     return number
 
 
-def _round_or_none(value: Optional[float], digits: int = 2) -> Optional[float]:
+def _round_or_none(value: float | None, digits: int = 2) -> float | None:
     if value is None:
         return None
     return round(float(value), digits)
 
 
-def _extract_year(column: Any) -> Optional[int]:
+def _extract_year(column: Any) -> int | None:
     year_attr = getattr(column, "year", None)
     if isinstance(year_attr, int):
         return year_attr
@@ -123,14 +127,14 @@ def _extract_year(column: Any) -> Optional[int]:
     return int(match.group(0))
 
 
-def _row_name(frame: pd.DataFrame, fields: list[str]) -> Optional[str]:
+def _row_name(frame: pd.DataFrame, fields: list[str]) -> str | None:
     for field in fields:
         if field in frame.index:
             return field
     return None
 
 
-def _latest_value(frame: pd.DataFrame, fields: list[str]) -> Optional[float]:
+def _latest_value(frame: pd.DataFrame, fields: list[str]) -> float | None:
     if frame.empty:
         return None
     row = _row_name(frame, fields)
@@ -142,7 +146,7 @@ def _latest_value(frame: pd.DataFrame, fields: list[str]) -> Optional[float]:
     return _safe_float(series.iloc[0])
 
 
-def _previous_value(frame: pd.DataFrame, fields: list[str]) -> Optional[float]:
+def _previous_value(frame: pd.DataFrame, fields: list[str]) -> float | None:
     if frame.empty:
         return None
     row = _row_name(frame, fields)
@@ -154,7 +158,7 @@ def _previous_value(frame: pd.DataFrame, fields: list[str]) -> Optional[float]:
     return _safe_float(series.iloc[1])
 
 
-def _value_for_year(frame: pd.DataFrame, fields: list[str], year: int) -> Optional[float]:
+def _value_for_year(frame: pd.DataFrame, fields: list[str], year: int) -> float | None:
     if frame.empty:
         return None
     row = _row_name(frame, fields)
@@ -170,23 +174,23 @@ def _value_for_year(frame: pd.DataFrame, fields: list[str], year: int) -> Option
     return None
 
 
-def _pct_change(current: Optional[float], previous: Optional[float]) -> Optional[float]:
+def _pct_change(current: float | None, previous: float | None) -> float | None:
     if current is None or previous in (None, 0):
         return None
     return (current / previous - 1.0) * 100.0
 
 
-def _ratio_pct(numerator: Optional[float], denominator: Optional[float]) -> Optional[float]:
+def _ratio_pct(numerator: float | None, denominator: float | None) -> float | None:
     if numerator is None or denominator in (None, 0):
         return None
     return (numerator / denominator) * 100.0
 
 
 def _clean_ticker(ticker: str) -> str:
-    return ticker[:-3] if ticker.upper().endswith(".IS") else ticker
+    return ticker.removesuffix(".IS")
 
 
-def _compute_enterprise_to_ebitda(bundle: TickerBundle, ebitda: Optional[float]) -> Optional[float]:
+def _compute_enterprise_to_ebitda(bundle: TickerBundle, ebitda: float | None) -> float | None:
     enterprise_to_ebitda = _safe_float(bundle.info.get("enterpriseToEbitda"))
     if enterprise_to_ebitda is not None:
         return enterprise_to_ebitda
@@ -196,7 +200,7 @@ def _compute_enterprise_to_ebitda(bundle: TickerBundle, ebitda: Optional[float])
     return enterprise_value / ebitda
 
 
-def _compute_price_to_cashflow(bundle: TickerBundle, info: dict[str, Optional[float]], annual_cashflow: pd.DataFrame) -> Optional[float]:
+def _compute_price_to_cashflow(bundle: TickerBundle, info: dict[str, float | None], annual_cashflow: pd.DataFrame) -> float | None:
     p_cf = _safe_float(bundle.info.get("priceToCashflow"))
     if p_cf is not None:
         return p_cf
@@ -207,30 +211,30 @@ def _compute_price_to_cashflow(bundle: TickerBundle, info: dict[str, Optional[fl
     return market_cap / operating_cash_flow
 
 
-def _compute_total_debt(annual_balance: pd.DataFrame) -> Optional[float]:
+def _compute_total_debt(annual_balance: pd.DataFrame) -> float | None:
     total_debt = _latest_value(annual_balance, TOTAL_DEBT_FIELDS)
     if total_debt is not None:
         return total_debt
     return _latest_value(annual_balance, LIABILITY_FIELDS)
 
 
-def _compute_net_working_capital(current_assets: Optional[float], current_liabilities: Optional[float]) -> Optional[float]:
+def _compute_net_working_capital(current_assets: float | None, current_liabilities: float | None) -> float | None:
     if current_assets is None or current_liabilities is None:
         return None
     return current_assets - current_liabilities
 
 
-def _compute_net_debt_to_ebitda(total_debt: Optional[float], cash_like: Optional[float], ebitda: Optional[float]) -> Optional[float]:
+def _compute_net_debt_to_ebitda(total_debt: float | None, cash_like: float | None, ebitda: float | None) -> float | None:
     if total_debt is None or cash_like is None or ebitda in (None, 0):
         return None
     return ((total_debt - cash_like) / ebitda) * 100.0
 
 
 def _compute_roe(
-    info: dict[str, Optional[float]],
-    net_income: Optional[float],
-    shareholders_equity: Optional[float],
-) -> Optional[float]:
+    info: dict[str, float | None],
+    net_income: float | None,
+    shareholders_equity: float | None,
+) -> float | None:
     roe = _safe_float(info.get("returnOnEquity"))
     if roe is not None:
         return roe * 100.0
@@ -239,7 +243,7 @@ def _compute_roe(
     return (net_income / shareholders_equity) * 100.0
 
 
-def _valid_share_count(candidate: Optional[float], implied_shares: Optional[float]) -> bool:
+def _valid_share_count(candidate: float | None, implied_shares: float | None) -> bool:
     if candidate is None or candidate <= 0:
         return False
     if implied_shares is None or implied_shares <= 0:
@@ -248,7 +252,7 @@ def _valid_share_count(candidate: Optional[float], implied_shares: Optional[floa
     return 0.5 <= ratio <= 2.0
 
 
-def compute_share_count(info: dict[str, Optional[float]], annual_balance: pd.DataFrame) -> Optional[float]:
+def compute_share_count(info: dict[str, float | None], annual_balance: pd.DataFrame) -> float | None:
     implied_shares = info.get("impliedShares")
     candidates = (
         info.get("sharesOutstanding"),
@@ -265,7 +269,7 @@ def compute_share_count(info: dict[str, Optional[float]], annual_balance: pd.Dat
 def _extract_growth_metrics(
     annual_income: pd.DataFrame,
     annual_balance: pd.DataFrame,
-) -> dict[str, Optional[float]]:
+) -> dict[str, float | None]:
     total_assets = _latest_value(annual_balance, TOTAL_ASSET_FIELDS)
     prev_total_assets = _previous_value(annual_balance, TOTAL_ASSET_FIELDS)
     revenue = _latest_value(annual_income, REVENUE_FIELDS)
@@ -285,10 +289,10 @@ def _extract_growth_metrics(
 
 def _extract_balance_metrics(
     annual_balance: pd.DataFrame,
-    info: dict[str, Optional[float]],
-    ebitda: Optional[float],
-    total_assets: Optional[float],
-) -> dict[str, Optional[float]]:
+    info: dict[str, float | None],
+    ebitda: float | None,
+    total_assets: float | None,
+) -> dict[str, float | None]:
     shareholders_equity = _latest_value(annual_balance, EQUITY_FIELDS)
     total_debt = _compute_total_debt(annual_balance)
     current_assets = _latest_value(annual_balance, CURRENT_ASSET_FIELDS)
@@ -434,8 +438,7 @@ def _build_rows_parallel(
     max_workers = max(1, min(parallel_workers, len(tickers)))
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(_build_rows_for_ticker, ticker, years): idx for idx, ticker in enumerate(tickers)}
-        completed = 0
-        for future in as_completed(futures):
+        for completed, future in enumerate(as_completed(futures), start=1):
             index = futures[future]
             ticker = tickers[index]
             try:
@@ -444,7 +447,6 @@ def _build_rows_parallel(
                 financial_row, dcf_row = _empty_rows_for_ticker(ticker, years)
             financial_rows[index] = financial_row
             dcf_rows[index] = dcf_row
-            completed += 1
             if show_progress and (completed % 10 == 0 or completed == len(tickers)):
                 print(f"DCF hazırlanıyor: {completed}/{len(tickers)}")
     return financial_rows, dcf_rows
@@ -460,7 +462,7 @@ def order_dcf_columns(frame: pd.DataFrame, years: list[int]) -> pd.DataFrame:
 
 def build_financials_and_dcf_frames(
     tickers: list[str],
-    end_year: Optional[int] = None,
+    end_year: int | None = None,
     rolling_year_count: int = 6,
     parallel_workers: int = 8,
     show_progress: bool = False,

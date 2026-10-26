@@ -5,7 +5,6 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-
 RATIO_PROFILE_CONFIG_PATH = Path(__file__).resolve().parent.parent / "ratio_profiles.json"
 CATEGORY_LIQUIDITY = "Likidite"
 CATEGORY_PROFITABILITY = "Karlılık"

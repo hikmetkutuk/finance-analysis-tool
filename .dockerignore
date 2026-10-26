@@ -21,4 +21,3 @@ logs/
 *.run.json
 
 commands.md
-tests/

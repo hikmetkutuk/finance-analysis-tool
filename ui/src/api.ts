@@ -1,4 +1,4 @@
-import type { HistoryPoint, Market, PortfolioResponse, PricePoint, RefreshState, Stock } from './types'
+import type { HistoryPoint, Market, MarketDataState, PortfolioResponse, PricePoint, RefreshState, Stock } from './types'
 
 const BASE = '/api'
 
@@ -30,6 +30,15 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ market }),
     })
+    if (!res.ok && res.status !== 409) throw new Error(`${res.status} ${res.statusText}`)
+    return res.json()
+  },
+
+  marketDataStatus: (): Promise<MarketDataState> =>
+    get('/market-data/status'),
+
+  triggerMarketDataRefresh: async (): Promise<{ status: string }> => {
+    const res = await fetch(`${BASE}/market-data/refresh`, { method: 'POST' })
     if (!res.ok && res.status !== 409) throw new Error(`${res.status} ${res.statusText}`)
     return res.json()
   },

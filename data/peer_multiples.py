@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Live sector peer multiples fetched from yfinance at run-time.
 Replaces static pe/ev_ebitda values from macro_config for US stocks.
@@ -6,7 +5,6 @@ Replaces static pe/ev_ebitda values from macro_config for US stocks.
 from __future__ import annotations
 
 import time
-from typing import Dict, Optional
 
 import yfinance as yf
 
@@ -14,7 +12,7 @@ from data.sector import robust_median
 
 # 5-6 liquid, well-covered representatives per sector — fetched once per run
 # NOTE: A ticker should NOT appear in its own sector peer list (circular valuation bias).
-SECTOR_PEERS_US: Dict[str, list[str]] = {
+SECTOR_PEERS_US: dict[str, list[str]] = {
     "Teknoloji":         ["MSFT", "AAPL", "GOOGL", "ORCL", "INTU", "NOW"],
     "Yarı İletken":      ["NVDA", "AVGO", "TXN", "KLAC", "AMAT", "LRCX"],
     "E-Ticaret":         ["AMZN", "BKNG", "EBAY", "EXPE"],
@@ -29,7 +27,7 @@ SECTOR_PEERS_US: Dict[str, list[str]] = {
 }
 
 # Ticker-level peer overrides — skill metodolojisi ile aynı peer seçimi
-TICKER_PEERS_US: Dict[str, list[str]] = {
+TICKER_PEERS_US: dict[str, list[str]] = {
     "META":  ["GOOGL", "AMZN", "NFLX"],
     "GOOGL": ["META", "AMZN", "NFLX"],
     "AMZN":  ["GOOGL", "META", "MSFT", "BKNG"],
@@ -42,7 +40,7 @@ EV_EBITDA_MIN, EV_EBITDA_MAX = 3.0, 60.0
 EV_REV_MIN, EV_REV_MAX = 0.3, 50.0
 
 # Sector-level PE floors — live peer medians can't fall below these
-SECTOR_PE_FLOORS: Dict[str, float] = {
+SECTOR_PE_FLOORS: dict[str, float] = {
     "Teknoloji": 20.0,
     "Yarı İletken": 20.0,
     "E-Ticaret": 18.0,
@@ -50,16 +48,17 @@ SECTOR_PE_FLOORS: Dict[str, float] = {
     "Sağlık & İlaç": 15.0,
     "Finans": 10.0,
 }
+PEER_FETCH_ERRORS = (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError)
 
 
 def _fetch_peer_info(ticker: str) -> dict:
     try:
         return yf.Ticker(ticker).info or {}
-    except Exception:
+    except PEER_FETCH_ERRORS:
         return {}
 
 
-def _extract_pe(info: dict) -> Optional[float]:
+def _extract_pe(info: dict) -> float | None:
     # prefer forward P/E; fall back to trailing
     for key in ("forwardPE", "trailingPE"):
         val = info.get(key)
@@ -73,7 +72,7 @@ def _extract_pe(info: dict) -> Optional[float]:
     return None
 
 
-def _extract_ev_rev(info: dict) -> Optional[float]:
+def _extract_ev_rev(info: dict) -> float | None:
     val = info.get("enterpriseToRevenue")
     if val is not None:
         try:
@@ -85,7 +84,7 @@ def _extract_ev_rev(info: dict) -> Optional[float]:
     return None
 
 
-def _extract_ev_ebitda(info: dict) -> Optional[float]:
+def _extract_ev_ebitda(info: dict) -> float | None:
     val = info.get("enterpriseToEbitda")
     if val is None:
         # derive from raw fields if available
@@ -105,10 +104,10 @@ def _extract_ev_ebitda(info: dict) -> Optional[float]:
 
 _CACHE_TTL_SECONDS = 4 * 3600
 _multiples_cache: dict = {"data": None, "fetched_at": 0.0}
-_ticker_multiples_cache: Dict[str, Dict[str, float]] = {}
+_ticker_multiples_cache: dict[str, dict[str, float]] = {}
 
 
-def get_ticker_multiples(ticker: str) -> Optional[Dict[str, float]]:
+def get_ticker_multiples(ticker: str) -> dict[str, float] | None:
     """Ticker'a özel peer listesi varsa o sektörün multiplerini döndürür."""
     ticker = ticker.upper().replace(".IS", "")
     if ticker not in TICKER_PEERS_US:
@@ -117,8 +116,7 @@ def get_ticker_multiples(ticker: str) -> Optional[Dict[str, float]]:
         return _ticker_multiples_cache[ticker]
     peers = TICKER_PEERS_US[ticker]
     pe_vals, ev_vals, ev_rev_vals = _collect_sector_vals(peers, 0.1)
-    entry: Dict[str, float] = {}
-    from data.sector import robust_median  # noqa: F811
+    entry: dict[str, float] = {}
     pe_med = robust_median(pe_vals)
     ev_med = robust_median(ev_vals)
     ev_rev_med = robust_median(ev_rev_vals)
@@ -134,7 +132,7 @@ def get_ticker_multiples(ticker: str) -> Optional[Dict[str, float]]:
     return entry if entry else None
 
 
-def get_live_sector_multiples() -> Dict[str, Dict[str, float]]:
+def get_live_sector_multiples() -> dict[str, dict[str, float]]:
     """Cached wrapper — re-fetches at most once every 4 hours."""
     now = time.time()
     if _multiples_cache["data"] is not None and now - _multiples_cache["fetched_at"] < _CACHE_TTL_SECONDS:
@@ -165,19 +163,19 @@ def _collect_sector_vals(tickers: list[str], delay: float) -> tuple[list[float],
 
 
 def fetch_live_sector_multiples(
-    peers: Dict[str, list[str]] | None = None,
+    peers: dict[str, list[str]] | None = None,
     delay: float = 0.1,
-) -> Dict[str, Dict[str, float]]:
+) -> dict[str, dict[str, float]]:
     """
     Returns {sector: {"pe": median_pe, "ev_ebitda": median_ev_ebitda}}.
     Sectors with insufficient data are omitted (caller falls back to static config).
     """
     sector_map = peers or SECTOR_PEERS_US
-    result: Dict[str, Dict[str, float]] = {}
+    result: dict[str, dict[str, float]] = {}
 
     for sector, tickers in sector_map.items():
         pe_vals, ev_vals, ev_rev_vals = _collect_sector_vals(tickers, delay)
-        entry: Dict[str, float] = {}
+        entry: dict[str, float] = {}
         pe_med = robust_median(pe_vals)
         ev_med = robust_median(ev_vals)
         ev_rev_med = robust_median(ev_rev_vals)

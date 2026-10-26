@@ -4,12 +4,11 @@ import json
 from copy import deepcopy
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict
-
+from typing import Any
 
 MACRO_CONFIG_PATH = Path("macro_config.json")
 
-DEFAULT_MACRO_CONFIG: Dict[str, Any] = {
+DEFAULT_MACRO_CONFIG: dict[str, Any] = {
     "as_of": date.today().isoformat(),
     "tr": {
         "risk_free_rate": 0.36,
@@ -36,7 +35,7 @@ DEFAULT_MACRO_CONFIG: Dict[str, Any] = {
 }
 
 
-def _deep_update(base: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, Any]:
+def _deep_update(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
     merged = deepcopy(base)
     for key, value in incoming.items():
         if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
@@ -46,7 +45,7 @@ def _deep_update(base: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, An
     return merged
 
 
-def load_macro_config(path: Path = MACRO_CONFIG_PATH) -> Dict[str, Any]:
+def load_macro_config(path: Path = MACRO_CONFIG_PATH) -> dict[str, Any]:
     if not path.exists():
         return deepcopy(DEFAULT_MACRO_CONFIG)
     try:
@@ -58,5 +57,5 @@ def load_macro_config(path: Path = MACRO_CONFIG_PATH) -> Dict[str, Any]:
     return _deep_update(DEFAULT_MACRO_CONFIG, raw)
 
 
-def save_macro_config(config: Dict[str, Any], path: Path = MACRO_CONFIG_PATH) -> None:
+def save_macro_config(config: dict[str, Any], path: Path = MACRO_CONFIG_PATH) -> None:
     path.write_text(json.dumps(config, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")

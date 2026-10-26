@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import time
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any
 
 from data.alpha_vantage_client import alpha_vantage_enabled, fetch_alpha_vantage_dataset
 from data.cache_store import load_fresh_cache, load_latest_cache, save_cache
@@ -107,7 +107,7 @@ class YahooProvider:
         )
 
     @staticmethod
-    def load_cached_dataset(symbol: str, max_age_seconds: Optional[int] = None) -> Any:
+    def load_cached_dataset(symbol: str, max_age_seconds: int | None = None) -> Any:
         if max_age_seconds is None:
             cached = load_latest_cache(RATIO_DATASET_CACHE_NAMESPACE, symbol)
         else:

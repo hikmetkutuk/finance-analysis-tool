@@ -17,7 +17,7 @@ pd = load_dependency("pandas")
 yf = load_dependency("yfinance")
 try:
     yfinance_exceptions = import_module("yfinance.exceptions")
-    YFRateLimitError = getattr(yfinance_exceptions, "YFRateLimitError")
+    YFRateLimitError = yfinance_exceptions.YFRateLimitError
 except ModuleNotFoundError:
     YFRateLimitError = OSError
 except AttributeError:
@@ -25,6 +25,6 @@ except AttributeError:
 
 try:
     curl_request_exceptions = import_module("curl_cffi.requests.exceptions")
-    NetworkRequestError = getattr(curl_request_exceptions, "RequestException")
+    NetworkRequestError = curl_request_exceptions.RequestException
 except ModuleNotFoundError:
     NetworkRequestError = OSError

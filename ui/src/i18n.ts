@@ -5,6 +5,9 @@ export interface Translations {
   lastUpdated: string
   refresh: string
   calculating: string
+  refreshMarketData: string
+  refreshingMarketData: string
+  macroAsOf: string
   errorPrefix: string
   loading: string
   firstCalcRunning: string
@@ -49,6 +52,9 @@ export const translations: Record<Lang, Translations> = {
     lastUpdated: 'son güncelleme:',
     refresh: 'Yenile',
     calculating: 'Hesaplanıyor…',
+    refreshMarketData: 'Piyasa Verilerini Güncelle',
+    refreshingMarketData: 'Piyasa verileri güncelleniyor…',
+    macroAsOf: 'makro veri:',
     errorPrefix: 'hata:',
     loading: 'Veriler yükleniyor…',
     firstCalcRunning: 'İlk hesaplama çalışıyor, birkaç dakika sürebilir',
@@ -56,7 +62,7 @@ export const translations: Record<Lang, Translations> = {
     startCalc: 'Hesaplamayı başlat →',
     fromCache: 'önbellekten',
     marketUS: 'ABD',
-    marketBIST: 'BIST',
+    marketBIST: 'XU030',
     colTicker: 'Ticker',
     colSector: 'Sektör',
     colPrice: 'Fiyat',
@@ -96,6 +102,9 @@ export const translations: Record<Lang, Translations> = {
     lastUpdated: 'last updated:',
     refresh: 'Refresh',
     calculating: 'Calculating…',
+    refreshMarketData: 'Update Market Data',
+    refreshingMarketData: 'Updating market data…',
+    macroAsOf: 'macro data:',
     errorPrefix: 'error:',
     loading: 'Loading data…',
     firstCalcRunning: 'First calculation running, may take a few minutes',
@@ -103,7 +112,7 @@ export const translations: Record<Lang, Translations> = {
     startCalc: 'Start calculation →',
     fromCache: 'from cache',
     marketUS: 'US',
-    marketBIST: 'BIST',
+    marketBIST: 'XU030',
     colTicker: 'Ticker',
     colSector: 'Sector',
     colPrice: 'Price',

@@ -5,7 +5,6 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-
 VALUATION_PROFILE_CONFIG_PATH = Path(__file__).resolve().parent.parent / "valuation_profiles.json"
 PROFILE_FINANCIAL = "Finansal"
 PROFILE_GROWTH = "Büyüme/Teknoloji"

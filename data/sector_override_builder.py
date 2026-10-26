@@ -1,7 +1,7 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -18,7 +18,7 @@ METRIC_BOUNDS = {
 }
 
 
-def safe_float(value: Any) -> Optional[float]:
+def safe_float(value: Any) -> float | None:
     try:
         number = float(value)
     except (TypeError, ValueError):
@@ -28,7 +28,7 @@ def safe_float(value: Any) -> Optional[float]:
     return number
 
 
-def sanitize_metric(metric_name: str, metric_value: Optional[float]) -> Optional[float]:
+def sanitize_metric(metric_name: str, metric_value: float | None) -> float | None:
     if metric_value is None:
         return None
     bounds = METRIC_BOUNDS.get(metric_name)

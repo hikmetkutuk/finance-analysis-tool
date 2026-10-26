@@ -1,13 +1,13 @@
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, TypedDict
 
 import pandas as pd
 
 from data.sector import (
-    MarketProfile,
     TR_PROFILE,
     US_PROFILE,
+    MarketProfile,
     build_sector_maps,
     extract_multiples,
     fetch_info,
@@ -42,9 +42,9 @@ OUTPUT_MD = Path("benchmark_validation_report.md")
 
 
 class SectorBenchmark(TypedDict):
-    sector_pe: Optional[float]
-    sector_pb: Optional[float]
-    sector_ev_ebitda: Optional[float]
+    sector_pe: float | None
+    sector_pb: float | None
+    sector_ev_ebitda: float | None
     peer_count: int
     peer_pe_count: int
     peer_pb_count: int
@@ -53,8 +53,8 @@ class SectorBenchmark(TypedDict):
 
 class MarketResource(TypedDict):
     profile: MarketProfile
-    lookup: Dict[str, str]
-    benchmarks: Dict[str, SectorBenchmark]
+    lookup: dict[str, str]
+    benchmarks: dict[str, SectorBenchmark]
 
 
 EMPTY_BENCHMARK: SectorBenchmark = {
@@ -68,15 +68,15 @@ EMPTY_BENCHMARK: SectorBenchmark = {
 }
 
 
-def build_sector_lookup(sector_map: Dict[str, List[str]]) -> Dict[str, str]:
-    lookup: Dict[str, str] = {}
+def build_sector_lookup(sector_map: dict[str, list[str]]) -> dict[str, str]:
+    lookup: dict[str, str] = {}
     for sector_name, tickers in sector_map.items():
         for ticker in tickers:
             lookup[ticker] = sector_name
     return lookup
 
 
-def metric_diff(company_value: Optional[float], sector_value: Optional[float]) -> Optional[float]:
+def metric_diff(company_value: float | None, sector_value: float | None) -> float | None:
     if company_value is None or sector_value is None or sector_value <= 0:
         return None
     return round((company_value / sector_value - 1) * 100, 2)
@@ -93,13 +93,13 @@ def reliability_label(comparable_metric_count: int, expected_metric_count: int, 
     return "low"
 
 
-def round_or_none(value: Optional[float]) -> Optional[float]:
+def round_or_none(value: float | None) -> float | None:
     if value is None:
         return None
     return round(float(value), 2)
 
 
-def compute_sector_benchmark(sector_tickers: List[str], financial: bool) -> SectorBenchmark:
+def compute_sector_benchmark(sector_tickers: list[str], financial: bool) -> SectorBenchmark:
     pe_values, pb_values, ev_values = [], [], []
 
     for peer_ticker in sector_tickers:
@@ -124,11 +124,11 @@ def compute_sector_benchmark(sector_tickers: List[str], financial: bool) -> Sect
 
 
 def prepare_benchmarks(
-    sector_map: Dict[str, List[str]],
+    sector_map: dict[str, list[str]],
     profile: MarketProfile,
-    target_sectors: List[str],
-) -> Dict[str, SectorBenchmark]:
-    benchmarks: Dict[str, SectorBenchmark] = {}
+    target_sectors: list[str],
+) -> dict[str, SectorBenchmark]:
+    benchmarks: dict[str, SectorBenchmark] = {}
     for sector_name in target_sectors:
         financial = sector_name in profile.financial_sectors
         tickers = sector_map.get(sector_name, [])
@@ -136,7 +136,7 @@ def prepare_benchmarks(
     return benchmarks
 
 
-def build_market_resources() -> Dict[str, MarketResource]:
+def build_market_resources() -> dict[str, MarketResource]:
     tr_map, us_map = build_sector_maps(auto_classify=False)
     tr_lookup = build_sector_lookup(tr_map)
     us_lookup = build_sector_lookup(us_map)
@@ -157,7 +157,7 @@ def build_market_resources() -> Dict[str, MarketResource]:
     }
 
 
-def build_unmapped_row(as_of: str, ticker: str, market: str) -> Dict[str, Any]:
+def build_unmapped_row(as_of: str, ticker: str, market: str) -> dict[str, Any]:
     return {
         "as_of": as_of,
         "ticker": ticker,
@@ -168,9 +168,9 @@ def build_unmapped_row(as_of: str, ticker: str, market: str) -> Dict[str, Any]:
 
 
 def count_comparable_metrics(
-    company_pe: Optional[float],
-    company_pb: Optional[float],
-    company_ev: Optional[float],
+    company_pe: float | None,
+    company_pb: float | None,
+    company_ev: float | None,
     benchmark: SectorBenchmark,
 ) -> int:
     metric_pairs = (
@@ -188,7 +188,7 @@ def build_mapped_row(
     profile: MarketProfile,
     sector_name: str,
     benchmark: SectorBenchmark,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     is_financial = sector_name in profile.financial_sectors
     info = fetch_info(ticker)
     company_pe, company_pb, company_ev = extract_multiples(info, is_financial)
@@ -218,9 +218,9 @@ def build_mapped_row(
     }
 
 
-def build_report_rows() -> List[Dict[str, Any]]:
+def build_report_rows() -> list[dict[str, Any]]:
     market_resources = build_market_resources()
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     as_of = date.today().isoformat()
 
     for ticker in CRITICAL_TICKERS:
@@ -255,7 +255,7 @@ def write_markdown(frame: pd.DataFrame) -> None:
     medium_count = int(summary.get("medium", 0))
     low_count = int(summary.get("low", 0))
 
-    rows: List[str] = [
+    rows: list[str] = [
         f"# Benchmark Validation Report ({date.today().isoformat()})",
         "",
         f"- Total ticker: {len(frame)}",

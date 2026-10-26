@@ -3,8 +3,7 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Optional
-
+from typing import Any
 
 SECTOR_PROFILE_CONFIG_PATH = Path(__file__).resolve().parent.parent / "sector_profiles.json"
 PROFILE_FINANCIAL = "Finansal"
@@ -87,7 +86,7 @@ def _build_sector_lookup(raw_groups: Any) -> dict[str, str]:
     return sector_lookup
 
 
-def _parse_keyword_profile(item: Any) -> Optional[tuple[str, str]]:
+def _parse_keyword_profile(item: Any) -> tuple[str, str] | None:
     if not isinstance(item, list) or len(item) != 2:
         return None
     keyword, profile_name = item

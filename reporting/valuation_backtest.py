@@ -3,14 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import yfinance as yf
 
 from data.market_data_provider import fetch_ticker_bundle, normalized_info
 from valuation import AVERAGE_FAIR_PRICE_LABEL, load_tickers, value_ticker
-
 
 HISTORY_PATH = Path("valuation_history.csv")
 BACKTEST_REPORT_PATH = Path("valuation_backtest_report.csv")
@@ -23,16 +22,16 @@ class SnapshotRow:
     ticker: str
     market: str
     sector: str
-    fair_value: Optional[float]
-    current_price: Optional[float]
-    upside_pct: Optional[float]
-    confidence: Optional[float]
-    ratio_score: Optional[float]
+    fair_value: float | None
+    current_price: float | None
+    upside_pct: float | None
+    confidence: float | None
+    ratio_score: float | None
     status: str
     warnings: str
 
 
-def parse_tr_formatted_number(value: Any) -> Optional[float]:
+def parse_tr_formatted_number(value: Any) -> float | None:
     if value is None:
         return None
     if isinstance(value, (int, float)):
@@ -52,7 +51,7 @@ def text_value(value: Any) -> str:
     return str(value)
 
 
-def fetch_price_near(ticker: str, target_date: datetime) -> Optional[float]:
+def fetch_price_near(ticker: str, target_date: datetime) -> float | None:
     start = (target_date - timedelta(days=5)).strftime("%Y-%m-%d")
     end = (target_date + timedelta(days=7)).strftime("%Y-%m-%d")
     try:
@@ -115,7 +114,7 @@ def build_snapshot_row(ticker: str, as_of: str) -> SnapshotRow:
     )
 
 
-def snapshot_valuations(tickers: list[str], as_of: Optional[str] = None) -> pd.DataFrame:
+def snapshot_valuations(tickers: list[str], as_of: str | None = None) -> pd.DataFrame:
     resolved_as_of = as_of if as_of is not None else date.today().isoformat()
     rows = [build_snapshot_row(ticker, resolved_as_of) for ticker in tickers]
     frame = pd.DataFrame([row.__dict__ for row in rows])
@@ -136,7 +135,7 @@ def build_calibration_report(report: pd.DataFrame) -> pd.DataFrame:
     group_columns = ["market", "sector", "signal_bucket"]
     for keys, group in enriched.groupby(group_columns, dropna=False):
         market, sector, bucket = keys
-        signals = group[group["signal"] == True]  # noqa: E712
+        signals = group[group["signal"]]
         grouped_rows.append(
             {
                 "market": market,
@@ -212,7 +211,7 @@ def print_backtest_summary(report: pd.DataFrame) -> None:
     if report.empty:
         print("Backtest için yeterli geçmiş veri yok.")
         return
-    signaled = report[report["signal"] == True]  # noqa: E712
+    signaled = report[report["signal"]]
     hit_rate = (signaled["hit"].mean() * 100) if not signaled.empty else 0.0
     avg_signal_return = signaled["forward_return_pct"].mean() if not signaled.empty else 0.0
     avg_all_return = report["forward_return_pct"].mean()
@@ -223,7 +222,7 @@ def print_backtest_summary(report: pd.DataFrame) -> None:
     print(f"Avg all return: {avg_all_return:.2f}%")
     if "market" in report.columns:
         for market, market_group in report.groupby("market", dropna=False):
-            market_signals = market_group[market_group["signal"] == True]  # noqa: E712
+            market_signals = market_group[market_group["signal"]]
             market_hit_rate = (market_signals["hit"].mean() * 100.0) if not market_signals.empty else 0.0
             market_avg_return = market_group["forward_return_pct"].mean()
             print(f"{market} avg return: {market_avg_return:.2f}% | hit rate: {market_hit_rate:.2f}%")

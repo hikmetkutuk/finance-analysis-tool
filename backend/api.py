@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import json
 import sqlite3
-import sys
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,39 +11,58 @@ import yfinance as yf
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from data.peer_multiples import get_live_sector_multiples
+from data.sector import FETCH_ERRORS
+from pipelines.refresh_market_pipeline import (
+    MARKET_REFRESH_ERRORS,
+    refresh_xu030_market_data,
+)
+from valuation import (
+    TICKER_PROCESSING_ERRORS,
+    load_tickers,
+    reload_runtime_config,
+    run_valuation,
+    value_ticker,
+)
+
 BACKEND_DIR = Path(__file__).parent
 PROJECT_ROOT = BACKEND_DIR.parent
 UI_DIST = PROJECT_ROOT / "ui" / "dist"
 DB_PATH = PROJECT_ROOT / "db" / "valuation_history.db"
 MACRO_FILE = PROJECT_ROOT / "macro_config.json"
+MARKET_STATUS_FILE = PROJECT_ROOT / "market_refresh_status.json"
 
 MARKET_FILES = {
-    "us":   str(PROJECT_ROOT / "tickers.txt"),
-    "bist": str(PROJECT_ROOT / "hisseler.txt"),
+    "us":    str(PROJECT_ROOT / "tickers.txt"),
+    "xu030": str(PROJECT_ROOT / "xu030.txt"),
 }
 VALID_MARKETS = frozenset(MARKET_FILES)
 _INVALID_MARKET = "invalid market"
 
-sys.path.insert(0, str(PROJECT_ROOT))
-from valuation import load_tickers, run_valuation, value_ticker  # noqa: E402
-from data.peer_multiples import get_live_sector_multiples  # noqa: E402
+API_OPERATION_ERRORS = tuple(set(TICKER_PROCESSING_ERRORS + FETCH_ERRORS + (sqlite3.Error,)))
 
 app = Flask(__name__, static_folder=str(UI_DIST), static_url_path="")  # NOSONAR
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
 
 _lock = threading.Lock()
 _state: dict[str, Any] = {
-    "us":   {"running": False, "last_updated": None, "error": None},
-    "bist": {"running": False, "last_updated": None, "error": None},
+    "us":    {"running": False, "last_updated": None, "error": None},
+    "xu030": {"running": False, "last_updated": None, "error": None},
 }
-_portfolio: dict[str, list[dict]] = {"us": [], "bist": []}
+_portfolio: dict[str, list[dict]] = {"us": [], "xu030": []}
+_market_data_state: dict[str, Any] = {
+    "running": False,
+    "last_updated": None,
+    "error": None,
+    "stage": None,
+}
 
 _price_cache: dict[str, dict] = {}
 PRICE_CACHE_TTL_SEC = 3600
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def init_db() -> None:
@@ -129,7 +146,6 @@ def _load_latest_from_db(market: str) -> tuple[list[dict], str | None]:
 
 
 def _do_refresh(market: str) -> None:
-    global _portfolio
     try:
         tickers = load_tickers(MARKET_FILES[market])
         results = run_valuation(tickers)
@@ -138,7 +154,7 @@ def _do_refresh(market: str) -> None:
             _state[market]["last_updated"] = _now().isoformat()
             _state[market]["error"] = None
         _save_snapshots(results, market)
-    except Exception as exc:
+    except API_OPERATION_ERRORS as exc:
         with _lock:
             _state[market]["error"] = str(exc)
     finally:
@@ -153,6 +169,41 @@ def start_refresh(market: str) -> bool:
         _state[market]["running"] = True
         _state[market]["error"] = None
     threading.Thread(target=_do_refresh, args=(market,), daemon=True).start()
+    return True
+
+
+def _do_full_market_refresh() -> None:
+    try:
+        with _lock:
+            _market_data_state["stage"] = "market_data"
+        result = refresh_xu030_market_data()
+        reload_runtime_config()
+        with _lock:
+            _market_data_state["last_updated"] = result["finished_at"]
+            _market_data_state["stage"] = "valuation"
+            _market_data_state["error"] = None
+        _do_refresh("xu030")
+    except MARKET_REFRESH_ERRORS as exc:
+        with _lock:
+            _market_data_state["error"] = str(exc)
+            _state["xu030"]["error"] = str(exc)
+            _state["xu030"]["running"] = False
+    finally:
+        with _lock:
+            _market_data_state["running"] = False
+            _market_data_state["stage"] = None
+
+
+def start_full_market_refresh() -> bool:
+    with _lock:
+        if _market_data_state["running"] or _state["xu030"]["running"]:
+            return False
+        _market_data_state["running"] = True
+        _market_data_state["error"] = None
+        _market_data_state["stage"] = "starting"
+        _state["xu030"]["running"] = True
+        _state["xu030"]["error"] = None
+    threading.Thread(target=_do_full_market_refresh, daemon=True).start()
     return True
 
 
@@ -204,13 +255,14 @@ def get_price_history(ticker: str):
         hist = yf.Ticker(upper).history(period="1y")
         if hist.empty:
             return jsonify({"ticker": upper, "prices": []})
-        data = [
-            {"date": str(idx.date()), "price": round(float(row["Close"]), 2)}
-            for idx, row in hist.iterrows()
-        ]
+        data = []
+        for idx, row in hist.iterrows():
+            index_value: Any = idx
+            row_value: Any = row
+            data.append({"date": str(index_value.date()), "price": round(float(row_value["Close"]), 2)})
         _price_cache[upper] = {"data": data, "fetched_at": _now()}
         return jsonify({"ticker": upper, "prices": data})
-    except Exception as exc:
+    except FETCH_ERRORS as exc:
         return jsonify({"error": str(exc)}), 500
 
 
@@ -235,7 +287,7 @@ def refresh_single_ticker(ticker: str):
             _state[market]["last_updated"] = _now().isoformat()
         _save_snapshots([result], market)
         return jsonify(result)
-    except Exception as exc:
+    except API_OPERATION_ERRORS as exc:
         return jsonify({"error": str(exc)}), 500
 
 
@@ -259,6 +311,27 @@ def refresh_status():
         return jsonify(dict(_state[market]))
 
 
+@app.route("/api/market-data/refresh", methods=["POST"])
+def trigger_market_data_refresh():
+    if not start_full_market_refresh():
+        return jsonify({"status": "already_running"}), 409
+    return jsonify({"status": "started"})
+
+
+@app.route("/api/market-data/status", methods=["GET"])
+def market_data_status():
+    with _lock:
+        state = dict(_market_data_state)
+    try:
+        macro = json.loads(MACRO_FILE.read_text(encoding="utf-8"))
+        state["macro_as_of"] = macro.get("as_of")
+        state["macro_source"] = macro.get("tr", {}).get("source")
+    except (OSError, json.JSONDecodeError):
+        state["macro_as_of"] = None
+        state["macro_source"] = None
+    return jsonify(state)
+
+
 @app.route("/api/macro", methods=["GET"])
 def get_macro():
     return jsonify(json.loads(MACRO_FILE.read_text(encoding="utf-8")))
@@ -273,9 +346,15 @@ def serve_react(path: str):
 
 
 def _startup() -> None:
-    global _portfolio
     init_db()
-    for market in ("us", "bist"):
+    if MARKET_STATUS_FILE.exists():
+        try:
+            saved_state = json.loads(MARKET_STATUS_FILE.read_text(encoding="utf-8"))
+            if saved_state.get("status") == "completed":
+                _market_data_state["last_updated"] = saved_state.get("finished_at")
+        except (OSError, json.JSONDecodeError):
+            pass
+    for market in ("us", "xu030"):
         results, last_updated = _load_latest_from_db(market)
         if results:
             with _lock:

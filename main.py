@@ -1,26 +1,26 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import json
 import logging
-from pathlib import Path
 import platform
 import subprocess
 import sys
 import time
-from typing import Any, Iterable, Optional
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
-from reporting.financials_report import build_financials_and_dcf_frames
-from reporting.template_report import write_template_report
+from pipelines.update_macro_config import main as update_macro_config_main
 from ratio_engine.constants import COLUMNS_ORDER, NUMERIC_COLUMNS
 from ratio_engine.service import analyze_symbols
-from pipelines.update_macro_config import main as update_macro_config_main
-from valuation import AVERAGE_FAIR_PRICE_LABEL, load_tickers, run_valuation
+from reporting.financials_report import build_financials_and_dcf_frames
+from reporting.template_report import write_template_report
 from reporting.valuation_backtest import evaluate_backtest, snapshot_valuations
-
+from valuation import AVERAGE_FAIR_PRICE_LABEL, load_tickers, run_valuation
 
 DEFAULT_INPUT = "coverage.txt"
 DEFAULT_OUTPUT = "investment_report.xlsx"
@@ -34,7 +34,7 @@ RUN_LOGGER_NAME = "analysis_run"
 MACRO_CONFIG_PATH = Path("macro_config.json")
 
 
-def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
+def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Tek Excel raporunda yatirim analiz paketi")
     parser.add_argument("--input", default=DEFAULT_INPUT)
     parser.add_argument("--output", default=DEFAULT_OUTPUT)
@@ -154,7 +154,7 @@ def _market_counts(tickers: list[str]) -> dict[str, int]:
     }
 
 
-def _macro_config_as_of() -> Optional[str]:
+def _macro_config_as_of() -> str | None:
     if not MACRO_CONFIG_PATH.exists():
         return None
     try:
@@ -167,7 +167,7 @@ def _macro_config_as_of() -> Optional[str]:
     return str(as_of) if isinstance(as_of, str) and as_of.strip() else None
 
 
-def _git_revision() -> Optional[str]:
+def _git_revision() -> str | None:
     try:
         completed = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -198,7 +198,7 @@ def build_run_metadata(
         "tickers_total": len(tickers),
         "market_counts": _market_counts(tickers),
         "include_backtest": bool(args.include_backtest),
-        "financials_workers": int(args.financials_workers),
+        "financials_workers": args.financials_workers,
         "macro_config_as_of": _macro_config_as_of(),
         "python_version": platform.python_version(),
         "platform": platform.platform(),
@@ -214,11 +214,11 @@ def finalize_run_metadata(
     financials_frame: pd.DataFrame,
 ) -> dict[str, Any]:
     finalized = dict(metadata)
-    finalized["finished_at"] = datetime.now(timezone.utc).isoformat()
+    finalized["finished_at"] = datetime.now(UTC).isoformat()
     finalized["elapsed_seconds"] = round(float(elapsed_seconds), 2)
-    finalized["valuation_rows"] = int(len(valuation_frame))
-    finalized["ratio_rows"] = int(len(ratio_frame))
-    finalized["financial_rows"] = int(len(financials_frame))
+    finalized["valuation_rows"] = len(valuation_frame)
+    finalized["ratio_rows"] = len(ratio_frame)
+    finalized["financial_rows"] = len(financials_frame)
     return finalized
 
 
@@ -227,13 +227,13 @@ def write_run_metadata(metadata_path: Path, metadata: dict[str, Any]) -> None:
     metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def main(argv: Optional[Iterable[str]] = None) -> int:
+def main(argv: Iterable[str] | None = None) -> int:
     args = parse_args(argv)
     output_path = str(args.output)
     log_path = Path(args.log_file) if args.log_file else _default_log_path(output_path)
     metadata_path = Path(args.run_metadata_output) if args.run_metadata_output else _default_metadata_path(output_path)
     logger = configure_logging(log_path)
-    started_at = datetime.now(timezone.utc).isoformat()
+    started_at = datetime.now(UTC).isoformat()
     if args.refresh_macro:
         update_macro_config_main()
 
@@ -249,7 +249,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     logger.info("Asama: Financials + DCF")
     financials_frame, dcf_frame = build_financials_and_dcf_frames(
         tickers,
-        parallel_workers=max(1, int(args.financials_workers)),
+        parallel_workers=max(1, args.financials_workers),
     )
     dcf_frame = attach_dcf_professional_value(dcf_frame, valuation_frame)
 

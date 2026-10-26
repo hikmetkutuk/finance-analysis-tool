@@ -1,20 +1,21 @@
-# -*- coding: utf-8 -*-
-
 from __future__ import annotations
 
 import time
 from statistics import median, pstdev
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 
 from data.live_params import fetch_bist_rf, fetch_us_erp
 from data.macro_config import load_macro_config
-from data.market_data_provider import fetch_ticker_bundle, normalized_info, validate_bundle
+from data.market_data_provider import (
+    fetch_ticker_bundle,
+    normalized_info,
+    validate_bundle,
+)
 from data.peer_multiples import get_live_sector_multiples
-from data.sector import TR_PROFILE, US_PROFILE, build_sector_maps
+from data.sector import FETCH_ERRORS, TR_PROFILE, US_PROFILE, build_sector_maps
 from data.sector_override_builder import load_sector_overrides
-
 
 YEARS_PROJECTION = 5
 MAX_GROWTH_CAP = 0.50
@@ -44,15 +45,15 @@ TICKER_PROCESSING_ERRORS = (
     OSError,
     RuntimeError,
     ZeroDivisionError,
-)
+) + FETCH_ERRORS
 
 MACRO_CONFIG = load_macro_config()
 SECTOR_OVERRIDES = load_sector_overrides()
 TR_SECTOR_MAP, US_SECTOR_MAP = build_sector_maps(auto_classify=False)
 
 
-def build_sector_lookup(sector_map: Dict[str, list[str]]) -> Dict[str, str]:
-    lookup: Dict[str, str] = {}
+def build_sector_lookup(sector_map: dict[str, list[str]]) -> dict[str, str]:
+    lookup: dict[str, str] = {}
     for sector_name, tickers in sector_map.items():
         for ticker in tickers:
             lookup[ticker] = sector_name
@@ -63,7 +64,17 @@ TR_LOOKUP = build_sector_lookup(TR_SECTOR_MAP)
 US_LOOKUP = build_sector_lookup(US_SECTOR_MAP)
 
 
-def safe_div(numerator: Optional[float], denominator: Optional[float]) -> Optional[float]:
+def reload_runtime_config() -> None:
+    """Diskteki son doğrulanmış yapılandırmayı çalışan sürece yükler."""
+    global MACRO_CONFIG, SECTOR_OVERRIDES, TR_SECTOR_MAP, US_SECTOR_MAP, TR_LOOKUP, US_LOOKUP
+    MACRO_CONFIG = load_macro_config()
+    SECTOR_OVERRIDES = load_sector_overrides()
+    TR_SECTOR_MAP, US_SECTOR_MAP = build_sector_maps(auto_classify=False)
+    TR_LOOKUP = build_sector_lookup(TR_SECTOR_MAP)
+    US_LOOKUP = build_sector_lookup(US_SECTOR_MAP)
+
+
+def safe_div(numerator: float | None, denominator: float | None) -> float | None:
     try:
         if numerator is None or is_near_zero(denominator):
             return None
@@ -72,7 +83,7 @@ def safe_div(numerator: Optional[float], denominator: Optional[float]) -> Option
         return None
 
 
-def safe_float(value: Any) -> Optional[float]:
+def safe_float(value: Any) -> float | None:
     if isinstance(value, pd.DataFrame):
         stacked = value.stack(dropna=True)
         if stacked.empty:
@@ -92,7 +103,7 @@ def safe_float(value: Any) -> Optional[float]:
     return number
 
 
-def is_near_zero(value: Optional[float], epsilon: float = EPSILON) -> bool:
+def is_near_zero(value: float | None, epsilon: float = EPSILON) -> bool:
     if value is None:
         return True
     try:
@@ -101,11 +112,11 @@ def is_near_zero(value: Optional[float], epsilon: float = EPSILON) -> bool:
         return True
 
 
-def has_nonzero_value(value: Optional[float], epsilon: float = EPSILON) -> bool:
+def has_nonzero_value(value: float | None, epsilon: float = EPSILON) -> bool:
     return not is_near_zero(value, epsilon)
 
 
-def format_number_tr(value: Optional[float]) -> str:
+def format_number_tr(value: float | None) -> str:
     if value is None:
         return ""
     try:
@@ -114,7 +125,7 @@ def format_number_tr(value: Optional[float]) -> str:
         return ""
 
 
-def format_percent_tr(value: Optional[float]) -> str:
+def format_percent_tr(value: float | None) -> str:
     if value is None:
         return ""
     try:
@@ -123,7 +134,7 @@ def format_percent_tr(value: Optional[float]) -> str:
         return ""
 
 
-def round_or_none(value: Optional[float], digits: int = 2) -> Optional[float]:
+def round_or_none(value: float | None, digits: int = 2) -> float | None:
     if value is None:
         return None
     try:
@@ -137,14 +148,14 @@ def get_currency_symbol(ticker_code: str) -> str:
 
 
 def clean_ticker(ticker_code: str) -> str:
-    return ticker_code.replace(".IS", "") if ticker_code.upper().endswith(".IS") else ticker_code
+    return ticker_code.removesuffix(".IS")
 
 
 def is_turkish_ticker(ticker: str) -> bool:
     return ticker.upper().endswith(".IS")
 
 
-def resolve_sector(ticker: str) -> Tuple[str, bool]:
+def resolve_sector(ticker: str) -> tuple[str, bool]:
     if is_turkish_ticker(ticker):
         sector_name = TR_LOOKUP.get(ticker, TR_PROFILE.other_label)
         return sector_name, sector_name in TR_PROFILE.financial_sectors
@@ -152,7 +163,7 @@ def resolve_sector(ticker: str) -> Tuple[str, bool]:
     return sector_name, sector_name in US_PROFILE.financial_sectors
 
 
-def compute_avg_growth(series: list[Optional[float]]) -> float:
+def compute_avg_growth(series: list[float | None]) -> float:
     values = [item for item in series if item is not None]
     if len(values) < 2:
         return 0.05
@@ -168,7 +179,7 @@ def compute_avg_growth(series: list[Optional[float]]) -> float:
     return sum(growths) / len(growths) if growths else 0.05
 
 
-_LIVE_RF_CACHE: Dict[str, float] = {}
+_LIVE_RF_CACHE: dict[str, float] = {}
 
 
 def _fetch_live_us_rf() -> float:
@@ -183,14 +194,14 @@ def _fetch_live_us_rf() -> float:
             rf = float(price) / 100.0
             _LIVE_RF_CACHE["us"] = rf
             return rf
-    except Exception:
+    except TICKER_PROCESSING_ERRORS:
         pass
     fallback = float(MACRO_CONFIG["us"]["risk_free_rate"])
     _LIVE_RF_CACHE["us"] = fallback
     return fallback
 
 
-def get_country_params(ticker: str) -> Dict[str, float]:
+def get_country_params(ticker: str) -> dict[str, float]:
     market_key = "tr" if is_turkish_ticker(ticker) else "us"
     market_config = MACRO_CONFIG[market_key]
     defaults = market_config["defaults"]
@@ -217,20 +228,20 @@ def get_country_params(ticker: str) -> Dict[str, float]:
     }
 
 
-def _bs_field(balance_sheet: "pd.DataFrame", fields: list[str]) -> Optional[float]:
+def _bs_field(balance_sheet: pd.DataFrame, fields: list[str]) -> float | None:
     for field in fields:
         if field in balance_sheet.index:
             return safe_float(balance_sheet.loc[field].iloc[0])
     return None
 
 
-def _current_fin_debt(curr_debt_total: Optional[float], curr_lease: Optional[float]) -> float:
+def _current_fin_debt(curr_debt_total: float | None, curr_lease: float | None) -> float:
     if curr_debt_total is not None and curr_lease is not None:
         return max(0.0, curr_debt_total - curr_lease)
     return curr_debt_total if curr_debt_total is not None else 0.0
 
 
-def _get_financial_debt(balance_sheet: "pd.DataFrame | None", info_total_debt: float) -> float:
+def _get_financial_debt(balance_sheet: pd.DataFrame | None, info_total_debt: float) -> float:
     """Balance sheet'ten finansal borcu çeker (işletme kiraları hariç)."""
     if not _is_dataframe(balance_sheet):
         return info_total_debt
@@ -269,11 +280,11 @@ def _compute_effective_tax_rate(income_stmt: pd.DataFrame) -> float:
 
 
 def calculate_wacc(
-    info: Dict[str, Optional[float]],
-    params: Dict[str, float],
-    income_stmt: "pd.DataFrame | None" = None,
-    balance_sheet: "pd.DataFrame | None" = None,
-) -> Tuple[float, float, float]:
+    info: dict[str, float | None],
+    params: dict[str, float],
+    income_stmt: pd.DataFrame | None = None,
+    balance_sheet: pd.DataFrame | None = None,
+) -> tuple[float, float, float]:
     """Skill metodolojisi: (wacc, effective_tax_rate, effective_kd) döndürür."""
     beta = info.get("beta") or 1.0
     equity = info.get("marketCap") or 0.0
@@ -305,7 +316,7 @@ def _is_dataframe(frame: Any) -> bool:
     return isinstance(frame, pd.DataFrame) and not frame.empty
 
 
-def _annual_value_for_year(frame: pd.DataFrame, row_names: list[str], target_year: int) -> Optional[float]:
+def _annual_value_for_year(frame: pd.DataFrame, row_names: list[str], target_year: int) -> float | None:
     if not _is_dataframe(frame):
         return None
     row_name = next((candidate for candidate in row_names if candidate in frame.index), None)
@@ -318,7 +329,7 @@ def _annual_value_for_year(frame: pd.DataFrame, row_names: list[str], target_yea
     return None
 
 
-def extract_numeric_scalar(value: Any) -> Optional[float]:
+def extract_numeric_scalar(value: Any) -> float | None:
     if value is None:
         return None
     if isinstance(value, pd.DataFrame):
@@ -334,7 +345,7 @@ def extract_numeric_scalar(value: Any) -> Optional[float]:
     return safe_float(value)
 
 
-def get_ebitda_safely(info: Dict[str, Optional[float]], income_stmt: pd.DataFrame, cash_flow: pd.DataFrame, year_hint: int = 2024) -> Optional[float]:
+def get_ebitda_safely(info: dict[str, float | None], income_stmt: pd.DataFrame, cash_flow: pd.DataFrame, year_hint: int = 2024) -> float | None:
     ebitda = info.get("ebitda")
     if has_nonzero_value(ebitda):
         return float(ebitda)
@@ -347,15 +358,15 @@ def get_ebitda_safely(info: Dict[str, Optional[float]], income_stmt: pd.DataFram
 
 
 def calculate_fcf(
-    operating_income: Optional[float],
-    pretax_income: Optional[float],
-    tax: Optional[float],
-    depreciation: Optional[float],
-    capex: Optional[float],
-    delta_nwc: Optional[float],
-    sbc: Optional[float],
+    operating_income: float | None,
+    pretax_income: float | None,
+    tax: float | None,
+    depreciation: float | None,
+    capex: float | None,
+    delta_nwc: float | None,
+    sbc: float | None,
     tax_rate_fallback: float,
-) -> Optional[float]:
+) -> float | None:
     operating_income_value = safe_float(operating_income)
     if operating_income_value is None or is_near_zero(operating_income_value):
         return None
@@ -381,9 +392,9 @@ def calculate_fcf(
     )
 
 
-def build_fcf_by_year(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame, tax_rate: float) -> Dict[int, Optional[float]]:
+def build_fcf_by_year(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame, tax_rate: float) -> dict[int, float | None]:
     """Görüntüleme ve büyüme hesabı için geçmiş FCF verilerini döndürür."""
-    fcf_by_year: Dict[int, Optional[float]] = {}
+    fcf_by_year: dict[int, float | None] = {}
     for year in range(2021, 2026):
         fcf_by_year[year] = calculate_fcf(
             _annual_value_for_year(income_stmt, OPERATING_INCOME_FIELDS, year),
@@ -398,7 +409,7 @@ def build_fcf_by_year(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame, tax_ra
     return fcf_by_year
 
 
-def _get_latest_revenue(income_stmt: pd.DataFrame) -> Optional[float]:
+def _get_latest_revenue(income_stmt: pd.DataFrame) -> float | None:
     """En güncel yıllık geliri döndürür."""
     for year in range(2025, 2020, -1):
         rev = _annual_value_for_year(income_stmt, REVENUE_FIELDS, year)
@@ -412,7 +423,7 @@ def _collect_year_margin_ratios(
     cash_flow: pd.DataFrame,
     year: int,
     revenue: float,
-) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
+) -> tuple[float | None, float | None, float | None, float | None]:
     ebit = _annual_value_for_year(income_stmt, OPERATING_INCOME_FIELDS, year)
     da = _annual_value_for_year(cash_flow, DEPRECIATION_FIELDS, year)
     capex = _annual_value_for_year(cash_flow, CAPEX_FIELDS, year)
@@ -425,12 +436,12 @@ def _collect_year_margin_ratios(
     )
 
 
-def _append_optional(lst: list, val: Optional[float]) -> None:
+def _append_optional(lst: list, val: float | None) -> None:
     if val is not None:
         lst.append(val)
 
 
-def compute_margin_profile(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame) -> Dict[str, float]:
+def compute_margin_profile(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame) -> dict[str, float]:
     """Skill: son 3 yılın medyan EBIT%, D&A%, CapEx%, NWC% değerlerini hesaplar."""
     ebit_margins: list[float] = []
     da_pcts: list[float] = []
@@ -453,7 +464,7 @@ def compute_margin_profile(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame) -
     }
 
 
-def compute_revenue_cagr(income_stmt: pd.DataFrame) -> Optional[float]:
+def compute_revenue_cagr(income_stmt: pd.DataFrame) -> float | None:
     """Gelir büyümesini FCF yerine doğrudan gelirden hesaplar (daha istikrarlı)."""
     revenues: list[float] = []
     for year in range(2021, 2026):
@@ -475,8 +486,8 @@ def clamp_growth(avg_growth: float, wacc: float) -> float:
 
 
 def calculate_dcf_fair_value(
-    latest_revenue: Optional[float],
-    margin_profile: Dict[str, float],
+    latest_revenue: float | None,
+    margin_profile: dict[str, float],
     initial_growth: float,
     wacc: float,
     debt: float,
@@ -485,7 +496,7 @@ def calculate_dcf_fair_value(
     terminal_growth: float,
     tax_rate: float,
     ev_ebitda_multiple: float = 15.0,
-) -> Optional[float]:
+) -> float | None:
     """
     Skill metodolojisi: gelir × marj oranlarından FCFF üretir (SBC çıkartılmaz).
     Büyüme oranı y1'den (terminal+1%)'ye doğrusal azalır.
@@ -528,26 +539,26 @@ def calculate_dcf_fair_value(
     return safe_div(enterprise_value - debt + cash, shares)
 
 
-def calculate_fk_fair_value(eps: Optional[float], sector_pe: float) -> Optional[float]:
+def calculate_fk_fair_value(eps: float | None, sector_pe: float) -> float | None:
     if eps is None or eps <= 0 or sector_pe <= 0:
         return None
     return eps * sector_pe
 
 
-def calculate_ev_ebitda_fair_value(ebitda: Optional[float], ev_multiple: float, debt: float, cash: float, shares: float) -> Optional[float]:
+def calculate_ev_ebitda_fair_value(ebitda: float | None, ev_multiple: float, debt: float, cash: float, shares: float) -> float | None:
     if ebitda is None or ebitda <= 0 or ev_multiple <= 0:
         return None
     enterprise_value = ebitda * ev_multiple
     return safe_div(enterprise_value - debt + cash, shares)
 
 
-def calculate_ddm_fair_value(dividend: Optional[float], wacc: float, ddm_growth: float) -> Optional[float]:
+def calculate_ddm_fair_value(dividend: float | None, wacc: float, ddm_growth: float) -> float | None:
     if dividend is None or dividend <= EPSILON or wacc <= ddm_growth:
         return None
     return dividend * (1 + ddm_growth) / (wacc - ddm_growth)
 
 
-def calculate_paid_capital_valuations(income_stmt: pd.DataFrame, shares: float) -> Tuple[Optional[float], Optional[float]]:
+def calculate_paid_capital_valuations(income_stmt: pd.DataFrame, shares: float) -> tuple[float | None, float | None]:
     paid_up_capital = shares if shares else None
     operating_income = _annual_value_for_year(income_stmt, OPERATING_INCOME_FIELDS, 2024)
     net_income = _annual_value_for_year(income_stmt, NET_INCOME_FIELDS, 2023)
@@ -556,13 +567,13 @@ def calculate_paid_capital_valuations(income_stmt: pd.DataFrame, shares: float) 
     return fair_value_efk, fair_value_ndk
 
 
-def graham_valuation(eps: Optional[float], sector_pe: float, bond_yield: float) -> Optional[float]:
+def graham_valuation(eps: float | None, sector_pe: float, bond_yield: float) -> float | None:
     if eps is None or eps <= EPSILON or sector_pe <= EPSILON or bond_yield <= EPSILON:
         return None
     return (eps * sector_pe) / (bond_yield * 100)
 
 
-def calculate_financial_fair_value(info: Dict[str, Optional[float]], params: Dict[str, float], cost_of_equity: float) -> Optional[float]:
+def calculate_financial_fair_value(info: dict[str, float | None], params: dict[str, float], cost_of_equity: float) -> float | None:
     book_value = info.get("bookValue")
     if book_value is None or book_value <= 0:
         return None
@@ -592,11 +603,11 @@ def applicable_valuation_keys(is_financial: bool, is_turkish: bool = True) -> li
 
 
 def compute_signal_quality_score(
-    valuations: Dict[str, Optional[float]],
+    valuations: dict[str, float | None],
     warnings: list[str],
     is_financial: bool,
     is_turkish: bool = True,
-) -> Tuple[int, str]:
+) -> tuple[int, str]:
     keys = applicable_valuation_keys(is_financial, is_turkish)
     present_values = [valuations[key] for key in keys if valuations.get(key) is not None and valuations.get(key) > 0]
     expected_count = len(keys)
@@ -613,7 +624,7 @@ def compute_signal_quality_score(
             elif variation > 0.6:
                 dispersion_penalty = 6
 
-    score = int(round(max(0, min(100, 45 + coverage * 55 - warning_penalty - dispersion_penalty))))
+    score = round(max(0, min(100, 45 + coverage * 55 - warning_penalty - dispersion_penalty)))
     if score >= 80:
         quality = "High"
     elif score >= 60:
@@ -623,7 +634,7 @@ def compute_signal_quality_score(
     return score, quality
 
 
-def _blend_fair_values(valuations: Dict[str, Optional[float]]) -> Optional[float]:
+def _blend_fair_values(valuations: dict[str, float | None]) -> float | None:
     fv_dcf = valuations.get("fv_dcf")
     fv_relative = valuations.get("fv_relative")
     if fv_dcf and fv_relative and fv_dcf > 0 and fv_relative > 0:
@@ -637,8 +648,8 @@ def _blend_fair_values(valuations: Dict[str, Optional[float]]) -> Optional[float
     return sum(fair_values) / len(fair_values) if fair_values else None
 
 
-def _build_detail_fields(extra: Dict[str, Any]) -> Dict[str, Any]:
-    def _pct(key: str) -> Optional[float]:
+def _build_detail_fields(extra: dict[str, Any]) -> dict[str, Any]:
+    def _pct(key: str) -> float | None:
         v = extra.get(key)
         return v * 100 if v is not None else None
 
@@ -675,17 +686,17 @@ def build_output(
     warnings: list[str],
     signal_quality_score: int,
     signal_quality_label: str,
-    current_price: Optional[float],
-    valuations: Dict[str, Optional[float]],
-    fcf_by_year: Dict[int, Optional[float]],
-    extra: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    current_price: float | None,
+    valuations: dict[str, float | None],
+    fcf_by_year: dict[int, float | None],
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     average_fair_value = _blend_fair_values(valuations)
     expected_return = None
     if average_fair_value is not None and current_price is not None and current_price > EPSILON:
         expected_return = average_fair_value / current_price - 1
 
-    output: Dict[str, Any] = {
+    output: dict[str, Any] = {
         "Kod": clean_ticker(ticker),
         "Sektör": sector_name,
         "Para Birimi": get_currency_symbol(ticker),
@@ -710,15 +721,15 @@ def build_output(
     }
     if extra:
         output.update({k: v for k, v in _build_detail_fields(extra).items() if v is not None})
-    for year in sorted(fcf_by_year.keys()):
+    for year in sorted(fcf_by_year):
         output[f"FCF {year}"] = round_or_none(fcf_by_year[year])
     return output
 
 
 def _apply_live_multiples(
-    params: Dict[str, float],
+    params: dict[str, float],
     sector_name: str,
-    live_multiples: Dict[str, Dict[str, float]] | None,
+    live_multiples: dict[str, dict[str, float]] | None,
     ticker: str = "",
 ) -> None:
     from data.peer_multiples import get_ticker_multiples
@@ -739,7 +750,7 @@ def _apply_live_multiples(
         params["ev_rev"] = live["ev_rev"]
 
 
-def _blend_analyst_growth(is_turkish: bool, info: Dict[str, Any], hist_growth: float) -> float:
+def _blend_analyst_growth(is_turkish: bool, info: dict[str, Any], hist_growth: float) -> float:
     if is_turkish:
         return hist_growth
     analyst_growth = info.get("earningsGrowth") or info.get("revenueGrowth")
@@ -749,13 +760,13 @@ def _blend_analyst_growth(is_turkish: bool, info: Dict[str, Any], hist_growth: f
     return 0.5 * hist_growth + 0.5 * analyst_clamped
 
 
-def _filter_dividend(is_turkish: bool, dividend: Optional[float], current_price: Optional[float]) -> Optional[float]:
+def _filter_dividend(is_turkish: bool, dividend: float | None, current_price: float | None) -> float | None:
     if is_turkish or dividend is None or not current_price or current_price <= EPSILON:
         return dividend
     return dividend if dividend / current_price >= 0.015 else None
 
 
-def _fetch_consensus_y1(ticker: str) -> Optional[float]:
+def _fetch_consensus_y1(ticker: str) -> float | None:
     try:
         import yfinance as yf
         rev_est = yf.Ticker(ticker).revenue_estimate
@@ -763,15 +774,15 @@ def _fetch_consensus_y1(ticker: str) -> Optional[float]:
             growth_val = rev_est.loc["+1y", "growth"]
             if growth_val is not None and not pd.isna(growth_val):
                 return float(growth_val)
-    except Exception:
+    except TICKER_PROCESSING_ERRORS:
         pass
     return None
 
 
 def _compute_dcf_initial_growth(
     is_turkish: bool,
-    consensus_y1: Optional[float],
-    rev_cagr: Optional[float],
+    consensus_y1: float | None,
+    rev_cagr: float | None,
     avg_growth: float,
 ) -> float:
     if not is_turkish and consensus_y1 is not None:
@@ -781,11 +792,11 @@ def _compute_dcf_initial_growth(
 
 def _compute_fv_ev_rev(
     is_financial: bool,
-    params: Dict[str, float],
-    latest_revenue: Optional[float],
+    params: dict[str, float],
+    latest_revenue: float | None,
     net_debt: float,
     shares: float,
-) -> Optional[float]:
+) -> float | None:
     if is_financial:
         return None
     ev_rev_multiple = params.get("ev_rev", 0.0)
@@ -798,18 +809,18 @@ def _compute_fv_ev_rev(
 
 
 def _build_extra_dict(
-    info: Dict[str, Any],
-    params: Dict[str, float],
-    margin_profile: Dict[str, float],
+    info: dict[str, Any],
+    params: dict[str, float],
+    margin_profile: dict[str, float],
     is_turkish: bool,
-    balance_sheet: "pd.DataFrame | None",
-    ebitda: Optional[float],
+    balance_sheet: pd.DataFrame | None,
+    ebitda: float | None,
     net_debt: float,
-    rev_cagr: Optional[float],
-    latest_revenue: Optional[float],
-    wacc_components: Dict[str, float],
-    implied_prices: Dict[str, Optional[float]],
-) -> Dict[str, Any]:
+    rev_cagr: float | None,
+    latest_revenue: float | None,
+    wacc_components: dict[str, float],
+    implied_prices: dict[str, float | None],
+) -> dict[str, Any]:
     _equity = info.get("marketCap") or 0.0
     _info_debt = info.get("totalDebt") or 0.0
     _fin_debt = _get_financial_debt(balance_sheet, _info_debt) if not is_turkish else _info_debt
@@ -842,9 +853,9 @@ def _build_extra_dict(
 
 def _resolve_avg_growth(
     is_turkish: bool,
-    rev_cagr: Optional[float],
-    fcf_by_year: Dict[int, Optional[float]],
-    info: Dict[str, Any],
+    rev_cagr: float | None,
+    fcf_by_year: dict[int, float | None],
+    info: dict[str, Any],
     wacc: float,
 ) -> float:
     if not is_turkish and rev_cagr is not None:
@@ -856,12 +867,12 @@ def _resolve_avg_growth(
 def _build_valuations(
     is_financial: bool,
     is_turkish: bool,
-    params: Dict[str, float],
-    info: Dict[str, Any],
+    params: dict[str, float],
+    info: dict[str, Any],
     cost_of_equity: float,
-    dcf_inputs: Dict[str, Any],
-    precomputed: Dict[str, Any],
-) -> Dict[str, Optional[float]]:
+    dcf_inputs: dict[str, Any],
+    precomputed: dict[str, Any],
+) -> dict[str, float | None]:
     fv_dcf = None if is_financial else calculate_dcf_fair_value(
         latest_revenue=dcf_inputs["latest_revenue"],
         margin_profile=dcf_inputs["margin_profile"],
@@ -888,8 +899,8 @@ def _build_valuations(
 
 def value_ticker(
     ticker: str,
-    live_multiples: Dict[str, Dict[str, float]] | None = None,
-) -> Dict[str, Any]:
+    live_multiples: dict[str, dict[str, float]] | None = None,
+) -> dict[str, Any]:
     bundle = fetch_ticker_bundle(ticker)
     info = normalized_info(bundle)
     warnings = validate_bundle(bundle, info)
@@ -992,7 +1003,7 @@ def value_ticker(
 
 def load_tickers(path: str) -> list[str]:
     try:
-        with open(path, "r", encoding="utf-8") as source:
+        with open(path, encoding="utf-8") as source:
             tickers = [line.strip() for line in source if line.strip()]
         print("Kaynak:", path)
         return tickers
@@ -1001,19 +1012,19 @@ def load_tickers(path: str) -> list[str]:
         return []
 
 
-def run_valuation(tickers: list[str]) -> list[Dict[str, Any]]:
+def run_valuation(tickers: list[str]) -> list[dict[str, Any]]:
     # Fetch live peer multiples once for US runs to replace static sector defaults
     has_us = any(not is_turkish_ticker(t) for t in tickers)
-    live_multiples: Dict[str, Dict[str, float]] = {}
+    live_multiples: dict[str, dict[str, float]] = {}
     if has_us:
         print("[peer_multiples] Canlı sektör katları çekiliyor…")
         try:
             live_multiples = get_live_sector_multiples()
             print(f"[peer_multiples] {len(live_multiples)} sektör verisi alındı.")
-        except Exception as exc:
+        except TICKER_PROCESSING_ERRORS as exc:
             print(f"[peer_multiples] Hata — statik değerlere dönülüyor: {exc}")
 
-    results: list[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     for ticker_code in tickers:
         print("→", ticker_code, "analiz")
         try:

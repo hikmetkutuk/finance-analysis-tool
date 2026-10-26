@@ -56,6 +56,12 @@ export interface RefreshState {
   error: string | null
 }
 
+export interface MarketDataState extends RefreshState {
+  stage: 'starting' | 'market_data' | 'valuation' | null
+  macro_as_of: string | null
+  macro_source: string | null
+}
+
 export interface HistoryPoint {
   snapped_at: string
   current_price: number | null
@@ -71,5 +77,5 @@ export interface PricePoint {
 
 export type SortKey = keyof Stock
 export type SortDir = 'asc' | 'desc'
-export type Market = 'us' | 'bist'
+export type Market = 'us' | 'xu030'
 export type Lang = 'tr' | 'en'

@@ -10,7 +10,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from reporting.valuation_backtest import (  # noqa: E402
+from reporting.valuation_backtest import (
     BACKTEST_REPORT_PATH,
     CALIBRATION_REPORT_PATH,
     build_calibration_report,

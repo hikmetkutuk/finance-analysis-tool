@@ -3,7 +3,7 @@ import { api } from './api'
 import { translations } from './i18n'
 import PortfolioTable from './components/PortfolioTable'
 import StockDetail from './components/StockDetail'
-import type { Lang, Market, RefreshState, Stock } from './types'
+import type { Lang, Market, MarketDataState, RefreshState, Stock } from './types'
 
 const POLL_MS = 30_000
 
@@ -18,11 +18,14 @@ function fmtDateTime(dt: string | null, locale: string, fromCacheLabel: string):
 }
 
 export default function App() {
-  const [market, setMarket] = useState<Market>('us')
+  const [market, setMarket] = useState<Market>('xu030')
   const [lang, setLang] = useState<Lang>('tr')
   const [stocks, setStocks] = useState<Stock[]>([])
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const [refreshState, setRefreshState] = useState<RefreshState>({ running: false, last_updated: null, error: null })
+  const [marketDataState, setMarketDataState] = useState<MarketDataState>({
+    running: false, last_updated: null, error: null, stage: null, macro_as_of: null, macro_source: null,
+  })
   const [selected, setSelected] = useState<Stock | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -53,12 +56,20 @@ export default function App() {
     } catch { /* ignore */ }
   }, [market, fetchPortfolio])
 
+  const fetchMarketDataStatus = useCallback(async () => {
+    try {
+      setMarketDataState(await api.marketDataStatus())
+    } catch { /* ignore */ }
+  }, [])
+
   useEffect(() => {
     fetchPortfolio()
     fetchStatus()
+    fetchMarketDataStatus()
     const id = setInterval(fetchStatus, POLL_MS)
-    return () => clearInterval(id)
-  }, [fetchPortfolio, fetchStatus])
+    const marketDataId = setInterval(fetchMarketDataStatus, POLL_MS)
+    return () => { clearInterval(id); clearInterval(marketDataId) }
+  }, [fetchPortfolio, fetchStatus, fetchMarketDataStatus])
 
   const selectedKod = selected?.Kod
   useEffect(() => {
@@ -71,6 +82,14 @@ export default function App() {
     try {
       await api.triggerRefresh(market)
       setRefreshState(prev => ({ ...prev, running: true }))
+    } catch { /* already running or error */ }
+  }
+
+  const handleMarketDataRefresh = async () => {
+    try {
+      await api.triggerMarketDataRefresh()
+      setMarketDataState(prev => ({ ...prev, running: true, stage: 'starting', error: null }))
+      setRefreshState(prev => ({ ...prev, running: true, error: null }))
     } catch { /* already running or error */ }
   }
 
@@ -165,9 +184,14 @@ export default function App() {
             <span className="text-xs text-slate-500 hidden sm:block">
               {tr.lastUpdated} {fmtDateTime(lastUpdated, tr.dateLocale, tr.fromCache)}
             </span>
+            {market === 'xu030' && marketDataState.macro_as_of && (
+              <span className="text-xs text-slate-500 hidden lg:block" title={marketDataState.macro_source ?? ''}>
+                {tr.macroAsOf} {marketDataState.macro_as_of}
+              </span>
+            )}
 
             <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-0.5">
-              {(['us', 'bist'] as const).map(m => (
+              {(['us', 'xu030'] as const).map(m => (
                 <button
                   key={m}
                   type="button"
@@ -211,6 +235,17 @@ export default function App() {
               <span className={refreshState.running ? 'animate-spin' : ''}>↻</span>
               {refreshState.running ? tr.calculating : tr.refresh}
             </button>
+            {market === 'xu030' && (
+              <button
+                type="button"
+                onClick={handleMarketDataRefresh}
+                disabled={refreshState.running || marketDataState.running}
+                title={marketDataState.error ?? marketDataState.macro_source ?? ''}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-900/50 hover:bg-emerald-800/60 border border-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {marketDataState.running ? tr.refreshingMarketData : tr.refreshMarketData}
+              </button>
+            )}
           </div>
         </div>
 

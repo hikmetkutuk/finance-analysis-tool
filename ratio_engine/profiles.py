@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import FrozenSet
 
 from .constants import MARKET_AUTO, MARKET_TR, MARKET_US
 
@@ -8,7 +7,7 @@ from .constants import MARKET_AUTO, MARKET_TR, MARKET_US
 class MarketProfile:
     market: str
     default_tax_rate: float
-    financial_terms: FrozenSet[str]
+    financial_terms: frozenset[str]
 
 
 TR_PROFILE = MarketProfile(

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Live market parameter fetcher.
 Caches results to avoid redundant network calls within the same run.
@@ -13,7 +12,7 @@ from __future__ import annotations
 import io
 import time
 import urllib.request
-from typing import Optional
+import zipfile
 
 _cache: dict[str, dict] = {}
 _ERP_TTL  = 7 * 24 * 3600   # 7 days — Damodaran updates monthly
@@ -21,6 +20,16 @@ _RF_TTL   = 24 * 3600        # 24 hours — TCMB meets monthly
 
 _HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; finance-analysis-tool)"}
 _TIMEOUT  = 10
+LIVE_PARAM_ERRORS = (
+    OSError,
+    TimeoutError,
+    ValueError,
+    TypeError,
+    KeyError,
+    IndexError,
+    ImportError,
+    zipfile.BadZipFile,
+)
 
 _DAMODARAN_URL = (
     "https://pages.stern.nyu.edu/~adamodar/pc/implprem/ERPbymonth.xlsx"
@@ -30,7 +39,7 @@ _FRED_BIST_URL = (
 )
 
 
-def _get(key: str) -> Optional[float]:
+def _get(key: str) -> float | None:
     entry = _cache.get(key)
     if entry and time.time() - entry["ts"] < entry["ttl"]:
         return entry["val"]
@@ -60,7 +69,7 @@ def _erp_col_index(header: tuple) -> int:
         return 9  # known fallback position
 
 
-def _parse_erp_from_rows(rows: list, col_idx: int) -> Optional[float]:
+def _parse_erp_from_rows(rows: list, col_idx: int) -> float | None:
     for row in reversed(rows[1:]):
         val = row[col_idx] if col_idx < len(row) else None
         if val is None:
@@ -87,7 +96,10 @@ def fetch_us_erp(fallback: float) -> float:
 
         data = _fetch_bytes(_DAMODARAN_URL)
         wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
-        rows = list(wb.active.iter_rows(values_only=True))
+        worksheet = wb.active
+        if worksheet is None:
+            raise ValueError("Damodaran çalışma kitabında aktif sayfa yok")
+        rows = list(worksheet.iter_rows(values_only=True))
         col_idx = _erp_col_index(rows[0])
         erp = _parse_erp_from_rows(rows, col_idx)
 
@@ -95,7 +107,7 @@ def fetch_us_erp(fallback: float) -> float:
             print(f"[live_params] US ERP from Damodaran: {erp*100:.2f}%")
             return _put("us_erp", erp, _ERP_TTL)
 
-    except Exception as exc:
+    except LIVE_PARAM_ERRORS as exc:
         print(f"[live_params] ERP fetch failed: {exc}")
 
     print(f"[live_params] US ERP fallback: {fallback*100:.2f}%")
@@ -123,7 +135,7 @@ def fetch_bist_rf(fallback: float) -> float:
             if 0.05 <= rf <= 1.0:  # sanity: 5-100%
                 print(f"[live_params] BIST rf from FRED: {rf*100:.2f}%")
                 return _put("bist_rf", rf, _RF_TTL)
-    except Exception as exc:
+    except LIVE_PARAM_ERRORS as exc:
         print(f"[live_params] BIST rf fetch failed: {exc}")
 
     print(f"[live_params] BIST rf fallback: {fallback*100:.2f}%")

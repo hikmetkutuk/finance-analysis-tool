@@ -4,36 +4,39 @@ import pandas as pd
 from openpyxl import load_workbook
 
 from data.market_data_provider import TickerBundle
-from reporting.financials_report import compute_share_count, financials_row_from_bundle
 from data.ratio_profile_config import load_ratio_profile_config, resolve_ratio_profile
 from data.sector import US_PROFILE
 from data.sector_profile_config import load_sector_profile_config
-from data.valuation_profile_config import load_valuation_profile_config, resolve_valuation_weight_map
+from data.valuation_profile_config import (
+    load_valuation_profile_config,
+    resolve_valuation_weight_map,
+)
+from reporting.financials_report import compute_share_count, financials_row_from_bundle
 from reporting.template_report import (
     CODE_COLUMN,
     GREEN_FONT_COLOR,
-    HISSE_PE,
+    HISSE_FUNDAMENTAL_QUALITY,
     HISSE_PB,
-    HisseInputs,
+    HISSE_PE,
     INA_VALUE_COLUMN,
-    MacroRates,
-    RED_FONT_COLOR,
+    PUAN_GROSS_MARGIN,
+    PUAN_REVENUE,
+    PUAN_TOTAL_ASSETS,
+    PUAN_TOTAL_DEBT,
     RASYO_COVERAGE,
     RASYO_PROFILE,
     RASYO_SCORE,
     RASYO_SCORE_100,
     RASYO_VALUATION_SCORE,
+    RED_FONT_COLOR,
     SHEET_HISSE,
     SHEET_KALITE,
-    PUAN_GROSS_MARGIN,
-    PUAN_REVENUE,
-    PUAN_TOTAL_ASSETS,
-    PUAN_TOTAL_DEBT,
-    HISSE_FUNDAMENTAL_QUALITY,
     WEIGHT_PROFILE_DEFAULT,
-    WEIGHT_PROFILE_FINANCIAL,
     WEIGHT_PROFILE_ENERGY_EQUIPMENT,
+    WEIGHT_PROFILE_FINANCIAL,
     WEIGHT_PROFILE_GROWTH,
+    HisseInputs,
+    MacroRates,
     build_puan_frame,
     build_rasyo_frame,
     hisse_output_row,

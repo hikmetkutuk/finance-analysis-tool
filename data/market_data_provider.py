@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import time
-from typing import Any, Dict, Optional
+from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 import yfinance as yf
@@ -10,7 +10,6 @@ from yfinance.exceptions import YFRateLimitError
 
 from .alpha_vantage_client import alpha_vantage_enabled, fetch_alpha_vantage_dataset
 from .cache_store import load_fresh_cache, load_latest_cache, save_cache
-
 
 FETCH_ERRORS = (YFRateLimitError, RuntimeError, ValueError, TypeError, KeyError, AttributeError, OSError)
 FAST_INFO_KEYS = ("marketCap", "shares", "priceToBook", "lastPrice")
@@ -23,12 +22,12 @@ TICKER_BUNDLE_CACHE_MAX_AGE_SECONDS = 6 * 60 * 60
 @dataclass
 class TickerBundle:
     ticker: str
-    info: Dict[str, Any]
-    fast_info: Dict[str, Any]
+    info: dict[str, Any]
+    fast_info: dict[str, Any]
     financials: pd.DataFrame
     balance_sheet: pd.DataFrame
     cashflow: pd.DataFrame
-    last_close: Optional[float]
+    last_close: float | None
     warnings: list[str]
 
 
@@ -36,7 +35,7 @@ def _dedupe_warnings(warnings: list[str]) -> list[str]:
     return list(dict.fromkeys(item for item in warnings if item))
 
 
-def safe_float(value: Any) -> Optional[float]:
+def safe_float(value: Any) -> float | None:
     try:
         number = float(value)
     except (TypeError, ValueError):
@@ -52,7 +51,7 @@ def as_dataframe(value: Any) -> pd.DataFrame:
     return pd.DataFrame()
 
 
-def as_string_dict(value: Any) -> Dict[str, Any]:
+def as_string_dict(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {}
     return {str(key): item for key, item in value.items()}
@@ -75,7 +74,7 @@ def _serialize_bundle(bundle: TickerBundle) -> dict[str, Any]:
     }
 
 
-def _deserialize_bundle(payload: Any) -> Optional[TickerBundle]:
+def _deserialize_bundle(payload: Any) -> TickerBundle | None:
     if not isinstance(payload, dict):
         return None
     ticker = payload.get("ticker")
@@ -104,7 +103,7 @@ def _bundle_has_substantive_data(bundle: TickerBundle) -> bool:
     )
 
 
-def _load_cached_bundle(namespace: str, key: str, max_age_seconds: Optional[int] = None) -> Optional[TickerBundle]:
+def _load_cached_bundle(namespace: str, key: str, max_age_seconds: int | None = None) -> TickerBundle | None:
     if max_age_seconds is None:
         cached = load_latest_cache(namespace, key)
     else:
@@ -116,7 +115,7 @@ def _load_cached_bundle(namespace: str, key: str, max_age_seconds: Optional[int]
 
 def _merge_bundle_with_fallback(
     bundle: TickerBundle,
-    fallback_bundle: Optional[TickerBundle],
+    fallback_bundle: TickerBundle | None,
     warning_label: str,
 ) -> TickerBundle:
     if fallback_bundle is None:
@@ -168,11 +167,11 @@ def _merge_bundle_with_fallback(
     )
 
 
-def _merge_bundle_with_cache(bundle: TickerBundle, cached_bundle: Optional[TickerBundle]) -> TickerBundle:
+def _merge_bundle_with_cache(bundle: TickerBundle, cached_bundle: TickerBundle | None) -> TickerBundle:
     return _merge_bundle_with_fallback(bundle, cached_bundle, "cache_backfill_used")
 
 
-def _bundle_with_last_close_option(bundle: Optional[TickerBundle], include_last_close: bool) -> Optional[TickerBundle]:
+def _bundle_with_last_close_option(bundle: TickerBundle | None, include_last_close: bool) -> TickerBundle | None:
     if bundle is None or include_last_close:
         return bundle
     return TickerBundle(
@@ -202,7 +201,7 @@ def call_with_retries(loader):
     raise RuntimeError("retry loader exited unexpectedly")
 
 
-def extract_fast_info(stock: yf.Ticker) -> tuple[Dict[str, Any], bool]:
+def extract_fast_info(stock: yf.Ticker) -> tuple[dict[str, Any], bool]:
     try:
         fast_info_obj = call_with_retries(lambda: stock.fast_info)
     except FETCH_ERRORS:
@@ -210,7 +209,7 @@ def extract_fast_info(stock: yf.Ticker) -> tuple[Dict[str, Any], bool]:
     if fast_info_obj is None:
         return {}, True
 
-    fast_info: Dict[str, Any] = {}
+    fast_info: dict[str, Any] = {}
     had_error = False
     for key in FAST_INFO_KEYS:
         try:
@@ -226,7 +225,7 @@ def extract_fast_info(stock: yf.Ticker) -> tuple[Dict[str, Any], bool]:
     return fast_info, had_error
 
 
-def get_last_close(stock: yf.Ticker) -> Optional[float]:
+def get_last_close(stock: yf.Ticker) -> float | None:
     try:
         history = call_with_retries(lambda: stock.history(period="5d", interval="1d"))
     except FETCH_ERRORS:
@@ -247,7 +246,7 @@ def get_last_close(stock: yf.Ticker) -> Optional[float]:
 
 class FreshCacheTickerBundleProvider:
     @staticmethod
-    def fetch(ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
+    def fetch(ticker: str, include_last_close: bool = True) -> TickerBundle | None:
         cached_bundle = _load_cached_bundle(
             TICKER_BUNDLE_CACHE_NAMESPACE,
             ticker,
@@ -311,9 +310,9 @@ class YahooLiveTickerBundleProvider:
 
 class AlphaVantageTickerBundleProvider:
     @staticmethod
-    def _fast_info_from_bundle(bundle: TickerBundle) -> Dict[str, Any]:
+    def _fast_info_from_bundle(bundle: TickerBundle) -> dict[str, Any]:
         info = bundle.info
-        fast_info: Dict[str, Any] = {}
+        fast_info: dict[str, Any] = {}
         if info.get("marketCap") is not None:
             fast_info["marketCap"] = info.get("marketCap")
         if info.get("sharesOutstanding") is not None:
@@ -325,7 +324,7 @@ class AlphaVantageTickerBundleProvider:
         return fast_info
 
     @staticmethod
-    def fetch(ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
+    def fetch(ticker: str, include_last_close: bool = True) -> TickerBundle | None:
         if not alpha_vantage_enabled():
             return None
         try:
@@ -359,7 +358,7 @@ class AlphaVantageTickerBundleProvider:
 
 class StaleCacheTickerBundleProvider:
     @staticmethod
-    def fetch(ticker: str, include_last_close: bool = True) -> Optional[TickerBundle]:
+    def fetch(ticker: str, include_last_close: bool = True) -> TickerBundle | None:
         cached_bundle = _load_cached_bundle(TICKER_BUNDLE_CACHE_NAMESPACE, ticker)
         return _bundle_with_last_close_option(cached_bundle, include_last_close)
 
@@ -402,7 +401,7 @@ def fetch_ticker_bundle(ticker: str, include_last_close: bool = True) -> TickerB
     return TickerBundleProviderChain().fetch(ticker, include_last_close=include_last_close)
 
 
-def coalesce_numeric(*values: Any) -> Optional[float]:
+def coalesce_numeric(*values: Any) -> float | None:
     for value in values:
         num = safe_float(value)
         if num is not None:
@@ -410,7 +409,7 @@ def coalesce_numeric(*values: Any) -> Optional[float]:
     return None
 
 
-def normalized_info(bundle: TickerBundle) -> Dict[str, Optional[float]]:
+def normalized_info(bundle: TickerBundle) -> dict[str, float | None]:
     info = bundle.info
     fast = bundle.fast_info
     market_cap = coalesce_numeric(info.get("marketCap"), fast.get("marketCap"))
@@ -447,7 +446,7 @@ def normalized_info(bundle: TickerBundle) -> Dict[str, Optional[float]]:
     return normalized
 
 
-def validate_bundle(bundle: TickerBundle, info: Dict[str, Optional[float]]) -> list[str]:
+def validate_bundle(bundle: TickerBundle, info: dict[str, float | None]) -> list[str]:
     warnings = list(bundle.warnings)
     if info.get("sharesOutstanding") is None and info.get("floatShares") is None:
         warnings.append("shares_missing")

@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
 from data.market_data_provider import fetch_ticker_bundle, normalized_info
 from valuation import AVERAGE_FAIR_PRICE_LABEL, load_tickers, value_ticker
 
-
 VALIDATION_REPORT_PATH = Path("valuation_validation_report.csv")
 
 
-def parse_tr_formatted_number(value: Any) -> Optional[float]:
+def parse_tr_formatted_number(value: Any) -> float | None:
     if value is None:
         return None
     if isinstance(value, (int, float)):

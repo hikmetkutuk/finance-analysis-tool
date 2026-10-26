@@ -1,10 +1,11 @@
 import argparse
 import json
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Iterable, Optional, cast
+from typing import Any, cast
 
 import pandas as pd
 import yfinance as yf
@@ -13,7 +14,7 @@ logger = logging.getLogger("sector")
 
 try:
     curl_request_exceptions = import_module("curl_cffi.requests.exceptions")
-    NetworkRequestError = getattr(curl_request_exceptions, "RequestException")
+    NetworkRequestError = curl_request_exceptions.RequestException
 except ModuleNotFoundError:
     NetworkRequestError = OSError
 
@@ -173,7 +174,7 @@ US_CLASSIFIER_RULES = [
 
 TR_PROFILE = MarketProfile(
     market="tr",
-    universe_path="hisseler.txt",
+    universe_path="xu030.txt",
     ticker_suffix=".IS",
     other_label="Diğer BIST",
     base_sector_map=BASE_SECTOR_TICKERS_TR,
@@ -200,14 +201,14 @@ def normalize_text(value: Any) -> str:
     return str(value).strip().lower()
 
 
-def safe_float(value: Any) -> Optional[float]:
+def safe_float(value: Any) -> float | None:
     try:
         return float(value)
     except (TypeError, ValueError):
         return None
 
 
-def robust_median(values: Iterable[float]) -> Optional[float]:
+def robust_median(values: Iterable[float]) -> float | None:
     series = pd.Series(list(values), dtype="float64").dropna()
     if series.empty:
         return None
@@ -267,7 +268,7 @@ def fetch_info(ticker: str) -> dict:
     return info
 
 
-def infer_sector_from_info(info: dict, profile: MarketProfile) -> Optional[str]:
+def infer_sector_from_info(info: dict, profile: MarketProfile) -> str | None:
     fields = [
         info.get("sector"),
         info.get("industry"),
@@ -381,7 +382,7 @@ def prepare_sector_map(profile: MarketProfile, auto_classify: bool = False) -> d
     return prepared
 
 
-def extract_multiples(info: dict, is_financial_sector: bool) -> tuple[Optional[float], Optional[float], Optional[float]]:
+def extract_multiples(info: dict, is_financial_sector: bool) -> tuple[float | None, float | None, float | None]:
     pe = safe_float(info.get("trailingPE"))
     pb = safe_float(info.get("priceToBook"))
     ev = safe_float(info.get("enterpriseValue"))

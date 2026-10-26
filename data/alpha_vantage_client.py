@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import os
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
 import pandas as pd
-
 
 ALPHA_VANTAGE_API_KEY_ENV = "ALPHAVANTAGE_API_KEY"
 ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
@@ -55,11 +54,11 @@ class AlphaVantageDataset:
     quarterly_balance: pd.DataFrame
     annual_cashflow: pd.DataFrame
     quarterly_cashflow: pd.DataFrame
-    last_close: Optional[float]
+    last_close: float | None
     warnings: list[str]
 
 
-def _safe_float(value: Any) -> Optional[float]:
+def _safe_float(value: Any) -> float | None:
     try:
         number = float(value)
     except (TypeError, ValueError):
@@ -69,14 +68,14 @@ def _safe_float(value: Any) -> Optional[float]:
     return number
 
 
-def _safe_ratio(value: Any) -> Optional[float]:
+def _safe_ratio(value: Any) -> float | None:
     number = _safe_float(value)
     if number is None:
         return None
     return number / 100.0 if abs(number) > 1.5 else number
 
 
-def _api_key() -> Optional[str]:
+def _api_key() -> str | None:
     raw = os.getenv(ALPHA_VANTAGE_API_KEY_ENV, "").strip()
     return raw or None
 
@@ -98,7 +97,7 @@ def _fetch_json(function_name: str, symbol: str, api_key: str) -> dict[str, Any]
     except json.JSONDecodeError as error:
         raise ValueError(f"alpha_vantage_invalid_json:{function_name}") from error
     if not isinstance(payload, dict):
-        raise ValueError(f"alpha_vantage_invalid_payload:{function_name}")
+        raise TypeError(f"alpha_vantage_invalid_payload:{function_name}")
     if payload.get("Error Message"):
         raise ValueError(f"alpha_vantage_error:{function_name}")
     if payload.get("Note") or payload.get("Information"):
@@ -137,7 +136,7 @@ def frame_from_reports(reports: Any, field_map: dict[str, str]) -> pd.DataFrame:
     return frame
 
 
-def _latest_balance_value(frame: pd.DataFrame, row_name: str) -> Optional[float]:
+def _latest_balance_value(frame: pd.DataFrame, row_name: str) -> float | None:
     if not isinstance(frame, pd.DataFrame) or frame.empty or row_name not in frame.index:
         return None
     series = frame.loc[row_name]
@@ -182,7 +181,7 @@ def _overview_to_info(overview: dict[str, Any], balance_sheet: pd.DataFrame, glo
     }
 
 
-def fetch_alpha_vantage_dataset(symbol: str) -> Optional[AlphaVantageDataset]:
+def fetch_alpha_vantage_dataset(symbol: str) -> AlphaVantageDataset | None:
     api_key = _api_key()
     if api_key is None:
         return None

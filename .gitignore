@@ -16,6 +16,9 @@ env/
 # ── Project data / cache ──────────────────────────────────────────────────────
 .cache/
 data/valuation_history.db
+data/market_snapshots/
+db/
+market_refresh_status.json
 logs/
 *.xlsx
 *.csv

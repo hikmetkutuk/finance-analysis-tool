@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from pathlib import Path
 import pickle
 import re
-from typing import Any, Optional
-
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 CACHE_ROOT = Path(__file__).resolve().parent.parent / ".cache"
 
@@ -27,11 +26,11 @@ def _latest_path(namespace: str, key: str) -> Path:
 
 
 def _snapshot_path(namespace: str, key: str, saved_at: datetime) -> Path:
-    stamp = saved_at.astimezone(timezone.utc).strftime("%Y-%m-%d")
+    stamp = saved_at.astimezone(UTC).strftime("%Y-%m-%d")
     return CACHE_ROOT / namespace / "snapshots" / stamp / f"{_safe_key(key)}.pkl"
 
 
-def _read_pickle(path: Path) -> Optional[CachePayload]:
+def _read_pickle(path: Path) -> CachePayload | None:
     if not path.exists():
         return None
     try:
@@ -48,22 +47,22 @@ def _read_pickle(path: Path) -> Optional[CachePayload]:
     return CachePayload(payload=payload, saved_at=saved_at)
 
 
-def load_latest_cache(namespace: str, key: str) -> Optional[CachePayload]:
+def load_latest_cache(namespace: str, key: str) -> CachePayload | None:
     return _read_pickle(_latest_path(namespace, key))
 
 
-def load_fresh_cache(namespace: str, key: str, max_age_seconds: int) -> Optional[CachePayload]:
+def load_fresh_cache(namespace: str, key: str, max_age_seconds: int) -> CachePayload | None:
     cached = load_latest_cache(namespace, key)
     if cached is None:
         return None
-    age_seconds = (datetime.now(timezone.utc) - cached.saved_at.astimezone(timezone.utc)).total_seconds()
+    age_seconds = (datetime.now(UTC) - cached.saved_at.astimezone(UTC)).total_seconds()
     if age_seconds > max_age_seconds:
         return None
     return cached
 
 
 def save_cache(namespace: str, key: str, payload: Any) -> CachePayload:
-    saved_at = datetime.now(timezone.utc)
+    saved_at = datetime.now(UTC)
     envelope = {"saved_at": saved_at, "payload": payload}
     latest_path = _latest_path(namespace, key)
     snapshot_path = _snapshot_path(namespace, key, saved_at)

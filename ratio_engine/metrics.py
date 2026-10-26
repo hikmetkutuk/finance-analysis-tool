@@ -1,4 +1,5 @@
-from typing import Any, Iterable, Optional, Tuple
+from collections.abc import Iterable
+from typing import Any
 
 from .constants import (
     CASH_KEYS,
@@ -18,7 +19,7 @@ from .dependencies import pd
 from .profiles import MarketProfile
 
 
-def _f(value: Any) -> Optional[float]:
+def _f(value: Any) -> float | None:
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -43,13 +44,13 @@ def is_financial_company(info: dict, profile: MarketProfile) -> bool:
     return any(term in text for term in profile.financial_terms)
 
 
-def first_col(frame: Any) -> Optional[Any]:
+def first_col(frame: Any) -> Any | None:
     if frame is None or frame.empty:
         return None
     return frame.columns[0]
 
 
-def latest_value(frame: Any, keys: Iterable[str]) -> Optional[float]:
+def latest_value(frame: Any, keys: Iterable[str]) -> float | None:
     if frame is None or frame.empty:
         return None
     latest_col = first_col(frame)
@@ -67,14 +68,14 @@ def latest_value(frame: Any, keys: Iterable[str]) -> Optional[float]:
     return None
 
 
-def latest_value_with_fallback(primary_frame: Any, secondary_frame: Any, keys: Iterable[str]) -> Optional[float]:
+def latest_value_with_fallback(primary_frame: Any, secondary_frame: Any, keys: Iterable[str]) -> float | None:
     value = latest_value(primary_frame, keys)
     if value is not None:
         return value
     return latest_value(secondary_frame, keys)
 
 
-def latest_two_values(frame: Any, keys: Iterable[str]) -> Tuple[Optional[float], Optional[float]]:
+def latest_two_values(frame: Any, keys: Iterable[str]) -> tuple[float | None, float | None]:
     if frame is None or frame.empty:
         return None, None
     row_key = next((key for key in keys if key in frame.index), None)
@@ -92,14 +93,14 @@ def latest_two_values_with_fallback(
     primary_frame: Any,
     secondary_frame: Any,
     keys: Iterable[str],
-) -> Tuple[Optional[float], Optional[float]]:
+) -> tuple[float | None, float | None]:
     current_value, previous_value = latest_two_values(primary_frame, keys)
     if current_value is not None:
         return current_value, previous_value
     return latest_two_values(secondary_frame, keys)
 
 
-def series_ttm(frame: Any, row_name: str) -> Optional[float]:
+def series_ttm(frame: Any, row_name: str) -> float | None:
     if frame is None or frame.empty or row_name not in frame.index:
         return None
     try:
@@ -109,7 +110,7 @@ def series_ttm(frame: Any, row_name: str) -> Optional[float]:
         return None
 
 
-def yoy_growth_from_annual(annual_frame: Any, row_name: str) -> Optional[float]:
+def yoy_growth_from_annual(annual_frame: Any, row_name: str) -> float | None:
     if annual_frame is None or annual_frame.empty or row_name not in annual_frame.index:
         return None
     series = annual_frame.loc[row_name].dropna()
@@ -122,7 +123,7 @@ def yoy_growth_from_annual(annual_frame: Any, row_name: str) -> Optional[float]:
     return (current_value - previous_value) / previous_value * 100.0
 
 
-def yoy_growth_from_quarterly(quarterly_frame: Any, row_name: str) -> Optional[float]:
+def yoy_growth_from_quarterly(quarterly_frame: Any, row_name: str) -> float | None:
     if quarterly_frame is None or quarterly_frame.empty or row_name not in quarterly_frame.index:
         return None
     series = quarterly_frame.loc[row_name].dropna()
@@ -135,7 +136,7 @@ def yoy_growth_from_quarterly(quarterly_frame: Any, row_name: str) -> Optional[f
     return (ttm_now - ttm_prev) / ttm_prev * 100.0
 
 
-def yoy_growth_from_annual_or_quarterly(annual_frame: Any, quarterly_frame: Any, row_name: str) -> Optional[float]:
+def yoy_growth_from_annual_or_quarterly(annual_frame: Any, quarterly_frame: Any, row_name: str) -> float | None:
     annual_value = yoy_growth_from_annual(annual_frame, row_name)
     if annual_value is not None:
         return annual_value
@@ -143,10 +144,10 @@ def yoy_growth_from_annual_or_quarterly(annual_frame: Any, quarterly_frame: Any,
 
 
 def build_liquidity_metrics(
-    current_assets: Optional[float],
-    current_liabilities: Optional[float],
-    inventory: Optional[float],
-    cash_like: Optional[float],
+    current_assets: float | None,
+    current_liabilities: float | None,
+    inventory: float | None,
+    cash_like: float | None,
 ) -> dict:
     assets = _f(current_assets)
     liabilities = _f(current_liabilities)
@@ -165,9 +166,9 @@ def build_liquidity_metrics(
 def calculate_roe(
     quarterly_financials: Any,
     info: dict,
-    equity_current: Optional[float],
-    equity_previous: Optional[float],
-) -> Optional[float]:
+    equity_current: float | None,
+    equity_previous: float | None,
+) -> float | None:
     ttm_net_income = series_ttm(quarterly_financials, "Net Income")
     if ttm_net_income is None:
         trailing_eps = _f(info.get("trailingEps"))
@@ -187,7 +188,7 @@ def calculate_roe(
     return (net_income_value / avg_equity) * 100.0
 
 
-def calculate_peg(info: dict) -> Optional[float]:
+def calculate_peg(info: dict) -> float | None:
     pe_ratio = _f(info.get("trailingPE"))
     growth = _f(info.get("earningsGrowth"))
     if pe_ratio in (None, 0) or growth is None:
@@ -198,13 +199,13 @@ def calculate_peg(info: dict) -> Optional[float]:
     return pe_ratio / growth_pct
 
 
-def normalize_tax_rate(rate: Optional[float], default_tax_rate: float) -> float:
+def normalize_tax_rate(rate: float | None, default_tax_rate: float) -> float:
     if rate is None:
         return default_tax_rate
     return min(max(rate, 0.0), 1.0)
 
 
-def read_total_debt_from_frame(balance_sheet: Any) -> Optional[float]:
+def read_total_debt_from_frame(balance_sheet: Any) -> float | None:
     total_debt = latest_value(balance_sheet, TOTAL_DEBT_KEYS)
     if total_debt is not None:
         return total_debt
@@ -213,14 +214,14 @@ def read_total_debt_from_frame(balance_sheet: Any) -> Optional[float]:
     return (short_debt or 0.0) + (long_debt or 0.0)
 
 
-def get_total_debt(quarterly_balance_sheet: Any, annual_balance_sheet: Any) -> Optional[float]:
+def get_total_debt(quarterly_balance_sheet: Any, annual_balance_sheet: Any) -> float | None:
     debt = read_total_debt_from_frame(quarterly_balance_sheet)
     if debt is not None:
         return debt
     return read_total_debt_from_frame(annual_balance_sheet)
 
 
-def get_avg_assets(quarterly_balance_sheet: Any, annual_balance_sheet: Any) -> Optional[float]:
+def get_avg_assets(quarterly_balance_sheet: Any, annual_balance_sheet: Any) -> float | None:
     if quarterly_balance_sheet is not None and not quarterly_balance_sheet.empty and TOTAL_ASSETS_KEY in quarterly_balance_sheet.index:
         values = quarterly_balance_sheet.loc[TOTAL_ASSETS_KEY].dropna()
         if values.shape[0] >= 2:
@@ -235,10 +236,10 @@ def calculate_roic(
     quarterly_financials: Any,
     quarterly_balance_sheet: Any,
     annual_balance_sheet: Any,
-    equity_current: Optional[float],
-    cash_like: Optional[float],
+    equity_current: float | None,
+    cash_like: float | None,
     default_tax_rate: float,
-) -> Optional[float]:
+) -> float | None:
     operating_income_ttm = series_ttm(quarterly_financials, "Operating Income")
     tax_rate = normalize_tax_rate(_f(info.get("effectiveTaxRate")), default_tax_rate)
     operating_income_value = _f(operating_income_ttm)
@@ -259,7 +260,7 @@ def calculate_asset_turnover(
     quarterly_financials: Any,
     quarterly_balance_sheet: Any,
     annual_balance_sheet: Any,
-) -> Optional[float]:
+) -> float | None:
     revenue_ttm = series_ttm(quarterly_financials, "Total Revenue") or series_ttm(quarterly_financials, "Revenue")
     avg_assets = get_avg_assets(quarterly_balance_sheet, annual_balance_sheet)
     revenue_value = _f(revenue_ttm)
@@ -272,7 +273,7 @@ def calculate_asset_turnover(
 def extract_balance_sheet_values(
     quarterly_balance_sheet: Any,
     annual_balance_sheet: Any,
-) -> Tuple[Optional[float], Optional[float], Optional[float], Optional[float], Optional[float], Optional[float]]:
+) -> tuple[float | None, float | None, float | None, float | None, float | None, float | None]:
     current_assets = latest_value_with_fallback(quarterly_balance_sheet, annual_balance_sheet, CURRENT_ASSET_KEYS)
     current_liabilities = latest_value_with_fallback(quarterly_balance_sheet, annual_balance_sheet, CURRENT_LIABILITY_KEYS)
     inventory = latest_value_with_fallback(quarterly_balance_sheet, annual_balance_sheet, INVENTORY_KEYS)

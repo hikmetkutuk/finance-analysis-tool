@@ -1,5 +1,6 @@
 import logging
-from typing import Iterable, List, Optional, Protocol, Tuple
+from collections.abc import Iterable
+from typing import Protocol
 
 from .constants import (
     COLUMN_ASSET_TURNOVER,
@@ -9,8 +10,8 @@ from .constants import (
     COLUMN_EBITDA_GROWTH,
     COLUMN_ERROR,
     COLUMN_FINANCIAL_SECTOR,
-    COLUMN_PEG,
     COLUMN_PE,
+    COLUMN_PEG,
     COLUMN_PRICE_TO_BOOK,
     COLUMN_QUICK_RATIO,
     COLUMN_ROE,
@@ -102,7 +103,7 @@ def build_stock_row(symbol: str, dataset: StockDataset, market: str) -> dict:
     return result_row
 
 
-def get_stock_data(symbol: str, market: str = MARKET_AUTO, provider: Optional[StockDatasetProvider] = None) -> dict:
+def get_stock_data(symbol: str, market: str = MARKET_AUTO, provider: StockDatasetProvider | None = None) -> dict:
     active_provider = provider or DatasetProviderChain()
     dataset = active_provider.fetch(symbol)
     return build_stock_row(symbol, dataset, market)
@@ -111,11 +112,11 @@ def get_stock_data(symbol: str, market: str = MARKET_AUTO, provider: Optional[St
 def analyze_symbols(
     symbols: Iterable[str],
     market: str = MARKET_AUTO,
-    provider: Optional[StockDatasetProvider] = None,
-) -> Tuple[List[dict], List[dict]]:
+    provider: StockDatasetProvider | None = None,
+) -> tuple[list[dict], list[dict]]:
     active_provider = provider or DatasetProviderChain()
-    rows: List[dict] = []
-    failed_symbols: List[dict] = []
+    rows: list[dict] = []
+    failed_symbols: list[dict] = []
     for symbol in symbols:
         try:
             logger.info("%s is being processed..", symbol)

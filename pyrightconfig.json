@@ -1,0 +1,35 @@
+{
+  "typeCheckingMode": "basic",
+  "pythonVersion": "3.12",
+  "include": [
+    "backend",
+    "data",
+    "pipelines",
+    "ratio_engine",
+    "reporting",
+    "tests",
+    "main.py",
+    "ratio.py",
+    "valuation.py"
+  ],
+  "exclude": [
+    "ui/node_modules",
+    "ui/dist",
+    "data/market_snapshots",
+    "db"
+  ],
+  "ignore": [
+    "main.py",
+    "valuation.py",
+    "reporting",
+    "tests"
+  ],
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": ["."]
+    }
+  ]
+}
