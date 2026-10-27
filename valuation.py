@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import time
+from math import sqrt
 from statistics import median, pstdev
 from typing import Any
 
@@ -52,18 +53,24 @@ MACRO_CONFIG = load_macro_config()
 SECTOR_OVERRIDES = load_sector_overrides()
 
 
-def load_company_metadata(path: str = "company_metadata.json") -> dict[str, dict[str, str]]:
+def _load_json_mapping(path: str) -> dict[str, Any]:
     try:
         with open(path, encoding="utf-8") as _f:
             raw = json.load(_f)
         if isinstance(raw, dict):
-            return {k: v for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
+            return raw
     except (OSError, json.JSONDecodeError):
         pass
     return {}
 
 
-COMPANY_METADATA: dict[str, dict[str, str]] = load_company_metadata()
+def load_company_metadata(path: str = "company_metadata.json") -> dict[str, dict[str, Any]]:
+    raw = _load_json_mapping(path)
+    return {k: v for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
+
+
+COMPANY_METADATA = load_company_metadata()
+SECTOR_RISK_CONFIG = _load_json_mapping("sector_risk_config.json")
 TR_SECTOR_MAP, US_SECTOR_MAP = build_sector_maps(auto_classify=False)
 
 
@@ -81,10 +88,12 @@ US_LOOKUP = build_sector_lookup(US_SECTOR_MAP)
 
 def reload_runtime_config() -> None:
     """Diskteki son doğrulanmış yapılandırmayı çalışan sürece yükler."""
-    global MACRO_CONFIG, SECTOR_OVERRIDES, COMPANY_METADATA, TR_SECTOR_MAP, US_SECTOR_MAP, TR_LOOKUP, US_LOOKUP
+    global MACRO_CONFIG, SECTOR_OVERRIDES, COMPANY_METADATA, SECTOR_RISK_CONFIG
+    global TR_SECTOR_MAP, US_SECTOR_MAP, TR_LOOKUP, US_LOOKUP
     MACRO_CONFIG = load_macro_config()
     SECTOR_OVERRIDES = load_sector_overrides()
     COMPANY_METADATA = load_company_metadata()
+    SECTOR_RISK_CONFIG = _load_json_mapping("sector_risk_config.json")
     TR_SECTOR_MAP, US_SECTOR_MAP = build_sector_maps(auto_classify=False)
     TR_LOOKUP = build_sector_lookup(TR_SECTOR_MAP)
     US_LOOKUP = build_sector_lookup(US_SECTOR_MAP)
@@ -308,6 +317,38 @@ def _current_fin_debt(curr_debt_total: float | None, curr_lease: float | None) -
     return curr_debt_total if curr_debt_total is not None else 0.0
 
 
+def resolve_market_beta(
+    info: dict[str, Any],
+    sector_name: str,
+    tax_rate: float,
+    market: str,
+    warnings: list[str] | None = None,
+) -> float:
+    raw_beta = safe_float(info.get("beta"))
+    if raw_beta is not None and raw_beta > 0:
+        return raw_beta
+
+    sectors = SECTOR_RISK_CONFIG.get("sectors", {})
+    defaults = SECTOR_RISK_CONFIG.get("defaults", {})
+    sector_config = sectors.get(f"{market}:{sector_name}", {}) if isinstance(sectors, dict) else {}
+    if not sector_config and isinstance(defaults, dict):
+        sector_config = defaults.get(market, {})
+    if not isinstance(sector_config, dict):
+        sector_config = {}
+    unlevered_beta = safe_float(sector_config.get("unlevered_beta"))
+    if unlevered_beta is None:
+        if warnings is not None:
+            warnings.append(f"{sector_name} için dinamik beta verisi yok; geçici beta=1 kullanıldı.")
+        return 1.0
+    if warnings is not None and sector_config.get("source") == "live_market_peer_median":
+        warnings.append(f"{sector_name} sektör betası yetersiz; piyasa medyanı kullanıldı.")
+    equity = safe_float(info.get("marketCap")) or 0.0
+    debt = safe_float(info.get("totalDebt")) or 0.0
+    debt_to_equity = debt / equity if equity > EPSILON else 0.0
+    levered_beta = unlevered_beta * (1 + (1 - tax_rate) * debt_to_equity)
+    return max(0.3, min(levered_beta, 3.0))
+
+
 def _get_financial_debt(balance_sheet: pd.DataFrame | None, info_total_debt: float) -> float:
     """Balance sheet'ten finansal borcu çeker (işletme kiraları hariç)."""
     if not _is_dataframe(balance_sheet):
@@ -508,13 +549,25 @@ def _append_optional(lst: list, val: float | None) -> None:
         lst.append(val)
 
 
+def _latest_statement_years(*frames: pd.DataFrame, limit: int = 3) -> list[int]:
+    years: set[int] = set()
+    for frame in frames:
+        if not _is_dataframe(frame):
+            continue
+        for column in frame.columns:
+            year = getattr(column, "year", None)
+            if isinstance(year, int):
+                years.add(year)
+    return sorted(years, reverse=True)[:limit]
+
+
 def compute_margin_profile(income_stmt: pd.DataFrame, cash_flow: pd.DataFrame) -> dict[str, float]:
-    """Skill: son 3 yılın medyan EBIT%, D&A%, CapEx%, NWC% değerlerini hesaplar."""
+    """Son üç mevcut mali yılın medyan EBIT%, D&A%, CapEx% ve NWC% değerlerini hesaplar."""
     ebit_margins: list[float] = []
     da_pcts: list[float] = []
     capex_pcts: list[float] = []
     nwc_pcts: list[float] = []
-    for year in range(2023, 2026):
+    for year in _latest_statement_years(income_stmt, cash_flow):
         revenue = _annual_value_for_year(income_stmt, REVENUE_FIELDS, year)
         if not revenue or revenue <= 0:
             continue
@@ -634,10 +687,10 @@ def calculate_paid_capital_valuations(income_stmt: pd.DataFrame, shares: float) 
     return fair_value_efk, fair_value_ndk
 
 
-def graham_valuation(eps: float | None, sector_pe: float, bond_yield: float) -> float | None:
-    if eps is None or eps <= EPSILON or sector_pe <= EPSILON or bond_yield <= EPSILON:
+def graham_valuation(eps: float | None, book_value_per_share: float | None) -> float | None:
+    if eps is None or book_value_per_share is None or eps <= EPSILON or book_value_per_share <= EPSILON:
         return None
-    return (eps * sector_pe) / (bond_yield * 100)
+    return sqrt(22.5 * eps * book_value_per_share)
 
 
 def calculate_financial_fair_value(info: dict[str, float | None], params: dict[str, float], cost_of_equity: float) -> float | None:
@@ -674,6 +727,7 @@ def compute_signal_quality_score(
     warnings: list[str],
     is_financial: bool,
     is_turkish: bool = True,
+    historical_hit_rate: float | None = None,
 ) -> tuple[int, str]:
     keys = applicable_valuation_keys(is_financial, is_turkish)
     present_values = [valuations[key] for key in keys if valuations.get(key) is not None and valuations.get(key) > 0]
@@ -691,7 +745,12 @@ def compute_signal_quality_score(
             elif variation > 0.6:
                 dispersion_penalty = 6
 
-    score = round(max(0, min(100, 45 + coverage * 55 - warning_penalty - dispersion_penalty)))
+    calibration_adjustment = 0.0
+    if historical_hit_rate is not None:
+        calibration_adjustment = max(-10.0, min(10.0, (historical_hit_rate - 50.0) * 0.3))
+    score = round(
+        max(0, min(100, 45 + coverage * 55 - warning_penalty - dispersion_penalty + calibration_adjustment))
+    )
     if score >= 80:
         quality = "High"
     elif score >= 60:
@@ -699,6 +758,25 @@ def compute_signal_quality_score(
     else:
         quality = "Low"
     return score, quality
+
+
+def _historical_hit_rate(market: str, sector_name: str) -> float | None:
+    path = "valuation_calibration_report.csv"
+    try:
+        frame = pd.read_csv(path)
+    except (OSError, pd.errors.ParserError):
+        return None
+    required = {"market", "sector", "signals", "hit_rate_pct"}
+    if frame.empty or not required.issubset(frame.columns):
+        return None
+    matches = frame[(frame["market"] == market) & (frame["sector"] == sector_name)].dropna(
+        subset=["signals", "hit_rate_pct"]
+    )
+    signal_count = float(matches["signals"].sum()) if not matches.empty else 0.0
+    if signal_count < 30:
+        return None
+    weighted_hits = float((matches["signals"] * matches["hit_rate_pct"]).sum())
+    return weighted_hits / signal_count
 
 
 def _blend_fair_values(valuations: dict[str, float | None]) -> float | None:
@@ -774,6 +852,8 @@ def build_output(
         "WACC": round_or_none(wacc * 100 if wacc is not None else None),
         "Ortalama Büyüme": round_or_none(avg_growth * 100 if avg_growth is not None else None),
         "DCF Değerlemesi": round_or_none(valuations["fv_dcf"]),
+        "DCF Ayı Senaryosu": round_or_none(valuations.get("fv_dcf_bear")),
+        "DCF Boğa Senaryosu": round_or_none(valuations.get("fv_dcf_bull")),
         "F/K Değerlemesi": round_or_none(valuations["fv_fk"]),
         "PD/DD Finansal Model": round_or_none(valuations["fv_financial"]),
         "EV/EBITDA Değerlemesi": round_or_none(valuations["fv_ev"]),
@@ -834,6 +914,9 @@ def _filter_dividend(is_turkish: bool, dividend: float | None, current_price: fl
 
 
 def _fetch_consensus_y1(ticker: str) -> float | None:
+    configured_growth = safe_float(COMPANY_METADATA.get(ticker, {}).get("revenue_growth_y1"))
+    if configured_growth is not None:
+        return configured_growth
     try:
         import yfinance as yf
         rev_est = yf.Ticker(ticker).revenue_estimate
@@ -847,14 +930,13 @@ def _fetch_consensus_y1(ticker: str) -> float | None:
 
 
 def _compute_dcf_initial_growth(
-    is_turkish: bool,
     consensus_y1: float | None,
     rev_cagr: float | None,
     avg_growth: float,
 ) -> float:
-    if not is_turkish and consensus_y1 is not None:
+    if consensus_y1 is not None:
         return max(min(consensus_y1, MAX_GROWTH_CAP), MIN_GROWTH_CAP)
-    return rev_cagr if (not is_turkish and rev_cagr is not None) else avg_growth
+    return rev_cagr if rev_cagr is not None else avg_growth
 
 
 def _compute_fv_ev_rev(
@@ -904,7 +986,7 @@ def _build_extra_dict(
         "net_debt": net_debt if not is_turkish else None,
         "revenue_growth": rev_cagr,
         "wacc_rf": params.get("risk_free_rate"),
-        "wacc_beta": info.get("beta") or 1.0,
+        "wacc_beta": wacc_components["beta"],
         "wacc_ke": wacc_components["ke"],
         "wacc_kd": wacc_components["kd"],
         "wacc_tax": wacc_components["tax"],
@@ -931,6 +1013,36 @@ def _resolve_avg_growth(
     return clamp_growth(_blend_analyst_growth(is_turkish, info, hist_growth), wacc)
 
 
+def _calculate_dcf_scenarios(
+    params: dict[str, float],
+    dcf_inputs: dict[str, Any],
+) -> dict[str, float | None]:
+    scenario_adjustments = {
+        "bear": (-0.03, -0.02, 0.01),
+        "base": (0.0, 0.0, 0.0),
+        "bull": (0.03, 0.02, -0.01),
+    }
+    values: dict[str, float | None] = {}
+    base_margin = dict(dcf_inputs["margin_profile"])
+    for scenario, (growth_delta, margin_delta, capex_delta) in scenario_adjustments.items():
+        margin_profile = dict(base_margin)
+        margin_profile["ebit_margin"] = max(0.0, base_margin.get("ebit_margin", 0.15) + margin_delta)
+        margin_profile["capex_pct"] = max(0.0, base_margin.get("capex_pct", 0.05) + capex_delta)
+        values[scenario] = calculate_dcf_fair_value(
+            latest_revenue=dcf_inputs["latest_revenue"],
+            margin_profile=margin_profile,
+            initial_growth=max(min(dcf_inputs["initial_growth"] + growth_delta, MAX_GROWTH_CAP), MIN_GROWTH_CAP),
+            wacc=dcf_inputs["wacc"],
+            debt=dcf_inputs["debt"],
+            cash=dcf_inputs["cash"],
+            shares=dcf_inputs["shares"],
+            terminal_growth=params["terminal_growth"],
+            tax_rate=dcf_inputs["tax_rate"],
+            ev_ebitda_multiple=params["ev_ebitda"],
+        )
+    return values
+
+
 def _build_valuations(
     is_financial: bool,
     is_turkish: bool,
@@ -940,19 +1052,11 @@ def _build_valuations(
     dcf_inputs: dict[str, Any],
     precomputed: dict[str, Any],
 ) -> dict[str, float | None]:
-    fv_dcf = None if is_financial else calculate_dcf_fair_value(
-        latest_revenue=dcf_inputs["latest_revenue"],
-        margin_profile=dcf_inputs["margin_profile"],
-        initial_growth=dcf_inputs["initial_growth"],
-        wacc=dcf_inputs["wacc"],
-        debt=dcf_inputs["debt"],
-        cash=dcf_inputs["cash"],
-        shares=dcf_inputs["shares"],
-        terminal_growth=params["terminal_growth"],
-        tax_rate=dcf_inputs["tax_rate"],
-    )
+    dcf_scenarios = {} if is_financial else _calculate_dcf_scenarios(params, dcf_inputs)
     return {
-        "fv_dcf": fv_dcf,
+        "fv_dcf": dcf_scenarios.get("base"),
+        "fv_dcf_bear": dcf_scenarios.get("bear"),
+        "fv_dcf_bull": dcf_scenarios.get("bull"),
         "fv_fk": precomputed["fv_fk"],
         "fv_financial": calculate_financial_fair_value(info, params, cost_of_equity) if is_financial else None,
         "fv_ev": precomputed["fv_ev"],
@@ -960,7 +1064,7 @@ def _build_valuations(
         "fv_ddm": calculate_ddm_fair_value(precomputed["dividend"], dcf_inputs["wacc"], params["ddm_growth"]),
         "fv_efk": precomputed["fv_efk"] if is_turkish else None,
         "fv_ndk": precomputed["fv_ndk"] if is_turkish else None,
-        "fv_graham": graham_valuation(precomputed["eps"], params["pe"], params["bond_yield_2"]) if is_turkish else None,
+        "fv_graham": graham_valuation(precomputed["eps"], precomputed["book_value"]) if is_turkish else None,
     }
 
 
@@ -986,7 +1090,11 @@ def _prepare_currency_context(
         params = get_country_params(ticker, "TRY")
         _apply_live_multiples(params, sector_name, live_multiples, ticker=ticker)
 
-    wacc_info = _normalize_wacc_info(info, fx_rate) if is_foreign_reporter else info
+    wacc_info = _normalize_wacc_info(info, fx_rate) if is_foreign_reporter else dict(info)
+    market = "tr" if is_turkish else "us"
+    wacc_info["beta"] = resolve_market_beta(
+        wacc_info, sector_name, params["tax_rate"], market, warnings
+    )
     return is_turkish, is_foreign_reporter, fx_rate, params, wacc_info
 
 
@@ -1035,11 +1143,14 @@ def _finalize_currency_valuations(
         return
     if fx_rate is None or fx_rate <= 1:
         valuations["fv_dcf"] = None
+        valuations["fv_dcf_bear"] = None
+        valuations["fv_dcf_bull"] = None
         valuations["fv_ddm"] = None
         return
-    dcf_value = valuations.get("fv_dcf")
-    if dcf_value is not None:
-        valuations["fv_dcf"] = dcf_value * fx_rate
+    for key in ("fv_dcf", "fv_dcf_bear", "fv_dcf_bull"):
+        dcf_value = valuations.get(key)
+        if dcf_value is not None:
+            valuations[key] = dcf_value * fx_rate
 
 
 def value_ticker(
@@ -1083,10 +1194,11 @@ def value_ticker(
     fair_value_efk, fair_value_ndk = _normalize_paid_capital_values(
         fair_value_efk, fair_value_ndk, is_foreign_reporter, fx_rate
     )
-    cost_of_equity = params["risk_free_rate"] + (info.get("beta") or 1.0) * params["market_premium"]
+    resolved_beta = safe_float(wacc_info.get("beta")) or 1.0
+    cost_of_equity = params["risk_free_rate"] + resolved_beta * params["market_premium"]
 
-    consensus_y1 = _fetch_consensus_y1(ticker) if not is_turkish else None
-    dcf_initial_growth = _compute_dcf_initial_growth(is_turkish, consensus_y1, rev_cagr, avg_growth)
+    consensus_y1 = _fetch_consensus_y1(ticker)
+    dcf_initial_growth = _compute_dcf_initial_growth(consensus_y1, rev_cagr, avg_growth)
 
     import numpy as _np
     net_debt = debt - cash
@@ -1123,6 +1235,7 @@ def value_ticker(
             "fv_efk": fair_value_efk,
             "fv_ndk": fair_value_ndk,
             "eps": eps,
+            "book_value": info.get("bookValue"),
         },
     )
     _finalize_currency_valuations(valuations, is_foreign_reporter, fx_rate)
@@ -1131,13 +1244,14 @@ def value_ticker(
         warnings=warnings,
         is_financial=is_financial,
         is_turkish=is_turkish,
+        historical_hit_rate=_historical_hit_rate("tr" if is_turkish else "us", sector_name),
     )
     extra = _build_extra_dict(
         info=info, params=params, margin_profile=margin_profile,
         is_turkish=is_turkish, balance_sheet=balance_sheet,
         ebitda=ebitda, net_debt=net_debt, rev_cagr=rev_cagr,
         latest_revenue=latest_revenue,
-        wacc_components={"ke": cost_of_equity, "kd": effective_kd, "tax": effective_tax_rate},
+        wacc_components={"beta": resolved_beta, "ke": cost_of_equity, "kd": effective_kd, "tax": effective_tax_rate},
         implied_prices={"pe": fv_fk_val, "ev_rev": fv_ev_rev_val, "ev": fv_ev_val},
     )
     return build_output(

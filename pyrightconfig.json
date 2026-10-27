@@ -21,8 +21,7 @@
   "ignore": [
     "main.py",
     "valuation.py",
-    "reporting",
-    "tests"
+    "reporting"
   ],
   "reportMissingImports": "none",
   "reportMissingModuleSource": "none",

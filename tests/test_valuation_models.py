@@ -30,7 +30,7 @@ def test_calculate_fk_fair_value() -> None:
 
 
 def test_financial_fair_value_uses_pb_and_roe() -> None:
-    info = {"bookValue": 10.0, "returnOnEquity": 0.20}
+    info: dict[str, float | None] = {"bookValue": 10.0, "returnOnEquity": 0.20}
     params = {"pb": 1.5}
     value = calculate_financial_fair_value(info, params, cost_of_equity=0.10)
     assert value is not None

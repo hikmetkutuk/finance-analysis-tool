@@ -25,7 +25,6 @@ COPY main.py        ./
 COPY ratio.py       ./
 
 COPY tickers.txt            ./
-COPY hisseler.txt           ./
 COPY xu030.txt              ./
 COPY macro_config.json      ./
 COPY ratio_profiles.json    ./
@@ -34,6 +33,7 @@ COPY sector_assignments.json ./
 COPY sector_overrides.json  ./
 COPY valuation_profiles.json ./
 COPY company_metadata.json  ./
+COPY sector_risk_config.json ./
 COPY pyrightconfig.json       ./
 
 

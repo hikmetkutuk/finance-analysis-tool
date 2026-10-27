@@ -416,7 +416,9 @@ def normalized_info(bundle: TickerBundle) -> dict[str, float | None]:
     current_price = coalesce_numeric(info.get("currentPrice"), fast.get("lastPrice"), bundle.last_close)
     implied_shares = market_cap / current_price if market_cap is not None and current_price not in (None, 0) else None
     normalized = {
-        "beta": coalesce_numeric(info.get("beta"), 1.0),
+        # Missing beta must remain missing so valuation can apply a sector-based
+        # bottom-up beta instead of silently treating every company as beta=1.
+        "beta": coalesce_numeric(info.get("beta")),
         "marketCap": market_cap,
         "totalDebt": coalesce_numeric(info.get("totalDebt")),
         "interestRate": coalesce_numeric(info.get("interestRate")),

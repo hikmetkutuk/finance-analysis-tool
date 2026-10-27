@@ -17,11 +17,11 @@ def test_validate_universe_requires_30_unique_is_tickers(tmp_path: Path, monkeyp
         pipeline._validate_universe()
 
 
-def test_validate_multiples_requires_full_universe(tmp_path: Path) -> None:
+def test_validate_multiples_requires_every_target_sector(tmp_path: Path) -> None:
     path = tmp_path / "multiples.csv"
-    pd.DataFrame([{"sector": "Banka", "ticker_count_total": 29}]).to_csv(path, index=False)
-    with pytest.raises(ValueError, match="30 XU030"):
-        pipeline._validate_multiples(path)
+    pd.DataFrame([{"sector": "Banka", "ticker_count_total": 8}]).to_csv(path, index=False)
+    with pytest.raises(ValueError, match="Sektör çarpanı eksik"):
+        pipeline._validate_sector_multiples(path, {"Banka", "Havacılık"})
 
 
 def test_live_tr_macro_uses_provider_and_credit_spread(monkeypatch: pytest.MonkeyPatch) -> None:

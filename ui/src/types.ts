@@ -9,6 +9,8 @@ export interface Stock {
   WACC: number | null
   'Ortalama Büyüme': number | null
   'DCF Değerlemesi': number | null
+  'DCF Ayı Senaryosu': number | null
+  'DCF Boğa Senaryosu': number | null
   'F/K Değerlemesi': number | null
   'PD/DD Finansal Model': number | null
   'EV/EBITDA Değerlemesi': number | null

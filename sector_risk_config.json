@@ -1,0 +1,57 @@
+{
+  "as_of": "2026-10-27T06:45:24.196358+00:00",
+  "defaults": {
+    "tr": {
+      "sample_size": 36,
+      "source": "live_market_peer_median",
+      "unlevered_beta": 0.4391
+    }
+  },
+  "sectors": {
+    "tr:Banka": {
+      "sample_size": 3,
+      "source": "live_sector_peer_median",
+      "unlevered_beta": 0.3738
+    },
+    "tr:Enerji Ekipman & Taahhüt": {
+      "sample_size": 3,
+      "source": "live_sector_peer_median",
+      "unlevered_beta": 0.5362
+    },
+    "tr:Gayrimenkul": {
+      "sample_size": 7,
+      "source": "live_sector_peer_median",
+      "unlevered_beta": 0.508
+    },
+    "tr:Otomotiv": {
+      "sample_size": 3,
+      "source": "live_sector_peer_median",
+      "unlevered_beta": 0.3613
+    },
+    "tr:Perakende": {
+      "sample_size": 5,
+      "source": "live_sector_peer_median",
+      "unlevered_beta": 0.3834
+    },
+    "tr:Petrol": {
+      "sample_size": 4,
+      "source": "live_sector_peer_median",
+      "unlevered_beta": 0.429
+    },
+    "tr:Sanayi & Üretim": {
+      "sample_size": 3,
+      "source": "live_sector_peer_median",
+      "unlevered_beta": 0.6206
+    },
+    "tr:Savunma": {
+      "sample_size": 5,
+      "source": "live_sector_peer_median",
+      "unlevered_beta": 0.8012
+    },
+    "tr:Telekomünikasyon": {
+      "sample_size": 3,
+      "source": "live_sector_peer_median",
+      "unlevered_beta": 0.3528
+    }
+  }
+}

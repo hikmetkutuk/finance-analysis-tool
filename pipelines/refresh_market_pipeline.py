@@ -14,6 +14,7 @@ from data.sector_override_builder import (
     load_sector_overrides,
     save_sector_overrides,
 )
+from data.sector_risk import market_sector_peers, refresh_sector_risk_config
 from pipelines.update_macro_config import update_tr_macro_config
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -24,6 +25,7 @@ MANAGED_FILES = (
     ROOT / "sector_assignments.json",
     ROOT / "sector_overrides.json",
     ROOT / "sector_multiples_tr.csv",
+    ROOT / "sector_risk_config.json",
 )
 MARKET_REFRESH_ERRORS = (
     OSError,
@@ -73,14 +75,18 @@ def _validate_universe() -> list[str]:
     return tickers
 
 
-def _validate_multiples(path: Path) -> None:
+def _validate_sector_multiples(path: Path, required_sectors: set[str]) -> None:
     frame = pd.read_csv(path)
     required = {"sector", "ticker_count_total"}
     if frame.empty or not required.issubset(frame.columns):
         raise ValueError("Sektör çarpanı çıktısı boş veya geçersiz")
+    available_sectors = set(frame["sector"].dropna().astype(str))
+    missing_sectors = sorted(required_sectors - available_sectors)
+    if missing_sectors:
+        raise ValueError(f"Sektör çarpanı eksik: {', '.join(missing_sectors)}")
     ticker_total = cast(Any, frame["ticker_count_total"].sum())
-    if int(ticker_total) != 30:
-        raise ValueError("Sektör çarpanları 30 XU030 hissesini kapsamıyor")
+    if int(ticker_total) < len(required_sectors):
+        raise ValueError("Sektör çarpanı peer örneklemi yetersiz")
 
 
 def refresh_xu030_market_data() -> dict:
@@ -91,9 +97,11 @@ def refresh_xu030_market_data() -> dict:
         tickers = _validate_universe()
         update_tr_macro_config()
         sector_map = prepare_sector_map(TR_PROFILE, auto_classify=True)
+        refresh_sector_risk_config("tr", set(sector_map))
+        peer_sector_map = market_sector_peers("tr", set(sector_map))
         multiples_path = ROOT / "sector_multiples_tr.csv"
-        calculate_sector_multiples(sector_map, str(multiples_path), TR_PROFILE)
-        _validate_multiples(multiples_path)
+        calculate_sector_multiples(peer_sector_map, str(multiples_path), TR_PROFILE)
+        _validate_sector_multiples(multiples_path, set(sector_map))
 
         overrides = load_sector_overrides(rebuild_if_missing=False)
         tr_overrides = build_market_overrides(multiples_path, sector_map)

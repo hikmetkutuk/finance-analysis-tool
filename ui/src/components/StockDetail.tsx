@@ -100,6 +100,8 @@ interface AnalysisTabProps {
 
 function AnalysisTab({ stock, currency }: AnalysisTabProps) {
   const dcf = (stock['DCF Değerlemesi'] ?? null) as number | null
+  const dcfBear = (stock['DCF Ayı Senaryosu'] ?? null) as number | null
+  const dcfBull = (stock['DCF Boğa Senaryosu'] ?? null) as number | null
   const rel = (stock['Rölatif Değerleme'] ?? null) as number | null
   const blended = (stock['Ortalama Adil Fiyat'] ?? null) as number | null
   const price = (stock['Güncel Fiyat'] ?? null) as number | null
@@ -176,6 +178,12 @@ function AnalysisTab({ stock, currency }: AnalysisTabProps) {
               </div>
             ))}
           </div>
+          {(dcfBear !== null || dcfBull !== null) && (
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <Row label="DCF Ayı Senaryosu" value={fmtPrice(dcfBear, currency)} />
+              <Row label="DCF Boğa Senaryosu" value={fmtPrice(dcfBull, currency)} />
+            </div>
+          )}
         </>
       )}
 

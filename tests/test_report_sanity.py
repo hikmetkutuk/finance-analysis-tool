@@ -145,7 +145,7 @@ def test_share_count_prefers_implied_shares_when_balance_stock_is_nominal() -> N
 
 
 def test_valuation_points_drop_extreme_values_against_price() -> None:
-    values = {
+    values: dict[str, float | None] = {
         "D1": 100.0,
         "D2": 3.0,
         "D3": 700.0,
