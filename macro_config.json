@@ -1,5 +1,35 @@
 {
   "as_of": "2026-10-23",
+  "usd_tr": {
+    "bond_yield_2": 0.0384,
+    "cost_of_debt": 0.060,
+    "ddm_growth": 0.020,
+    "defaults": {
+      "ev_ebitda": 9.0,
+      "pb": 2.0,
+      "pe": 12.0
+    },
+    "market_premium": 0.099,
+    "risk_free_rate": 0.0464,
+    "source": "fred_ust10y_2026_10_damodaran_crp_turkey",
+    "tax_rate": 0.22,
+    "terminal_growth": 0.025
+  },
+  "eur_tr": {
+    "bond_yield_2": 0.025,
+    "cost_of_debt": 0.040,
+    "ddm_growth": 0.020,
+    "defaults": {
+      "ev_ebitda": 10.0,
+      "pb": 2.0,
+      "pe": 18.0
+    },
+    "market_premium": 0.099,
+    "risk_free_rate": 0.028,
+    "source": "ecb_bund10y_2026_10_damodaran_crp_turkey",
+    "tax_rate": 0.22,
+    "terminal_growth": 0.025
+  },
   "tr": {
     "bond_yield_2": 0.3996,
     "cost_of_debt": 0.4496,

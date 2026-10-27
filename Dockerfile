@@ -33,6 +33,7 @@ COPY sector_profiles.json   ./
 COPY sector_assignments.json ./
 COPY sector_overrides.json  ./
 COPY valuation_profiles.json ./
+COPY company_metadata.json  ./
 COPY pyrightconfig.json       ./
 
 

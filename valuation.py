@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import json
 import time
 from statistics import median, pstdev
 from typing import Any
 
 import pandas as pd
 
-from data.live_params import fetch_bist_rf, fetch_us_erp
+from data.live_params import fetch_us_erp
 from data.macro_config import load_macro_config
 from data.market_data_provider import (
     fetch_ticker_bundle,
@@ -49,6 +50,20 @@ TICKER_PROCESSING_ERRORS = (
 
 MACRO_CONFIG = load_macro_config()
 SECTOR_OVERRIDES = load_sector_overrides()
+
+
+def load_company_metadata(path: str = "company_metadata.json") -> dict[str, dict[str, str]]:
+    try:
+        with open(path, encoding="utf-8") as _f:
+            raw = json.load(_f)
+        if isinstance(raw, dict):
+            return {k: v for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {}
+
+
+COMPANY_METADATA: dict[str, dict[str, str]] = load_company_metadata()
 TR_SECTOR_MAP, US_SECTOR_MAP = build_sector_maps(auto_classify=False)
 
 
@@ -66,9 +81,10 @@ US_LOOKUP = build_sector_lookup(US_SECTOR_MAP)
 
 def reload_runtime_config() -> None:
     """Diskteki son doğrulanmış yapılandırmayı çalışan sürece yükler."""
-    global MACRO_CONFIG, SECTOR_OVERRIDES, TR_SECTOR_MAP, US_SECTOR_MAP, TR_LOOKUP, US_LOOKUP
+    global MACRO_CONFIG, SECTOR_OVERRIDES, COMPANY_METADATA, TR_SECTOR_MAP, US_SECTOR_MAP, TR_LOOKUP, US_LOOKUP
     MACRO_CONFIG = load_macro_config()
     SECTOR_OVERRIDES = load_sector_overrides()
+    COMPANY_METADATA = load_company_metadata()
     TR_SECTOR_MAP, US_SECTOR_MAP = build_sector_maps(auto_classify=False)
     TR_LOOKUP = build_sector_lookup(TR_SECTOR_MAP)
     US_LOOKUP = build_sector_lookup(US_SECTOR_MAP)
@@ -201,16 +217,67 @@ def _fetch_live_us_rf() -> float:
     return fallback
 
 
-def get_country_params(ticker: str) -> dict[str, float]:
-    market_key = "tr" if is_turkish_ticker(ticker) else "us"
+_FX_RATE_CACHE: dict[str, dict[str, float]] = {}
+_FX_CACHE_TTL = 300  # 5 minutes
+
+
+def _fetch_fx_rate(pair: str, warnings: list[str] | None = None) -> float | None:
+    """FX kuru çeker; çift bazlı TTL önbellek, stale fallback, None döner yalnızca önbelleksiz hata durumunda."""
+    now = time.time()
+    entry = _FX_RATE_CACHE.get(pair, {})
+    cached_ts = entry.get("ts")
+    cached_val = entry.get("val")
+    if cached_val and cached_ts and (now - cached_ts) < _FX_CACHE_TTL:
+        return cached_val
+    try:
+        import yfinance as _yf
+        _fx = _yf.Ticker(pair)
+        rate = float(_fx.fast_info.last_price or _fx.info.get("regularMarketPrice") or 0) or None
+        if rate and rate > 1:
+            _FX_RATE_CACHE[pair] = {"ts": now, "val": rate}
+            return rate
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    if cached_val:
+        if warnings is not None:
+            currency = pair.replace("TRY=X", "")
+            warnings.append(f"{currency}/TRY kuru alınamadı; eski önbellek değeri kullanılıyor.")
+        return cached_val
+    return None
+
+
+def _detect_reporting_currency(ticker: str, info: dict[str, Any]) -> str:
+    """Ticker'ın raporlama para birimini tespit eder.
+
+    company_metadata.json override önceliklidir; yoksa yfinance financialCurrency kullanılır.
+    """
+    override = COMPANY_METADATA.get(ticker, {}).get("reporting_currency")
+    if override:
+        return override.upper()
+    financial_currency = info.get("financialCurrency")
+    if isinstance(financial_currency, str) and financial_currency.upper() in ("EUR", "USD", "TRY"):
+        return financial_currency.upper()
+    return "TRY"
+
+
+def get_country_params(ticker: str, financial_currency: str = "TRY") -> dict[str, float]:
+    override = SECTOR_OVERRIDES.get(ticker, {})
+    if is_turkish_ticker(ticker):
+        if financial_currency == "EUR":
+            market_key = "eur_tr"
+        elif financial_currency == "USD":
+            market_key = "usd_tr"
+        else:
+            market_key = "tr"
+    else:
+        market_key = "us"
     market_config = MACRO_CONFIG[market_key]
     defaults = market_config["defaults"]
-    override = SECTOR_OVERRIDES.get(ticker, {})
     if market_key == "us":
         rf = _fetch_live_us_rf()
         erp = fetch_us_erp(fallback=float(market_config["market_premium"]))
     else:
-        rf = fetch_bist_rf(fallback=float(market_config["risk_free_rate"]))
+        rf = float(market_config["risk_free_rate"])
         erp = float(market_config["market_premium"])
     return {
         "market_key": market_key,
@@ -897,6 +964,84 @@ def _build_valuations(
     }
 
 
+def _prepare_currency_context(
+    ticker: str,
+    info: dict[str, Any],
+    warnings: list[str],
+    sector_name: str,
+    live_multiples: dict[str, dict[str, float]] | None,
+) -> tuple[bool, bool, float | None, dict[str, float], dict[str, Any]]:
+    is_turkish = is_turkish_ticker(ticker)
+    financial_currency = _detect_reporting_currency(ticker, info) if is_turkish else "USD"
+    is_foreign_reporter = is_turkish and financial_currency in ("EUR", "USD")
+    params = get_country_params(ticker, financial_currency)
+    _apply_live_multiples(params, sector_name, live_multiples, ticker=ticker)
+
+    fx_rate = _fetch_fx_rate(f"{financial_currency}TRY=X", warnings) if is_foreign_reporter else None
+    if is_foreign_reporter and fx_rate is None:
+        warnings.append(
+            f"{financial_currency}/TRY kuru alınamadı; "
+            "DCF/EFK/NDK/DDM hesaplanamıyor — TL parametreleri kullanılıyor."
+        )
+        params = get_country_params(ticker, "TRY")
+        _apply_live_multiples(params, sector_name, live_multiples, ticker=ticker)
+
+    wacc_info = _normalize_wacc_info(info, fx_rate) if is_foreign_reporter else info
+    return is_turkish, is_foreign_reporter, fx_rate, params, wacc_info
+
+
+def _normalize_wacc_info(info: dict[str, Any], fx_rate: float | None) -> dict[str, Any]:
+    if fx_rate is None or fx_rate <= 1:
+        return info
+    return {
+        **info,
+        "marketCap": (info.get("marketCap") or 0.0) / fx_rate,
+        "totalDebt": (info.get("totalDebt") or 0.0) / fx_rate,
+    }
+
+
+def _normalize_paid_capital_values(
+    fair_value_efk: float | None,
+    fair_value_ndk: float | None,
+    is_foreign_reporter: bool,
+    fx_rate: float | None,
+) -> tuple[float | None, float | None]:
+    if not is_foreign_reporter:
+        return fair_value_efk, fair_value_ndk
+    if fx_rate is None or fx_rate <= 1:
+        return None, None
+    converted_efk = fair_value_efk * fx_rate if fair_value_efk is not None else None
+    converted_ndk = fair_value_ndk * fx_rate if fair_value_ndk is not None else None
+    return converted_efk, converted_ndk
+
+
+def _normalize_dcf_balance(
+    debt: float,
+    cash: float,
+    is_foreign_reporter: bool,
+    fx_rate: float | None,
+) -> tuple[float, float]:
+    if not is_foreign_reporter or fx_rate is None or fx_rate <= 1:
+        return debt, cash
+    return debt / fx_rate, cash / fx_rate
+
+
+def _finalize_currency_valuations(
+    valuations: dict[str, float | None],
+    is_foreign_reporter: bool,
+    fx_rate: float | None,
+) -> None:
+    if not is_foreign_reporter:
+        return
+    if fx_rate is None or fx_rate <= 1:
+        valuations["fv_dcf"] = None
+        valuations["fv_ddm"] = None
+        return
+    dcf_value = valuations.get("fv_dcf")
+    if dcf_value is not None:
+        valuations["fv_dcf"] = dcf_value * fx_rate
+
+
 def value_ticker(
     ticker: str,
     live_multiples: dict[str, dict[str, float]] | None = None,
@@ -908,15 +1053,16 @@ def value_ticker(
     cash_flow = bundle.cashflow
     balance_sheet = bundle.balance_sheet
 
-    params = get_country_params(ticker)
     sector_name, is_financial = resolve_sector(ticker)
-    _apply_live_multiples(params, sector_name, live_multiples, ticker=ticker)
+    is_turkish, is_foreign_reporter, fx_rate, params, wacc_info = _prepare_currency_context(
+        ticker, info, warnings, sector_name, live_multiples
+    )
 
-    is_turkish = is_turkish_ticker(ticker)
+    # Foreign-currency BIST tickers: pass financials so WACC uses effective kd/tax.
     wacc, effective_tax_rate, effective_kd = calculate_wacc(
-        info, params,
-        income_stmt=income_stmt if not is_turkish else None,
-        balance_sheet=balance_sheet if not is_turkish else None,
+        wacc_info, params,
+        income_stmt=income_stmt if (not is_turkish or is_foreign_reporter) else None,
+        balance_sheet=balance_sheet if (not is_turkish or is_foreign_reporter) else None,
     )
 
     fcf_by_year = build_fcf_by_year(income_stmt, cash_flow, effective_tax_rate)
@@ -926,12 +1072,17 @@ def value_ticker(
     avg_growth = _resolve_avg_growth(is_turkish, rev_cagr, fcf_by_year, info, wacc)
 
     shares = info.get("sharesOutstanding") or info.get("floatShares") or 1
+    # debt/cash from yfinance info are TRY for all BIST tickers — used as-is for
+    # relative valuation (ebitda from info is also TRY).
     debt = info.get("totalDebt") or 0
     cash = info.get("totalCash") or 0
     eps = info.get("trailingEps")
     ebitda = get_ebitda_safely(info, income_stmt, cash_flow)
     dividend = _filter_dividend(is_turkish, info.get("dividendRate"), info.get("currentPrice"))
     fair_value_efk, fair_value_ndk = calculate_paid_capital_valuations(income_stmt, shares)
+    fair_value_efk, fair_value_ndk = _normalize_paid_capital_values(
+        fair_value_efk, fair_value_ndk, is_foreign_reporter, fx_rate
+    )
     cost_of_equity = params["risk_free_rate"] + (info.get("beta") or 1.0) * params["market_premium"]
 
     consensus_y1 = _fetch_consensus_y1(ticker) if not is_turkish else None
@@ -946,6 +1097,8 @@ def value_ticker(
     rel_candidates = [v for v in [fv_fk_val, fv_ev_rev_val, fv_ev_val] if v is not None and v > 0]
     fv_relative_val = float(_np.nanmedian(rel_candidates)) if rel_candidates else None
 
+    dcf_debt, dcf_cash = _normalize_dcf_balance(debt, cash, is_foreign_reporter, fx_rate)
+
     valuations = _build_valuations(
         is_financial=is_financial,
         is_turkish=is_turkish,
@@ -957,8 +1110,8 @@ def value_ticker(
             "margin_profile": margin_profile,
             "initial_growth": dcf_initial_growth,
             "wacc": wacc,
-            "debt": debt,
-            "cash": cash,
+            "debt": dcf_debt,
+            "cash": dcf_cash,
             "shares": shares,
             "tax_rate": effective_tax_rate,
         },
@@ -972,6 +1125,7 @@ def value_ticker(
             "eps": eps,
         },
     )
+    _finalize_currency_valuations(valuations, is_foreign_reporter, fx_rate)
     signal_quality_score, signal_quality_label = compute_signal_quality_score(
         valuations=valuations,
         warnings=warnings,
