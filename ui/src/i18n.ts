@@ -16,6 +16,7 @@ export interface Translations {
   fromCache: string
   marketUS: string
   marketBIST: string
+  marketBIST100: string
   colTicker: string
   colSector: string
   colPrice: string
@@ -25,6 +26,7 @@ export interface Translations {
   colWacc: string
   colDcf: string
   colPE: string
+  colPB: string
   colEvEbitda: string
   searchPlaceholder: (market: string) => string
   price: string
@@ -63,6 +65,7 @@ export const translations: Record<Lang, Translations> = {
     fromCache: 'önbellekten',
     marketUS: 'ABD',
     marketBIST: 'XU030',
+    marketBIST100: 'XU100',
     colTicker: 'Ticker',
     colSector: 'Sektör',
     colPrice: 'Fiyat',
@@ -72,6 +75,7 @@ export const translations: Record<Lang, Translations> = {
     colWacc: 'AOSM',
     colDcf: 'İNA',
     colPE: 'F/K',
+    colPB: 'PD/DD',
     colEvEbitda: 'FD/FAVÖK',
     searchPlaceholder: () => 'Ticker veya sektör ara…',
     price: 'Fiyat',
@@ -113,6 +117,7 @@ export const translations: Record<Lang, Translations> = {
     fromCache: 'from cache',
     marketUS: 'US',
     marketBIST: 'XU030',
+    marketBIST100: 'XU100',
     colTicker: 'Ticker',
     colSector: 'Sector',
     colPrice: 'Price',
@@ -122,6 +127,7 @@ export const translations: Record<Lang, Translations> = {
     colWacc: 'WACC',
     colDcf: 'DCF',
     colPE: 'P/E',
+    colPB: 'P/B',
     colEvEbitda: 'EV/EBITDA',
     searchPlaceholder: () => 'Search ticker or sector…',
     price: 'Price',

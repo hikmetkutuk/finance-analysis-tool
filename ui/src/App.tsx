@@ -31,6 +31,12 @@ export default function App() {
 
   const tr = translations[lang]
 
+  const marketLabels: Record<Market, string> = {
+    us: tr.marketUS,
+    xu030: tr.marketBIST,
+    xu100: tr.marketBIST100,
+  }
+
   useEffect(() => {
     setStocks([])
     setSelected(null)
@@ -87,7 +93,7 @@ export default function App() {
 
   const handleMarketDataRefresh = async () => {
     try {
-      await api.triggerMarketDataRefresh()
+      await api.triggerMarketDataRefresh(market)
       setMarketDataState(prev => ({ ...prev, running: true, stage: 'starting', error: null }))
       setRefreshState(prev => ({ ...prev, running: true, error: null }))
     } catch { /* already running or error */ }
@@ -184,14 +190,14 @@ export default function App() {
             <span className="text-xs text-slate-500 hidden sm:block">
               {tr.lastUpdated} {fmtDateTime(lastUpdated, tr.dateLocale, tr.fromCache)}
             </span>
-            {market === 'xu030' && marketDataState.macro_as_of && (
+            {market !== 'us' && marketDataState.macro_as_of && (
               <span className="text-xs text-slate-500 hidden lg:block" title={marketDataState.macro_source ?? ''}>
                 {tr.macroAsOf} {marketDataState.macro_as_of}
               </span>
             )}
 
             <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-0.5">
-              {(['us', 'xu030'] as const).map(m => (
+              {(['us', 'xu030', 'xu100'] as const).map(m => (
                 <button
                   key={m}
                   type="button"
@@ -202,7 +208,7 @@ export default function App() {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {m === 'us' ? tr.marketUS : tr.marketBIST}
+                  {marketLabels[m]}
                 </button>
               ))}
             </div>
@@ -235,7 +241,7 @@ export default function App() {
               <span className={refreshState.running ? 'animate-spin' : ''}>↻</span>
               {refreshState.running ? tr.calculating : tr.refresh}
             </button>
-            {market === 'xu030' && (
+            {market !== 'us' && (
               <button
                 type="button"
                 onClick={handleMarketDataRefresh}

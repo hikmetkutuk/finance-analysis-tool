@@ -26,6 +26,7 @@ COPY ratio.py       ./
 
 COPY tickers.txt            ./
 COPY xu030.txt              ./
+COPY xu100.txt              ./
 COPY macro_config.json      ./
 COPY ratio_profiles.json    ./
 COPY sector_profiles.json   ./

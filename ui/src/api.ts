@@ -37,8 +37,12 @@ export const api = {
   marketDataStatus: (): Promise<MarketDataState> =>
     get('/market-data/status'),
 
-  triggerMarketDataRefresh: async (): Promise<{ status: string }> => {
-    const res = await fetch(`${BASE}/market-data/refresh`, { method: 'POST' })
+  triggerMarketDataRefresh: async (market: Market): Promise<{ status: string }> => {
+    const res = await fetch(`${BASE}/market-data/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ market }),
+    })
     if (!res.ok && res.status !== 409) throw new Error(`${res.status} ${res.statusText}`)
     return res.json()
   },

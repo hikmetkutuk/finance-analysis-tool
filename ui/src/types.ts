@@ -25,6 +25,7 @@ export interface Stock {
   // Detail fields (skill-aligned)
   'Trailing P/E': number | null
   'Forward P/E': number | null
+  'PD/DD': number | null
   'Market Cap': number | null
   'Enterprise Value': number | null
   'TTM Revenue': number | null
@@ -79,5 +80,5 @@ export interface PricePoint {
 
 export type SortKey = keyof Stock
 export type SortDir = 'asc' | 'desc'
-export type Market = 'us' | 'xu030'
+export type Market = 'us' | 'xu030' | 'xu100'
 export type Lang = 'tr' | 'en'

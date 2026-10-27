@@ -103,6 +103,7 @@ export default function PortfolioTable({ stocks, selected, onSelect, lang }: Rea
     { key: 'WACC', label: tr.colWacc, align: 'right', fmt: (v) => num(v as number | null) },
     { key: 'DCF Değerlemesi', label: tr.colDcf, align: 'right', fmt: (v, row) => price(v as number | null, (row['Para Birimi'] as string) || '$') },
     { key: 'Trailing P/E', label: tr.colPE, align: 'right', fmt: (v) => v !== null && v !== undefined ? `${(v as number).toFixed(1)}×` : '—' },
+    { key: 'PD/DD', label: tr.colPB, align: 'right', fmt: (v) => v !== null && v !== undefined ? `${(v as number).toFixed(1)}×` : '—' },
     { key: 'Peer EV/EBITDA', label: tr.colEvEbitda, align: 'right', fmt: (v) => v !== null && v !== undefined ? `${(v as number).toFixed(1)}×` : '—' },
   ]
 

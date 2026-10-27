@@ -35,6 +35,7 @@ MARKET_STATUS_FILE = PROJECT_ROOT / "market_refresh_status.json"
 MARKET_FILES = {
     "us":    str(PROJECT_ROOT / "tickers.txt"),
     "xu030": str(PROJECT_ROOT / "xu030.txt"),
+    "xu100": str(PROJECT_ROOT / "xu100.txt"),
 }
 VALID_MARKETS = frozenset(MARKET_FILES)
 _INVALID_MARKET = "invalid market"
@@ -48,8 +49,9 @@ _lock = threading.Lock()
 _state: dict[str, Any] = {
     "us":    {"running": False, "last_updated": None, "error": None},
     "xu030": {"running": False, "last_updated": None, "error": None},
+    "xu100": {"running": False, "last_updated": None, "error": None},
 }
-_portfolio: dict[str, list[dict]] = {"us": [], "xu030": []}
+_portfolio: dict[str, list[dict]] = {"us": [], "xu030": [], "xu100": []}
 _market_data_state: dict[str, Any] = {
     "running": False,
     "last_updated": None,
@@ -172,7 +174,7 @@ def start_refresh(market: str) -> bool:
     return True
 
 
-def _do_full_market_refresh() -> None:
+def _do_full_market_refresh(market: str) -> None:
     try:
         with _lock:
             _market_data_state["stage"] = "market_data"
@@ -182,28 +184,28 @@ def _do_full_market_refresh() -> None:
             _market_data_state["last_updated"] = result["finished_at"]
             _market_data_state["stage"] = "valuation"
             _market_data_state["error"] = None
-        _do_refresh("xu030")
+        _do_refresh(market)
     except MARKET_REFRESH_ERRORS as exc:
         with _lock:
             _market_data_state["error"] = str(exc)
-            _state["xu030"]["error"] = str(exc)
-            _state["xu030"]["running"] = False
+            _state[market]["error"] = str(exc)
+            _state[market]["running"] = False
     finally:
         with _lock:
             _market_data_state["running"] = False
             _market_data_state["stage"] = None
 
 
-def start_full_market_refresh() -> bool:
+def start_full_market_refresh(market: str) -> bool:
     with _lock:
-        if _market_data_state["running"] or _state["xu030"]["running"]:
+        if _market_data_state["running"] or _state[market]["running"]:
             return False
         _market_data_state["running"] = True
         _market_data_state["error"] = None
         _market_data_state["stage"] = "starting"
-        _state["xu030"]["running"] = True
-        _state["xu030"]["error"] = None
-    threading.Thread(target=_do_full_market_refresh, daemon=True).start()
+        _state[market]["running"] = True
+        _state[market]["error"] = None
+    threading.Thread(target=_do_full_market_refresh, args=(market,), daemon=True).start()
     return True
 
 
@@ -313,7 +315,11 @@ def refresh_status():
 
 @app.route("/api/market-data/refresh", methods=["POST"])
 def trigger_market_data_refresh():
-    if not start_full_market_refresh():
+    body = request.get_json(silent=True) or {}
+    market = body.get("market", "xu030")
+    if market not in {"xu030", "xu100"}:
+        return jsonify({"error": _INVALID_MARKET}), 400
+    if not start_full_market_refresh(market):
         return jsonify({"status": "already_running"}), 409
     return jsonify({"status": "started"})
 
@@ -354,7 +360,7 @@ def _startup() -> None:
                 _market_data_state["last_updated"] = saved_state.get("finished_at")
         except (OSError, json.JSONDecodeError):
             pass
-    for market in ("us", "xu030"):
+    for market in VALID_MARKETS:
         results, last_updated = _load_latest_from_db(market)
         if results:
             with _lock:

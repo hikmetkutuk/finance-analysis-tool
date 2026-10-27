@@ -801,6 +801,7 @@ def _build_detail_fields(extra: dict[str, Any]) -> dict[str, Any]:
     return {
         "Trailing P/E": round_or_none(extra.get("trailing_pe")),
         "Forward P/E": round_or_none(extra.get("forward_pe")),
+        "PD/DD": round_or_none(extra.get("price_to_book")),
         "Market Cap": round_or_none(extra.get("market_cap")),
         "Enterprise Value": round_or_none(extra.get("enterprise_value")),
         "TTM Revenue": round_or_none(extra.get("ttm_revenue")),
@@ -978,6 +979,7 @@ def _build_extra_dict(
     return {
         "trailing_pe": info.get("trailingPE"),
         "forward_pe": info.get("forwardPE"),
+        "price_to_book": info.get("priceToBook"),
         "market_cap": info.get("marketCap"),
         "enterprise_value": info.get("enterpriseValue"),
         "ttm_revenue": latest_revenue,
